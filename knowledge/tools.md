@@ -22,7 +22,10 @@ Poniższe to tylko **ilustracje** pojęcia, nie jego istota:
 - **Za dużo źródeł/narzędzi** → szum i gorsze odpowiedzi (agent przetwarza niepotrzebne informacje).
 - **Poleganie na narzędziach o wysokim ryzyku halucynacji** (wyszukiwanie w sieci / deep search) jako na źródle prawdy.
 - **Słabej jakości, nieaktualne lub sprzeczne dane** w podłączonych źródłach.
-- [DO UZUPEŁNIENIA: materiały AIDEAS nie mają jednego, dedykowanego slajdu o „narzędziach" rozumianych jako wywoływane zdolności agenta — powyższe wynikają z sekcji o bazie wiedzy, źródłach danych i integracjach. Warto potwierdzić/rozszerzyć listę błędów.]
+- **Włączanie narzędzi, których agent nie potrzebuje** → więcej narzędzi to większe zamieszanie i koszt; agent gubi się, po które sięgnąć.
+- **Zbyt ogólny lub niejasny opis narzędzia** — model nie wie, kiedy po nie sięgnąć, więc używa go w złym momencie albo wcale.
+- **Oczekiwanie, że agent użyje narzędzia, którego mu nie daliśmy** (np. liczenie na wyszukiwanie w sieci, gdy narzędzie web jest wyłączone).
+- **Brak myślenia o błędach narzędzia** — gdy narzędzie zwróci błąd albo dziwny wynik, agent powinien sobie z tym poradzić, a nie się zaciąć.
 
 ## Krótki przykład
 Agent do obsługi zapytań e-mail: **odczytuje** treść wiadomości (integracja z pocztą), **wyszukuje** odpowiedź w firmowej bazie wiedzy z plików PDF (RAG), **przygotowuje** odpowiedź i **wysyła** ją do klienta (integracja). Model sam nie zna treści maila ani firmowych dokumentów — wykonać to zadanie pozwalają mu dopiero narzędzia.

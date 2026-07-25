@@ -33,11 +33,14 @@ Wybór modelu przekłada się bezpośrednio na jakość odpowiedzi, koszty dzia�
 **Warto pamiętać o planie B** — jeśli model przestanie działać lub przekroczy limity, miej gotowy model alternatywny. Można też łączyć modele w jednym projekcie (np. jeden do przetwarzania danych, drugi do generowania treści).
 
 ## Typowe błędy
-*(Materiały nie mają osobnego slajdu „typowe błędy" dla modelu — poniższe wynikają z sekcji o kosztach i wyborze modelu.)*
+*(Materiały nie mają osobnego slajdu „typowe błędy" dla modelu — trzy pierwsze punkty wynikają z sekcji o kosztach i wyborze modelu.)*
 - Wybór dużego, drogiego modelu tam, gdzie w zupełności wystarczy model mini (niepotrzebny koszt).
 - Ignorowanie kosztów i limitów API przy intensywnym korzystaniu — przy dużej skali potrafią drastycznie wpłynąć na budżet.
 - Brak planu awaryjnego (planu B) na wypadek awarii lub przekroczenia limitów modelu.
-- [DO UZUPEŁNIENIA: ewentualne dodatkowe „typowe błędy" dot. wyboru modelu — brak dedykowanej listy w materiałach AIDEAS.]
+- Sięganie po najmocniejszy i najdroższy model do prostych zadań — przepala budżet i spowalnia odpowiedzi, choć tańszy model w zupełności by wystarczył.
+- Błąd odwrotny: najtańszy i najszybszy model do zadań wymagających złożonego rozumowania — agent częściej się myli i gubi wątek.
+- Zakładanie, że każdy model przyjmuje te same ustawienia — nowsze modele (np. Opus 4.8, Sonnet 5) nie przyjmują ręcznej temperatury i same dobierają poziom losowości.
+- Ignorowanie okna kontekstu — wybór modelu, który nie pomieści potrzebnej ilości tekstu (długie instrukcje, wiedza, historia rozmowy).
 
 ## Krótki przykład
 - **Model mini** — przygotowanie treści komunikacji, postów w mediach społecznościowych, roboczej wersji briefu na bazie szablonu.
