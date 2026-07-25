@@ -27,6 +27,27 @@ function mapError(error) {
     return { status: 502, message: error.message };
   }
 
+  // Bledy dostawcy OpenAI (warstwa lib/providers/openai.js zamienia odpowiedzi
+  // HTTP na wyjatki z kodem). Komunikaty sa juz po polsku — przepuszczamy je.
+  if (error?.code === "openai_auth") {
+    return { status: 401, message: error.message };
+  }
+  if (error?.code === "openai_model_not_found") {
+    return { status: 400, message: error.message };
+  }
+  if (error?.code === "openai_rate_limit") {
+    return { status: 429, message: error.message };
+  }
+  if (error?.code === "openai_bad_request") {
+    return { status: 400, message: error.message };
+  }
+  if (error?.code === "openai_unavailable") {
+    return { status: 503, message: error.message };
+  }
+  if (error?.code === "openai_error") {
+    return { status: 502, message: error.message };
+  }
+
   if (error instanceof Anthropic.AuthenticationError) {
     return {
       status: 401,

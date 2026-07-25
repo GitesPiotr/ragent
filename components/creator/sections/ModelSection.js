@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAppState } from "@/lib/state/StateContext";
 import {
   updateAgentField,
@@ -22,6 +22,25 @@ export function ModelSection() {
     models: [],
     error: null,
   });
+
+  // Czy klucze dostawcow sa ustawione po stronie serwera (bez ich wartosci).
+  // Uzywane do ostrzezenia przy modelach, ktorych nie da sie uruchomic.
+  const [keys, setKeys] = useState({});
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/providers/status", { cache: "no-store" });
+        const data = await res.json();
+        if (alive) setKeys(data || {});
+      } catch {
+        /* brak informacji -> nie pokazujemy notki o kluczu */
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
 
   function changeField(field, value) {
     dispatch(updateAgentField(field, value));
@@ -83,6 +102,16 @@ export function ModelSection() {
   const isOllama = agent.provider === "ollama";
   const visibleModels = isOllama ? ollama.models : staticModels;
 
+  // Czy WSZYSTKIE modele tego dostawcy sa niesprawdzone (verified === false).
+  // Wtedy nad lista pokazujemy jedna notke zamiast powtarzac ja przy kazdym.
+  const providerUnverified =
+    !isOllama &&
+    staticModels.length > 0 &&
+    staticModels.every((m) => m.verified === false);
+  // Nazwa zmiennej z kluczem + czy klucz jest ustawiony na serwerze.
+  const requiredKey = staticModels.find((m) => m.requiresKey)?.requiresKey;
+  const keyConfigured = keys[agent.provider]?.configured;
+
   return (
     <div className={styles.section}>
       <div className={styles.head}>
@@ -135,6 +164,19 @@ export function ModelSection() {
           </div>
         )}
 
+        {/* Modele podlaczone „na slepo”, bez ani jednego realnego wywolania.
+            Ostrzegamy, ale NIE blokujemy wyboru — konfiguracje agenta mozna
+            zapisac, a przy probie rozmowy uzytkownik dostanie czytelny blad. */}
+        {providerUnverified && (
+          <div className={styles.note}>
+            ⚠️ Te modele nie zostały jeszcze przetestowane w tej aplikacji —
+            możesz je wybrać, ale rozmowa może nie zadziałać za pierwszym razem.
+            {requiredKey && keyConfigured === false
+              ? ` Wymagają też klucza ${requiredKey} w pliku .env.local (obecnie go brakuje) — po dodaniu zrestartuj serwer.`
+              : ""}
+          </div>
+        )}
+
         <div className={styles.modelList}>
           {visibleModels.map((m) => {
             const selected = agent.model === m.id;
@@ -162,6 +204,7 @@ export function ModelSection() {
                   <span className={styles.modelName}>{m.label}</span>
                   <span className={styles.modelMeta}>
                     {m.id} · {tempInfo}
+                    {m.verified === false ? " · ⚠️ niesprawdzone" : ""}
                   </span>
                 </span>
               </label>
