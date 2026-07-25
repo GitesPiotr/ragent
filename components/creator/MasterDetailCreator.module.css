@@ -1,0 +1,558 @@
+.creator {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  width: 100%;
+}
+
+/* --- NAGLOWEK --- */
+.header {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 18px;
+  border: 1px solid #e4e4e7;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 2px 12px rgba(24, 24, 27, 0.05);
+}
+
+.nameBlock {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.agentName {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #18181b;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.editNameButton {
+  flex-shrink: 0;
+  padding: 4px 6px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  font-size: 14px;
+  cursor: pointer;
+  opacity: 0.6;
+}
+
+.editNameButton:hover {
+  background: #f4f4f5;
+  opacity: 1;
+}
+
+.nameInput {
+  padding: 6px 10px;
+  border: 1px solid #a78bfa;
+  border-radius: 8px;
+  font-size: 18px;
+  font-weight: 700;
+  font-family: inherit;
+  background: #fff;
+  color: #18181b;
+  min-width: 240px;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.saveStatus {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.statusSaving {
+  color: #6d28d9;
+}
+.statusSaved {
+  color: #15803d;
+}
+.statusError {
+  color: #b91c1c;
+}
+.statusDirty {
+  color: #b45309;
+}
+
+.saveButton {
+  padding: 10px 22px;
+  border: none;
+  border-radius: 9px;
+  background: #7c3aed;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.saveButton:hover:not(:disabled) {
+  background: #6d28d9;
+}
+
+.saveButton:disabled {
+  background: #d4d4d8;
+  cursor: not-allowed;
+}
+
+.error {
+  padding: 12px 16px;
+  border: 1px solid #fca5a5;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+/* --- UKLAD DWUKOLUMNOWY --- */
+.columns {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+/* LEWA kolumna — sticky, przewija sie razem z trescia. */
+.master {
+  position: sticky;
+  top: 84px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.masterLabel {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #a1a1aa;
+  padding-left: 4px;
+}
+
+.cards {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.card {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  border: 1px solid #e4e4e7;
+  border-radius: 12px;
+  background: #fff;
+  overflow: hidden;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.15s;
+}
+
+.card:hover {
+  border-color: #c4b5fd;
+  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.1);
+  transform: translateY(-1px);
+}
+
+.cardActive {
+  border-color: #7c3aed;
+  background: #faf5ff;
+  box-shadow: 0 0 0 1px #7c3aed inset;
+}
+
+.cardButton {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 12px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  min-width: 0;
+}
+
+.cardIcon {
+  font-size: 17px;
+  line-height: 1.2;
+  flex-shrink: 0;
+}
+
+.cardText {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.cardLabel {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  font-size: 14px;
+  font-weight: 700;
+  color: #18181b;
+}
+
+.cardSummary {
+  font-size: 12px;
+  line-height: 1.4;
+  color: #71717a;
+}
+
+.previewTag {
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: #fef3c7;
+  color: #92400e;
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.removeCard {
+  flex-shrink: 0;
+  width: 30px;
+  border: none;
+  border-left: 1px solid #f4f4f5;
+  background: transparent;
+  color: #a1a1aa;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.removeCard:hover {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.addButton {
+  padding: 11px 14px;
+  border: 1px dashed #c4b5fd;
+  border-radius: 12px;
+  background: #faf5ff;
+  color: #6d28d9;
+  font-size: 13.5px;
+  font-weight: 700;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.addButton:hover:not(:disabled) {
+  background: #ede9fe;
+  border-color: #7c3aed;
+}
+
+.addButtonActive {
+  background: #ede9fe;
+  border-style: solid;
+  border-color: #7c3aed;
+}
+
+.addButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.allAdded {
+  font-size: 12px;
+  color: #a1a1aa;
+  text-align: center;
+}
+
+/* PRAWA kolumna — edytor parametru */
+.detail {
+  padding: 22px 24px;
+  border: 1px solid #e4e4e7;
+  border-radius: 14px;
+  background: #fff;
+  min-height: 460px;
+}
+
+.pickerTitle {
+  margin: 0 0 6px;
+  font-size: 20px;
+  font-weight: 800;
+  color: #18181b;
+}
+
+.pickerHint {
+  margin: 0 0 18px;
+  font-size: 13.5px;
+  color: #71717a;
+}
+
+.pickerList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.pickerItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid #e4e4e7;
+  border-radius: 12px;
+  background: #fff;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+  transition: border-color 0.15s, background 0.15s, transform 0.15s;
+}
+
+.pickerItem:hover {
+  border-color: #7c3aed;
+  background: #faf5ff;
+  transform: translateY(-1px);
+}
+
+.pickerIcon {
+  font-size: 20px;
+  line-height: 1.1;
+}
+
+.chatArea {
+  border-top: 1px solid #e4e4e7;
+  padding-top: 8px;
+}
+
+@media (max-width: 900px) {
+  .columns {
+    grid-template-columns: 1fr;
+  }
+
+  .master {
+    position: static;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .header,
+  :root:not([data-theme="light"]) .card,
+  :root:not([data-theme="light"]) .detail,
+  :root:not([data-theme="light"]) .pickerItem {
+    background: #131318;
+    border-color: #27272a;
+  }
+
+  :root:not([data-theme="light"]) .agentName,
+  :root:not([data-theme="light"]) .cardLabel,
+  :root:not([data-theme="light"]) .pickerTitle {
+    color: #ededed;
+  }
+
+  :root:not([data-theme="light"]) .cardSummary,
+  :root:not([data-theme="light"]) .pickerHint,
+  :root:not([data-theme="light"]) .allAdded {
+    color: #a1a1aa;
+  }
+
+  :root:not([data-theme="light"]) .nameInput {
+    background: #17171c;
+    color: #ededed;
+    border-color: #7c3aed;
+  }
+
+  :root:not([data-theme="light"]) .editNameButton:hover {
+    background: #27272e;
+  }
+
+  :root:not([data-theme="light"]) .cardActive {
+    background: #1a1530;
+    border-color: #7c3aed;
+  }
+
+  :root:not([data-theme="light"]) .card:hover,
+  :root:not([data-theme="light"]) .pickerItem:hover {
+    border-color: #6d28d9;
+  }
+
+  :root:not([data-theme="light"]) .pickerItem:hover {
+    background: #1a1530;
+  }
+
+  :root:not([data-theme="light"]) .addButton {
+    background: #17132e;
+    border-color: #3b2f6b;
+    color: #c4b5fd;
+  }
+
+  :root:not([data-theme="light"]) .addButton:hover:not(:disabled),
+  :root:not([data-theme="light"]) .addButtonActive {
+    background: #221a45;
+    border-color: #7c3aed;
+  }
+
+  :root:not([data-theme="light"]) .removeCard {
+    border-left-color: #27272a;
+  }
+
+  :root:not([data-theme="light"]) .removeCard:hover {
+    background: #2a1212;
+    color: #ff8f8f;
+  }
+
+  :root:not([data-theme="light"]) .previewTag {
+    background: #422006;
+    color: #fcd34d;
+  }
+
+  :root:not([data-theme="light"]) .statusSaved {
+    color: #4ade80;
+  }
+
+  :root:not([data-theme="light"]) .statusError {
+    color: #ff8f8f;
+  }
+
+  :root:not([data-theme="light"]) .statusDirty {
+    color: #fbbf24;
+  }
+
+  :root:not([data-theme="light"]) .statusSaving {
+    color: #c4b5fd;
+  }
+
+  :root:not([data-theme="light"]) .saveButton:disabled {
+    background: #3f3f46;
+    color: #a1a1aa;
+  }
+
+  :root:not([data-theme="light"]) .error {
+    background: #2a1212;
+    border-color: #5a2a2a;
+    color: #ff8f8f;
+  }
+
+  :root:not([data-theme="light"]) .chatArea {
+    border-top-color: #27272a;
+  }
+}
+
+:root[data-theme="dark"] .header,
+  :root[data-theme="dark"] .card,
+  :root[data-theme="dark"] .detail,
+  :root[data-theme="dark"] .pickerItem {
+    background: #131318;
+    border-color: #27272a;
+  }
+
+:root[data-theme="dark"] .agentName,
+  :root[data-theme="dark"] .cardLabel,
+  :root[data-theme="dark"] .pickerTitle {
+    color: #ededed;
+  }
+
+:root[data-theme="dark"] .cardSummary,
+  :root[data-theme="dark"] .pickerHint,
+  :root[data-theme="dark"] .allAdded {
+    color: #a1a1aa;
+  }
+
+:root[data-theme="dark"] .nameInput {
+    background: #17171c;
+    color: #ededed;
+    border-color: #7c3aed;
+  }
+
+:root[data-theme="dark"] .editNameButton:hover {
+    background: #27272e;
+  }
+
+:root[data-theme="dark"] .cardActive {
+    background: #1a1530;
+    border-color: #7c3aed;
+  }
+
+:root[data-theme="dark"] .card:hover,
+  :root[data-theme="dark"] .pickerItem:hover {
+    border-color: #6d28d9;
+  }
+
+:root[data-theme="dark"] .pickerItem:hover {
+    background: #1a1530;
+  }
+
+:root[data-theme="dark"] .addButton {
+    background: #17132e;
+    border-color: #3b2f6b;
+    color: #c4b5fd;
+  }
+
+:root[data-theme="dark"] .addButton:hover:not(:disabled),
+  :root[data-theme="dark"] .addButtonActive {
+    background: #221a45;
+    border-color: #7c3aed;
+  }
+
+:root[data-theme="dark"] .removeCard {
+    border-left-color: #27272a;
+  }
+
+:root[data-theme="dark"] .removeCard:hover {
+    background: #2a1212;
+    color: #ff8f8f;
+  }
+
+:root[data-theme="dark"] .previewTag {
+    background: #422006;
+    color: #fcd34d;
+  }
+
+:root[data-theme="dark"] .statusSaved {
+    color: #4ade80;
+  }
+
+:root[data-theme="dark"] .statusError {
+    color: #ff8f8f;
+  }
+
+:root[data-theme="dark"] .statusDirty {
+    color: #fbbf24;
+  }
+
+:root[data-theme="dark"] .statusSaving {
+    color: #c4b5fd;
+  }
+
+:root[data-theme="dark"] .saveButton:disabled {
+    background: #3f3f46;
+    color: #a1a1aa;
+  }
+
+:root[data-theme="dark"] .error {
+    background: #2a1212;
+    border-color: #5a2a2a;
+    color: #ff8f8f;
+  }
+
+:root[data-theme="dark"] .chatArea {
+    border-top-color: #27272a;
+  }
+
+/* themeified */

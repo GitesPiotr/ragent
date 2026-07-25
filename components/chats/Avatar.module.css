@@ -1,0 +1,87 @@
+/* Kolko z ikona rozmowcy. Kolory czerpie z --purple / --purple-light
+   zdefiniowanych na kontenerze .page (z fallbackami). */
+
+.circle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  flex-shrink: 0;
+  line-height: 1;
+}
+
+.ai {
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+/* Agent = robot, fiolet. */
+.agentSoft {
+  background: var(--purple-light, #f1ecfe);
+  color: var(--purple, #4b0fb4);
+}
+
+.agentFilled {
+  background: var(--purple, #4b0fb4);
+  color: #fff;
+}
+
+/* Sam model = „AI", granat. */
+.modelSoft {
+  background: var(--navy-light, #e8eef7);
+  color: var(--navy, #3d5a80);
+}
+
+.modelFilled {
+  background: var(--navy, #3d5a80);
+  color: #fff;
+}
+
+/* Uzytkownik = sylwetka, neutralna szarosc. */
+.user {
+  background: #e5e5ea;
+  color: #6b7280;
+}
+
+/* Brak wyboru (placeholder w pickerze nowej rozmowy). */
+.placeholder {
+  background: #ececf0;
+  color: #a1a1aa;
+  border: 1px dashed #cfcfd6;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .user {
+    background: #2a2a31;
+    color: #a1a1aa;
+  }
+
+  :root:not([data-theme="light"]) .modelSoft {
+    background: #1a2433;
+    color: #9db6d8;
+  }
+
+  :root:not([data-theme="light"]) .placeholder {
+    background: #26262c;
+    color: #71717a;
+    border-color: #3f3f46;
+  }
+}
+
+:root[data-theme="dark"] .user {
+    background: #2a2a31;
+    color: #a1a1aa;
+  }
+
+:root[data-theme="dark"] .modelSoft {
+    background: #1a2433;
+    color: #9db6d8;
+  }
+
+:root[data-theme="dark"] .placeholder {
+    background: #26262c;
+    color: #71717a;
+    border-color: #3f3f46;
+  }
+
+/* themeified */

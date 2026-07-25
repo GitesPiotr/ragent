@@ -1,0 +1,140 @@
+.sidebar {
+  width: 220px;
+  flex-shrink: 0;
+  min-height: 100dvh;
+  padding: 24px 16px;
+  border-right: 1px solid #e9e9ee;
+  background: #fbfaff;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.brand {
+  font-size: 18px;
+  font-weight: 800;
+  color: #6d28d9;
+  letter-spacing: -0.02em;
+}
+
+.group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Sekcja dolna (Ustawienia) — dociśnięta do dołu sidebara. */
+.bottom {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding-top: 12px;
+  border-top: 1px solid #e9e9ee;
+}
+
+.linkIcon {
+  margin-right: 8px;
+  font-size: 15px;
+}
+
+.groupLabel {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #9a9aa8;
+  margin-bottom: 4px;
+}
+
+.link {
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  color: #3f3f46;
+  text-decoration: none;
+}
+
+.link:hover {
+  background: #f1ecfe;
+  color: #6d28d9;
+}
+
+.active {
+  background: #ede9fe;
+  color: #6d28d9;
+}
+
+@media (max-width: 720px) {
+  .sidebar {
+    width: 100%;
+    min-height: auto;
+    border-right: none;
+    border-bottom: 1px solid #e9e9ee;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .sidebar {
+    background: #0d0b16;
+    border-right-color: #262233;
+  }
+
+  :root:not([data-theme="light"]) .link {
+    color: #c9c9d4;
+  }
+
+  :root:not([data-theme="light"]) .link:hover {
+    background: #1c1730;
+    color: #c4b5fd;
+  }
+
+  :root:not([data-theme="light"]) .active {
+    background: #221a45;
+    color: #c4b5fd;
+  }
+
+  @media (max-width: 720px) {
+    :root:not([data-theme="light"]) .sidebar {
+      border-bottom-color: #262233;
+    }
+  }
+}
+
+:root[data-theme="dark"] .sidebar {
+    background: #0d0b16;
+    border-right-color: #262233;
+  }
+
+:root[data-theme="dark"] .link {
+    color: #c9c9d4;
+  }
+
+:root[data-theme="dark"] .link:hover {
+    background: #1c1730;
+    color: #c4b5fd;
+  }
+
+:root[data-theme="dark"] .active {
+    background: #221a45;
+    color: #c4b5fd;
+  }
+
+@media (max-width: 720px) {
+  :root[data-theme="dark"] .sidebar {
+      border-bottom-color: #262233;
+    }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .bottom {
+    border-top-color: #262233;
+  }
+}
+
+:root[data-theme="dark"] .bottom {
+  border-top-color: #262233;
+}
+
+/* themeified */

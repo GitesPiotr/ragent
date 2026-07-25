@@ -1,0 +1,55 @@
+/* Link nawigacji wstecz stylowany jak przycisk drugorzedny (ghost) z list.
+   Wartosci celowo takie same jak .ghostButton w app/projekty/workspace.module.css. */
+
+.backButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  /* Rodzic bywa flex-column ze stretch (kreator) — bez tego link rozciagnalby
+     sie na cala szerokosc. */
+  align-self: flex-start;
+  padding: 6px 12px;
+  border: 1px solid #d4d4d8;
+  border-radius: 8px;
+  background: #fff;
+  color: #3f3f46;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.backButton:hover {
+  background: #f4f4f5;
+  border-color: #a1a1aa;
+}
+
+.arrow {
+  /* Strzalka jest dekoracja — czytnik ekranu przeczyta sam tekst. */
+  line-height: 1;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .backButton {
+    background: #1c1c22;
+    border-color: #3f3f46;
+    color: #d4d4d8;
+  }
+
+  :root:not([data-theme="light"]) .backButton:hover {
+    background: #27272e;
+    border-color: #52525b;
+  }
+}
+
+:root[data-theme="dark"] .backButton {
+    background: #1c1c22;
+    border-color: #3f3f46;
+    color: #d4d4d8;
+  }
+
+:root[data-theme="dark"] .backButton:hover {
+    background: #27272e;
+    border-color: #52525b;
+  }
+
+/* themeified */

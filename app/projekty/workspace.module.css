@@ -1,0 +1,515 @@
+/* Wspolne style ekranow Projekty i Agenty. */
+
+/* Listy czytaja sie lepiej w waskiej kolumnie — kreator ma wlasna szerokosc. */
+.listPage {
+  max-width: 960px;
+}
+
+.header {
+  margin-bottom: 20px;
+}
+
+.title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  color: #18181b;
+}
+
+.subtitle {
+  margin: 6px 0 0;
+  font-size: 14px;
+  color: #71717a;
+}
+
+/* Odstep pod linkiem wstecz — sam przycisk stylowany jest
+   w components/workspace/BackButton. */
+.backRow {
+  margin-bottom: 10px;
+}
+
+/* Naglowek listy z akcja po prawej (tytul + przycisk otwierajacy modal). */
+.headerRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.headerText {
+  min-width: 0;
+}
+
+.headerAction {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* --- Formularz tworzenia (inline, nie modal) --- */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  margin-bottom: 24px;
+  border: 1px solid #e4e4e7;
+  border-radius: 12px;
+  background: #fbfaff;
+}
+
+.formTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: #6d28d9;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #52525b;
+}
+
+.input,
+.textarea {
+  padding: 9px 11px;
+  border: 1px solid #d4d4d8;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #fff;
+  color: #18181b;
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 62px;
+}
+
+.input:focus,
+.textarea:focus {
+  outline: 2px solid #c4b5fd;
+  outline-offset: -1px;
+  border-color: #a78bfa;
+}
+
+.formRow {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+/* Modal tworzenia/edycji: components/workspace/FormModal. */
+
+/* --- Przyciski --- */
+.primaryButton {
+  align-self: flex-start;
+  padding: 9px 16px;
+  border: none;
+  border-radius: 8px;
+  background: #7c3aed;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primaryButton:hover:not(:disabled) {
+  background: #6d28d9;
+}
+
+.primaryButton:disabled {
+  background: #c4b5fd;
+  cursor: not-allowed;
+}
+
+/* Akcja glowna w karcie (link stylowany jak przycisk). */
+.primaryLink {
+  padding: 6px 12px;
+  border: 1px solid #7c3aed;
+  border-radius: 8px;
+  background: #7c3aed;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.primaryLink:hover {
+  background: #6d28d9;
+  border-color: #6d28d9;
+}
+
+.ghostButton {
+  padding: 6px 12px;
+  border: 1px solid #d4d4d8;
+  border-radius: 8px;
+  background: #fff;
+  color: #3f3f46;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ghostButton:hover:not(:disabled) {
+  background: #f4f4f5;
+  border-color: #a1a1aa;
+}
+
+.ghostButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Akcja nieodwracalna w karcie. Wizualnie ODMIENNA od archiwizacji
+   (ghost), zeby nie dalo sie kliknac jej "z rozpedu". */
+.dangerButton {
+  padding: 6px 12px;
+  border: 1px solid #fca5a5;
+  border-radius: 8px;
+  background: #fff;
+  color: #b91c1c;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dangerButton:hover:not(:disabled) {
+  background: #fef2f2;
+  border-color: #dc2626;
+}
+
+.dangerButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* --- Tresc okna potwierdzenia usuniecia --- */
+.confirmText {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.55;
+  color: #3f3f46;
+}
+
+.confirmWarning {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+  font-weight: 600;
+  color: #b91c1c;
+}
+
+/* --- Karty --- */
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.card {
+  padding: 16px;
+  border: 1px solid #e4e4e7;
+  border-radius: 12px;
+  background: #fff;
+  transition: box-shadow 0.15s, border-color 0.15s, transform 0.15s;
+}
+
+.card:hover {
+  border-color: #c4b5fd;
+  box-shadow: 0 4px 14px rgba(124, 58, 237, 0.09);
+}
+
+.cardArchived {
+  background: #fafafa;
+  opacity: 0.75;
+}
+
+.cardTop {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.cardTitle {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #18181b;
+}
+
+.cardTitleLink {
+  color: #18181b;
+  text-decoration: none;
+}
+
+.cardTitleLink:hover {
+  color: #6d28d9;
+  text-decoration: underline;
+}
+
+.cardDesc {
+  margin: 6px 0 0;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: #52525b;
+  white-space: pre-wrap;
+}
+
+.cardMeta {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #a1a1aa;
+}
+
+.roleTag {
+  display: inline-block;
+  margin-top: 8px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #f1ecfe;
+  color: #6d28d9;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.badge {
+  flex-shrink: 0;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #f4f4f5;
+  color: #71717a;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.cardActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+
+/* --- Stany --- */
+.error {
+  padding: 14px 16px;
+  margin-bottom: 20px;
+  border: 1px solid #fca5a5;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.errorTitle {
+  font-weight: 700;
+  margin-bottom: 4px;
+}
+
+.info {
+  padding: 24px;
+  border: 1px dashed #d4d4d8;
+  border-radius: 12px;
+  text-align: center;
+  color: #71717a;
+  font-size: 14px;
+}
+
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.toggleArchived {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #52525b;
+  cursor: pointer;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .title,
+  :root:not([data-theme="light"]) .cardTitle,
+  :root:not([data-theme="light"]) .cardTitleLink {
+    color: #ededed;
+  }
+
+  :root:not([data-theme="light"]) .subtitle,
+  :root:not([data-theme="light"]) .cardDesc,
+  :root:not([data-theme="light"]) .toggleArchived,
+  :root:not([data-theme="light"]) .label {
+    color: #a1a1aa;
+  }
+
+  :root:not([data-theme="light"]) .form {
+    background: #12101c;
+    border-color: #2a2540;
+  }
+
+  :root:not([data-theme="light"]) .input,
+  :root:not([data-theme="light"]) .textarea {
+    background: #17171c;
+    border-color: #3f3f46;
+    color: #ededed;
+  }
+
+  :root:not([data-theme="light"]) .card {
+    background: #131318;
+    border-color: #27272a;
+  }
+
+  :root:not([data-theme="light"]) .cardArchived {
+    background: #0f0f13;
+  }
+
+  :root:not([data-theme="light"]) .ghostButton {
+    background: #1c1c22;
+    border-color: #3f3f46;
+    color: #d4d4d8;
+  }
+
+  :root:not([data-theme="light"]) .ghostButton:hover:not(:disabled) {
+    background: #27272e;
+  }
+
+  :root:not([data-theme="light"]) .dangerButton {
+    background: #1c1c22;
+    border-color: #5a2a2a;
+    color: #ff8f8f;
+  }
+
+  :root:not([data-theme="light"]) .dangerButton:hover:not(:disabled) {
+    background: #2a1212;
+    border-color: #7f3030;
+  }
+
+  :root:not([data-theme="light"]) .confirmText {
+    color: #d4d4d8;
+  }
+
+  :root:not([data-theme="light"]) .confirmWarning {
+    color: #ff8f8f;
+  }
+
+  :root:not([data-theme="light"]) .badge {
+    background: #27272a;
+    color: #a1a1aa;
+  }
+
+  :root:not([data-theme="light"]) .roleTag {
+    background: #221a45;
+    color: #c4b5fd;
+  }
+
+  :root:not([data-theme="light"]) .error {
+    background: #2a1212;
+    border-color: #5a2a2a;
+    color: #ff8f8f;
+  }
+
+  :root:not([data-theme="light"]) .info {
+    border-color: #3f3f46;
+    color: #a1a1aa;
+  }
+}
+
+:root[data-theme="dark"] .title,
+  :root[data-theme="dark"] .cardTitle,
+  :root[data-theme="dark"] .cardTitleLink {
+    color: #ededed;
+  }
+
+:root[data-theme="dark"] .subtitle,
+  :root[data-theme="dark"] .cardDesc,
+  :root[data-theme="dark"] .toggleArchived,
+  :root[data-theme="dark"] .label {
+    color: #a1a1aa;
+  }
+
+:root[data-theme="dark"] .form {
+    background: #12101c;
+    border-color: #2a2540;
+  }
+
+:root[data-theme="dark"] .input,
+  :root[data-theme="dark"] .textarea {
+    background: #17171c;
+    border-color: #3f3f46;
+    color: #ededed;
+  }
+
+:root[data-theme="dark"] .card {
+    background: #131318;
+    border-color: #27272a;
+  }
+
+:root[data-theme="dark"] .cardArchived {
+    background: #0f0f13;
+  }
+
+:root[data-theme="dark"] .ghostButton {
+    background: #1c1c22;
+    border-color: #3f3f46;
+    color: #d4d4d8;
+  }
+
+:root[data-theme="dark"] .ghostButton:hover:not(:disabled) {
+    background: #27272e;
+  }
+
+:root[data-theme="dark"] .dangerButton {
+    background: #1c1c22;
+    border-color: #5a2a2a;
+    color: #ff8f8f;
+  }
+
+:root[data-theme="dark"] .dangerButton:hover:not(:disabled) {
+    background: #2a1212;
+    border-color: #7f3030;
+  }
+
+:root[data-theme="dark"] .confirmText {
+    color: #d4d4d8;
+  }
+
+:root[data-theme="dark"] .confirmWarning {
+    color: #ff8f8f;
+  }
+
+:root[data-theme="dark"] .badge {
+    background: #27272a;
+    color: #a1a1aa;
+  }
+
+:root[data-theme="dark"] .roleTag {
+    background: #221a45;
+    color: #c4b5fd;
+  }
+
+:root[data-theme="dark"] .error {
+    background: #2a1212;
+    border-color: #5a2a2a;
+    color: #ff8f8f;
+  }
+
+:root[data-theme="dark"] .info {
+    border-color: #3f3f46;
+    color: #a1a1aa;
+  }
+
+/* themeified */

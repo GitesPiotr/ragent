@@ -1,0 +1,37 @@
+.shell {
+  display: flex;
+  min-height: 100dvh;
+  align-items: stretch;
+  font-family: var(--font-geist-sans);
+  background: #ffffff;
+}
+
+/* Szerokosc ograniczaja poszczegolne ekrany (listy maja .listPage),
+   bo kreator master-detail potrzebuje wiecej miejsca niz listy. */
+.content {
+  flex: 1;
+  min-width: 0;
+  padding: 32px 28px 64px;
+}
+
+@media (max-width: 720px) {
+  .shell {
+    flex-direction: column;
+  }
+
+  .content {
+    padding: 20px 16px 48px;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .shell {
+    background: #0a0a0a;
+  }
+}
+
+:root[data-theme="dark"] .shell {
+    background: #0a0a0a;
+  }
+
+/* themeified */

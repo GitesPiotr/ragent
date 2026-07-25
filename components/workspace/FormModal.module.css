@@ -1,0 +1,256 @@
+/* Wspolny modal formularzowy list (projekty, agenty). */
+
+.modalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 48px 16px;
+  overflow-y: auto;
+  background: rgba(24, 24, 27, 0.55);
+  animation: overlayIn 0.15s ease-out;
+}
+
+.modal {
+  width: 100%;
+  max-width: 520px;
+  border: 1px solid #e4e4e7;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 18px 50px rgba(24, 24, 27, 0.28);
+  animation: modalIn 0.16s ease-out;
+}
+
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px;
+  border-bottom: 1px solid #ececef;
+}
+
+.modalTitle {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: #6d28d9;
+}
+
+.modalClose {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #71717a;
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.modalClose:hover:not(:disabled) {
+  background: #f4f4f5;
+  color: #18181b;
+}
+
+.modalClose:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.modalBody {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 18px;
+}
+
+/* Blad zapisu pokazujemy w modalu, nie na liscie pod spodem. */
+.modalError {
+  padding: 10px 12px;
+  border: 1px solid #fca5a5;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding: 0 18px 18px;
+}
+
+/* Przyciski stopki — te same wartosci co .primaryButton / .ghostButton list. */
+.primaryButton {
+  padding: 9px 16px;
+  border: none;
+  border-radius: 8px;
+  background: #7c3aed;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.primaryButton:hover:not(:disabled) {
+  background: #6d28d9;
+}
+
+.primaryButton:disabled {
+  background: #c4b5fd;
+  cursor: not-allowed;
+}
+
+/* Submit operacji nieodwracalnej — czerwony, zeby nie pomylic go z zapisem. */
+.dangerButton {
+  padding: 9px 16px;
+  border: none;
+  border-radius: 8px;
+  background: #dc2626;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.dangerButton:hover:not(:disabled) {
+  background: #b91c1c;
+}
+
+.dangerButton:disabled {
+  background: #fca5a5;
+  cursor: not-allowed;
+}
+
+.ghostButton {
+  padding: 6px 12px;
+  border: 1px solid #d4d4d8;
+  border-radius: 8px;
+  background: #fff;
+  color: #3f3f46;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.ghostButton:hover:not(:disabled) {
+  background: #f4f4f5;
+  border-color: #a1a1aa;
+}
+
+.ghostButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@keyframes overlayIn {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes modalIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px) scale(0.985);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .modalOverlay,
+  .modal {
+    animation: none;
+  }
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .modal {
+    background: #131318;
+    border-color: #27272a;
+  }
+
+  :root:not([data-theme="light"]) .modalHeader {
+    border-bottom-color: #27272a;
+  }
+
+  :root:not([data-theme="light"]) .modalTitle {
+    color: #c4b5fd;
+  }
+
+  :root:not([data-theme="light"]) .modalClose:hover:not(:disabled) {
+    background: #27272e;
+    color: #ededed;
+  }
+
+  :root:not([data-theme="light"]) .modalError {
+    background: #2a1212;
+    border-color: #5a2a2a;
+    color: #ff8f8f;
+  }
+
+  :root:not([data-theme="light"]) .dangerButton:disabled {
+    background: #5a2a2a;
+    color: #c9a3a3;
+  }
+
+  :root:not([data-theme="light"]) .ghostButton {
+    background: #1c1c22;
+    border-color: #3f3f46;
+    color: #d4d4d8;
+  }
+
+  :root:not([data-theme="light"]) .ghostButton:hover:not(:disabled) {
+    background: #27272e;
+  }
+}
+
+:root[data-theme="dark"] .modal {
+    background: #131318;
+    border-color: #27272a;
+  }
+
+:root[data-theme="dark"] .modalHeader {
+    border-bottom-color: #27272a;
+  }
+
+:root[data-theme="dark"] .modalTitle {
+    color: #c4b5fd;
+  }
+
+:root[data-theme="dark"] .modalClose:hover:not(:disabled) {
+    background: #27272e;
+    color: #ededed;
+  }
+
+:root[data-theme="dark"] .modalError {
+    background: #2a1212;
+    border-color: #5a2a2a;
+    color: #ff8f8f;
+  }
+
+:root[data-theme="dark"] .dangerButton:disabled {
+    background: #5a2a2a;
+    color: #c9a3a3;
+  }
+
+:root[data-theme="dark"] .ghostButton {
+    background: #1c1c22;
+    border-color: #3f3f46;
+    color: #d4d4d8;
+  }
+
+:root[data-theme="dark"] .ghostButton:hover:not(:disabled) {
+    background: #27272e;
+  }
+
+/* themeified */

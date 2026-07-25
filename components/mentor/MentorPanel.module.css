@@ -1,0 +1,565 @@
+/* Przycisk otwierania mentora - staly, prawy gorny rog. */
+.toggle {
+  position: fixed;
+  top: 16px;
+  right: 16px;
+  z-index: 1000;
+  padding: 10px 16px;
+  border: none;
+  border-radius: 999px;
+  background: #7c3aed;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.toggle:hover {
+  background: #6d28d9;
+}
+
+/* Panel mentora - szuflada z prawej strony. Szerokosc ustawiana inline
+   (przesuwalna); 380px to fallback. */
+.panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 999;
+  width: 380px;
+  max-width: 96vw;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border-left: 1px solid #e5e5e5;
+  box-shadow: -4px 0 20px rgba(0, 0, 0, 0.08);
+}
+
+/* Uchwyt na LEWEJ krawedzi panelu — obszar lapania ~5px, linia grubieje
+   i robi sie fioletowa przy hover / focusie / przeciaganiu. */
+.resizer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 5;
+  width: 5px;
+  height: 100%;
+  cursor: col-resize;
+  touch-action: none;
+}
+
+.resizer::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: 1px;
+  background: transparent;
+  transition: background 0.12s ease, width 0.12s ease;
+}
+
+.resizer:hover::before,
+.resizer:focus-visible::before,
+.resizerActive::before {
+  width: 3px;
+  background: #7c3aed;
+}
+
+.resizer:focus-visible {
+  outline: none;
+}
+
+.header {
+  padding: 60px 20px 12px;
+  border-bottom: 1px solid #eee;
+}
+
+.title {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #6d28d9;
+}
+
+.subtitle {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: #666;
+}
+
+/* Wybor trybu mentora */
+.backButton {
+  margin-top: 6px;
+  padding: 4px 8px;
+  border: none;
+  background: transparent;
+  color: #6d28d9;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.modePicker {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px 16px;
+}
+
+.modeButton {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px;
+  border: 1px solid #ddd6fe;
+  border-radius: 12px;
+  background: #f5f3ff;
+  cursor: pointer;
+  text-align: left;
+}
+
+.modeButton:hover {
+  background: #ede9fe;
+  border-color: #c4b5fd;
+}
+
+.modeTitle {
+  font-size: 15px;
+  font-weight: 700;
+  color: #6d28d9;
+}
+
+.modeDesc {
+  font-size: 13px;
+  color: #555;
+}
+
+.messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.msgWrap {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Karta propozycji (wpisanie do kreatora) */
+.proposalCard {
+  align-self: flex-start;
+  max-width: 95%;
+  padding: 10px 12px;
+  border: 1px dashed #a78bfa;
+  border-radius: 10px;
+  background: #faf5ff;
+}
+
+.proposalHead {
+  font-size: 12px;
+  color: #6d28d9;
+  margin-bottom: 6px;
+}
+
+.proposalBody {
+  font-size: 14px;
+  color: #1f2937;
+  margin-bottom: 10px;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.proposalList {
+  margin: 0;
+  padding-left: 18px;
+}
+
+.proposalList li {
+  margin: 2px 0;
+}
+
+.acceptButton {
+  padding: 8px 14px;
+  border: none;
+  border-radius: 8px;
+  background: #7c3aed;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.acceptButton:disabled {
+  background: #c4b5fd;
+  cursor: not-allowed;
+}
+
+.appliedBadge {
+  font-size: 13px;
+  font-weight: 600;
+  color: #15803d;
+}
+
+/* KROK PERSONA — wybór ścieżki (dwa przyciski pod wypowiedzią mentora) */
+.pathChoice {
+  align-self: flex-start;
+  max-width: 95%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pathButton {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 12px 14px;
+  border: 1px solid #a78bfa;
+  border-radius: 10px;
+  background: #faf5ff;
+  cursor: pointer;
+  text-align: left;
+}
+
+.pathButton:hover {
+  background: #ede9fe;
+  border-color: #7c3aed;
+}
+
+.pathTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: #6d28d9;
+}
+
+.pathDesc {
+  font-size: 12.5px;
+  color: #555;
+}
+
+/* ŚCIEŻKA A — pole na własny opis persony */
+.draftBox {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 16px 16px;
+  border-top: 1px solid #eee;
+}
+
+.draftLabel {
+  font-size: 12px;
+  font-weight: 600;
+  color: #6d28d9;
+}
+
+.draftInput {
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 15px;
+  font-family: inherit;
+  resize: vertical;
+  min-height: 110px;
+  max-height: 240px;
+  background: #fff;
+  color: #111;
+}
+
+.empty {
+  margin: auto;
+  text-align: center;
+  color: #999;
+  font-size: 14px;
+}
+
+.message {
+  max-width: 90%;
+  padding: 10px 12px;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.user {
+  align-self: flex-end;
+  background: #7c3aed;
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+
+.mentor {
+  align-self: flex-start;
+  background: #f5f3ff;
+  border: 1px solid #ddd6fe;
+  color: #111;
+  border-bottom-left-radius: 4px;
+}
+
+.role {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  opacity: 0.7;
+  margin-bottom: 2px;
+}
+
+.loader {
+  align-self: flex-start;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: #666;
+  padding: 8px 12px;
+}
+
+.dots {
+  display: inline-flex;
+  gap: 3px;
+}
+
+.dots span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #a78bfa;
+  animation: blink 1.2s infinite both;
+}
+
+.dots span:nth-child(2) {
+  animation-delay: 0.2s;
+}
+
+.dots span:nth-child(3) {
+  animation-delay: 0.4s;
+}
+
+@keyframes blink {
+  0%,
+  80%,
+  100% {
+    opacity: 0.2;
+  }
+  40% {
+    opacity: 1;
+  }
+}
+
+.error {
+  margin: 0 16px;
+  padding: 10px 12px;
+  border: 1px solid #f3c2c2;
+  background: #fdecec;
+  color: #a30000;
+  border-radius: 8px;
+  font-size: 14px;
+}
+
+.inputRow {
+  display: flex;
+  gap: 8px;
+  padding: 12px 16px 16px;
+  border-top: 1px solid #eee;
+}
+
+.input {
+  flex: 1;
+  padding: 10px 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  font-size: 15px;
+  font-family: inherit;
+  resize: none;
+  min-height: 44px;
+  max-height: 140px;
+  background: #fff;
+  color: #111;
+}
+
+.sendButton {
+  padding: 0 18px;
+  border: none;
+  border-radius: 8px;
+  background: #7c3aed;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.sendButton:disabled {
+  background: #c4b5fd;
+  cursor: not-allowed;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .panel {
+    background: #0f0f0f;
+    border-left-color: #262626;
+  }
+
+  :root:not([data-theme="light"]) .header {
+    border-bottom-color: #262626;
+  }
+
+  :root:not([data-theme="light"]) .subtitle,
+  :root:not([data-theme="light"]) .empty,
+  :root:not([data-theme="light"]) .loader {
+    color: #999;
+  }
+
+  :root:not([data-theme="light"]) .mentor {
+    background: #1a1530;
+    border-color: #3b2f6b;
+    color: #ededed;
+  }
+
+  :root:not([data-theme="light"]) .modeButton {
+    background: #1a1530;
+    border-color: #3b2f6b;
+  }
+
+  :root:not([data-theme="light"]) .modeButton:hover {
+    background: #221a45;
+  }
+
+  :root:not([data-theme="light"]) .modeDesc {
+    color: #aaa;
+  }
+
+  :root:not([data-theme="light"]) .proposalCard {
+    background: #17132e;
+    border-color: #6d28d9;
+  }
+
+  :root:not([data-theme="light"]) .proposalBody {
+    color: #d4d4d8;
+  }
+
+  :root:not([data-theme="light"]) .appliedBadge {
+    color: #4ade80;
+  }
+
+  :root:not([data-theme="light"]) .input,
+  :root:not([data-theme="light"]) .draftInput {
+    background: #111;
+    color: #ededed;
+    border-color: #333;
+  }
+
+  :root:not([data-theme="light"]) .pathButton {
+    background: #17132e;
+    border-color: #6d28d9;
+  }
+
+  :root:not([data-theme="light"]) .pathButton:hover {
+    background: #221a45;
+  }
+
+  :root:not([data-theme="light"]) .pathDesc {
+    color: #aaa;
+  }
+
+  :root:not([data-theme="light"]) .inputRow,
+  :root:not([data-theme="light"]) .draftBox,
+  :root:not([data-theme="light"]) .error {
+    border-color: #262626;
+  }
+
+  :root:not([data-theme="light"]) .error {
+    background: #2a1212;
+    border-color: #5a2a2a;
+    color: #ff8f8f;
+  }
+}
+
+:root[data-theme="dark"] .panel {
+    background: #0f0f0f;
+    border-left-color: #262626;
+  }
+
+:root[data-theme="dark"] .header {
+    border-bottom-color: #262626;
+  }
+
+:root[data-theme="dark"] .subtitle,
+  :root[data-theme="dark"] .empty,
+  :root[data-theme="dark"] .loader {
+    color: #999;
+  }
+
+:root[data-theme="dark"] .mentor {
+    background: #1a1530;
+    border-color: #3b2f6b;
+    color: #ededed;
+  }
+
+:root[data-theme="dark"] .modeButton {
+    background: #1a1530;
+    border-color: #3b2f6b;
+  }
+
+:root[data-theme="dark"] .modeButton:hover {
+    background: #221a45;
+  }
+
+:root[data-theme="dark"] .modeDesc {
+    color: #aaa;
+  }
+
+:root[data-theme="dark"] .proposalCard {
+    background: #17132e;
+    border-color: #6d28d9;
+  }
+
+:root[data-theme="dark"] .proposalBody {
+    color: #d4d4d8;
+  }
+
+:root[data-theme="dark"] .appliedBadge {
+    color: #4ade80;
+  }
+
+:root[data-theme="dark"] .input,
+  :root[data-theme="dark"] .draftInput {
+    background: #111;
+    color: #ededed;
+    border-color: #333;
+  }
+
+:root[data-theme="dark"] .pathButton {
+    background: #17132e;
+    border-color: #6d28d9;
+  }
+
+:root[data-theme="dark"] .pathButton:hover {
+    background: #221a45;
+  }
+
+:root[data-theme="dark"] .pathDesc {
+    color: #aaa;
+  }
+
+:root[data-theme="dark"] .inputRow,
+  :root[data-theme="dark"] .draftBox,
+  :root[data-theme="dark"] .error {
+    border-color: #262626;
+  }
+
+:root[data-theme="dark"] .error {
+    background: #2a1212;
+    border-color: #5a2a2a;
+    color: #ff8f8f;
+  }
+
+/* themeified */

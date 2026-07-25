@@ -1,0 +1,1014 @@
+/* Wspolne style edytorow parametrow (prawa kolumna master-detail). */
+
+.section {
+  display: flex;
+  flex-direction: column;
+}
+
+.head {
+  margin-bottom: 4px;
+}
+
+.title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  color: #18181b;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.subtitle {
+  margin: 6px 0 16px;
+  font-size: 13.5px;
+  color: #71717a;
+  line-height: 1.5;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 20px;
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 700;
+  color: #3f3f46;
+}
+
+.hint {
+  font-size: 12.5px;
+  color: #71717a;
+  line-height: 1.5;
+}
+
+.input,
+.textarea,
+.select {
+  padding: 10px 12px;
+  border: 1px solid #d4d4d8;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #fff;
+  color: #18181b;
+}
+
+.textarea {
+  min-height: 190px;
+  resize: vertical;
+  line-height: 1.6;
+}
+
+.input:focus,
+.textarea:focus,
+.select:focus {
+  outline: 2px solid #c4b5fd;
+  outline-offset: -1px;
+  border-color: #a78bfa;
+}
+
+.counter {
+  align-self: flex-end;
+  font-size: 12px;
+  color: #a1a1aa;
+}
+
+/* --- Suwak temperatury --- */
+.sliderRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.slider {
+  flex: 1;
+  accent-color: #7c3aed;
+}
+
+.slider:disabled {
+  opacity: 0.4;
+}
+
+.sliderValue {
+  min-width: 42px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  background: #ede9fe;
+  color: #6d28d9;
+  font-size: 14px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.tempHint {
+  margin-top: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #6d28d9;
+}
+
+.note {
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  background: #fffbeb;
+  color: #78350f;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+/* --- Lista modeli --- */
+.modelList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.modelOption {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid #e4e4e7;
+  border-radius: 10px;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.modelOption:hover {
+  border-color: #c4b5fd;
+  background: #faf5ff;
+}
+
+.modelSelected {
+  border-color: #7c3aed;
+  background: #f5f3ff;
+  box-shadow: 0 0 0 1px #7c3aed inset;
+}
+
+.modelBody {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.modelName {
+  font-size: 14px;
+  font-weight: 700;
+  color: #18181b;
+}
+
+.modelMeta {
+  font-size: 12px;
+  color: #71717a;
+}
+
+/* --- Zasady --- */
+.addRow {
+  display: flex;
+  gap: 8px;
+}
+
+.addRow .input {
+  flex: 1;
+}
+
+.list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.listItem {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid #e4e4e7;
+  border-radius: 8px;
+  background: #fff;
+  font-size: 13.5px;
+  line-height: 1.5;
+  color: #27272a;
+}
+
+.empty {
+  padding: 18px;
+  border: 1px dashed #d4d4d8;
+  border-radius: 10px;
+  text-align: center;
+  color: #a1a1aa;
+  font-size: 13px;
+}
+
+/* --- Narzedzia --- */
+.toolRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 1px solid #e4e4e7;
+  border-radius: 10px;
+  background: #fff;
+  margin-bottom: 8px;
+}
+
+.toolInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.toolName {
+  font-size: 14px;
+  font-weight: 700;
+  color: #18181b;
+}
+
+.toolDesc {
+  font-size: 12.5px;
+  color: #71717a;
+}
+
+/* Informacja o koszcie narzedzia (np. web search). */
+.toolCost {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #b45309;
+}
+
+/* Notka „tylko modele Claude” — narzedzie wyszarzone dla innych dostawcow. */
+.toolNote {
+  margin-top: 4px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #92400e;
+  background: #fef3c7;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  padding: 6px 9px;
+}
+
+/* Przelacznik (switch) */
+.switch {
+  position: relative;
+  flex-shrink: 0;
+  width: 44px;
+  height: 24px;
+  border-radius: 999px;
+  border: none;
+  background: #d4d4d8;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.switchOn {
+  background: #7c3aed;
+}
+
+.switchDisabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.switchKnob {
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.15s;
+}
+
+.switchOn .switchKnob {
+  transform: translateX(20px);
+}
+
+/* --- Przyciski --- */
+.button {
+  padding: 10px 16px;
+  border: none;
+  border-radius: 8px;
+  background: #7c3aed;
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.button:hover:not(:disabled) {
+  background: #6d28d9;
+}
+
+.button:disabled {
+  background: #c4b5fd;
+  cursor: not-allowed;
+}
+
+.removeButton {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  border: 1px solid #e4e4e7;
+  border-radius: 6px;
+  background: #fff;
+  color: #71717a;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.removeButton:hover {
+  border-color: #fca5a5;
+  color: #b91c1c;
+  background: #fef2f2;
+}
+
+/* --- Rama "w przygotowaniu" --- */
+.previewBanner {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  margin-bottom: 18px;
+  border: 1px solid #fde68a;
+  border-radius: 10px;
+  background: #fffbeb;
+  color: #78350f;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.previewDisabled {
+  opacity: 0.65;
+  pointer-events: none;
+  user-select: none;
+}
+
+.segmented {
+  display: flex;
+  gap: 6px;
+  padding: 4px;
+  border: 1px solid #e4e4e7;
+  border-radius: 10px;
+  background: #fafafa;
+  width: fit-content;
+}
+
+.segment {
+  padding: 7px 14px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: #52525b;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.segmentActive {
+  background: #7c3aed;
+  color: #fff;
+}
+
+.dropZone {
+  display: block;
+  padding: 26px 20px;
+  border: 2px dashed #c4b5fd;
+  border-radius: 12px;
+  text-align: center;
+  color: #6d28d9;
+  font-size: 13.5px;
+  font-weight: 600;
+  background: #faf5ff;
+  cursor: pointer;
+}
+
+.dropZone:hover {
+  background: #f3ebff;
+  border-color: #7c3aed;
+}
+
+/* --- Test agenta: podglad promptu --- */
+.roleNote {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  margin-bottom: 18px;
+  border: 1px solid #bfdbfe;
+  border-radius: 10px;
+  background: #eff6ff;
+  color: #1e40af;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.promptMeta {
+  margin: 10px 0 8px;
+  font-size: 12.5px;
+  color: #71717a;
+}
+
+.promptParts {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.promptPart {
+  border: 1px solid #e4e4e7;
+  border-radius: 10px;
+  background: #fff;
+  overflow: hidden;
+}
+
+.promptPartHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  background: #faf5ff;
+  border-bottom: 1px solid #ede9fe;
+}
+
+.promptPartLabel {
+  font-size: 13px;
+  font-weight: 700;
+  color: #6d28d9;
+}
+
+.promptPartSource {
+  font-size: 11.5px;
+  color: #a1a1aa;
+}
+
+.promptText {
+  margin: 0;
+  padding: 11px 13px;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #27272a;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 240px;
+  overflow-y: auto;
+}
+
+.promptRaw {
+  margin: 10px 0 0;
+  padding: 14px;
+  border: 1px solid #e4e4e7;
+  border-radius: 10px;
+  background: #fafafa;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 12px;
+  line-height: 1.6;
+  color: #27272a;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 420px;
+  overflow-y: auto;
+}
+
+.promptKnowledge {
+  padding: 11px 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.promptFile {
+  font-size: 13px;
+  color: #27272a;
+}
+
+.promptFileChars {
+  color: #a1a1aa;
+  font-size: 12px;
+}
+
+.promptFileNote {
+  margin-top: 4px;
+  font-size: 12px;
+  color: #a1a1aa;
+  line-height: 1.45;
+}
+
+.promptWarn {
+  padding: 8px 13px;
+  background: #fffbeb;
+  border-top: 1px solid #fde68a;
+  color: #92400e;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.testChat {
+  margin-top: 22px;
+  padding-top: 18px;
+  border-top: 1px solid #e4e4e7;
+}
+
+/* --- Baza wiedzy: lista plikow --- */
+.fileRow {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 13px;
+  border: 1px solid #e4e4e7;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.fileCheck {
+  margin-top: 3px;
+  flex-shrink: 0;
+}
+
+.fileInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  flex: 1;
+  min-width: 0;
+}
+
+.fileName {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #18181b;
+  word-break: break-word;
+}
+
+.fileMeta {
+  font-size: 12px;
+  color: #71717a;
+}
+
+.fileNote {
+  margin-top: 2px;
+  font-size: 12px;
+  line-height: 1.45;
+  color: #92400e;
+}
+
+.statusReady {
+  color: #15803d;
+  font-weight: 600;
+}
+
+.statusWarn {
+  color: #b45309;
+  font-weight: 600;
+}
+
+.statusError {
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+.errorBox {
+  padding: 11px 13px;
+  margin-bottom: 16px;
+  border: 1px solid #fca5a5;
+  border-radius: 9px;
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.dropZoneBusy {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+.qaPair {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid #e4e4e7;
+  border-radius: 10px;
+  background: #fff;
+  margin-bottom: 10px;
+}
+
+.qaLabel {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #a1a1aa;
+}
+
+.qaRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f4f4f5;
+}
+
+.qaToggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #52525b;
+  cursor: pointer;
+}
+
+.qaText {
+  margin: 0;
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: #27272a;
+  white-space: pre-wrap;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .title,
+  :root:not([data-theme="light"]) .modelName,
+  :root:not([data-theme="light"]) .toolName {
+    color: #ededed;
+  }
+
+  :root:not([data-theme="light"]) .subtitle,
+  :root:not([data-theme="light"]) .hint,
+  :root:not([data-theme="light"]) .modelMeta,
+  :root:not([data-theme="light"]) .toolDesc {
+    color: #a1a1aa;
+  }
+
+  :root:not([data-theme="light"]) .label {
+    color: #d4d4d8;
+  }
+
+  :root:not([data-theme="light"]) .input,
+  :root:not([data-theme="light"]) .textarea,
+  :root:not([data-theme="light"]) .select {
+    background: #17171c;
+    border-color: #3f3f46;
+    color: #ededed;
+  }
+
+  :root:not([data-theme="light"]) .modelOption,
+  :root:not([data-theme="light"]) .toolRow,
+  :root:not([data-theme="light"]) .listItem,
+  :root:not([data-theme="light"]) .qaPair,
+  :root:not([data-theme="light"]) .fileRow {
+    background: #131318;
+    border-color: #27272a;
+    color: #d4d4d8;
+  }
+
+  :root:not([data-theme="light"]) .fileName {
+    color: #ededed;
+  }
+
+  :root:not([data-theme="light"]) .fileMeta {
+    color: #a1a1aa;
+  }
+
+  :root:not([data-theme="light"]) .fileNote {
+    color: #fcd34d;
+  }
+
+  :root:not([data-theme="light"]) .statusReady {
+    color: #4ade80;
+  }
+
+  :root:not([data-theme="light"]) .statusWarn {
+    color: #fbbf24;
+  }
+
+  :root:not([data-theme="light"]) .statusError {
+    color: #ff8f8f;
+  }
+
+  :root:not([data-theme="light"]) .errorBox {
+    background: #2a1212;
+    border-color: #5a2a2a;
+    color: #ff8f8f;
+  }
+
+  :root:not([data-theme="light"]) .roleNote {
+    background: #0f1f3d;
+    border-color: #1e3a8a;
+    color: #93c5fd;
+  }
+
+  :root:not([data-theme="light"]) .promptPart {
+    background: #131318;
+    border-color: #27272a;
+  }
+
+  :root:not([data-theme="light"]) .promptPartHead {
+    background: #17132e;
+    border-bottom-color: #2a2350;
+  }
+
+  :root:not([data-theme="light"]) .promptPartLabel {
+    color: #c4b5fd;
+  }
+
+  :root:not([data-theme="light"]) .promptText,
+  :root:not([data-theme="light"]) .promptFile {
+    color: #d4d4d8;
+  }
+
+  :root:not([data-theme="light"]) .promptRaw {
+    background: #0f0f13;
+    border-color: #27272a;
+    color: #d4d4d8;
+  }
+
+  :root:not([data-theme="light"]) .promptWarn {
+    background: #241c07;
+    border-top-color: #5a4a14;
+    color: #fcd34d;
+  }
+
+  :root:not([data-theme="light"]) .testChat {
+    border-top-color: #27272a;
+  }
+
+  :root:not([data-theme="light"]) .dropZone {
+    background: #17132e;
+    border-color: #3b2f6b;
+    color: #c4b5fd;
+  }
+
+  :root:not([data-theme="light"]) .dropZone:hover {
+    background: #221a45;
+    border-color: #7c3aed;
+  }
+
+  :root:not([data-theme="light"]) .qaRow {
+    border-bottom-color: #27272a;
+  }
+
+  :root:not([data-theme="light"]) .qaToggle {
+    color: #a1a1aa;
+  }
+
+  :root:not([data-theme="light"]) .qaText {
+    color: #d4d4d8;
+  }
+
+  :root:not([data-theme="light"]) .modelOption:hover {
+    background: #1a1530;
+    border-color: #6d28d9;
+  }
+
+  :root:not([data-theme="light"]) .modelSelected {
+    background: #1a1530;
+    border-color: #7c3aed;
+  }
+
+  :root:not([data-theme="light"]) .sliderValue {
+    background: #221a45;
+    color: #c4b5fd;
+  }
+
+  :root:not([data-theme="light"]) .tempHint {
+    color: #c4b5fd;
+  }
+
+  :root:not([data-theme="light"]) .note,
+  :root:not([data-theme="light"]) .previewBanner {
+    background: #241c07;
+    border-color: #5a4a14;
+    color: #fcd34d;
+  }
+
+  :root:not([data-theme="light"]) .segmented,
+  :root:not([data-theme="light"]) .dropZone {
+    background: #131318;
+    border-color: #27272a;
+  }
+
+  :root:not([data-theme="light"]) .segment {
+    color: #a1a1aa;
+  }
+
+  :root:not([data-theme="light"]) .segmentActive {
+    background: #7c3aed;
+    color: #fff;
+  }
+
+  :root:not([data-theme="light"]) .removeButton {
+    background: #1c1c22;
+    border-color: #3f3f46;
+    color: #a1a1aa;
+  }
+
+  :root:not([data-theme="light"]) .empty {
+    border-color: #3f3f46;
+    color: #71717a;
+  }
+}
+
+:root[data-theme="dark"] .title,
+  :root[data-theme="dark"] .modelName,
+  :root[data-theme="dark"] .toolName {
+    color: #ededed;
+  }
+
+:root[data-theme="dark"] .subtitle,
+  :root[data-theme="dark"] .hint,
+  :root[data-theme="dark"] .modelMeta,
+  :root[data-theme="dark"] .toolDesc {
+    color: #a1a1aa;
+  }
+
+:root[data-theme="dark"] .label {
+    color: #d4d4d8;
+  }
+
+:root[data-theme="dark"] .input,
+  :root[data-theme="dark"] .textarea,
+  :root[data-theme="dark"] .select {
+    background: #17171c;
+    border-color: #3f3f46;
+    color: #ededed;
+  }
+
+:root[data-theme="dark"] .modelOption,
+  :root[data-theme="dark"] .toolRow,
+  :root[data-theme="dark"] .listItem,
+  :root[data-theme="dark"] .qaPair,
+  :root[data-theme="dark"] .fileRow {
+    background: #131318;
+    border-color: #27272a;
+    color: #d4d4d8;
+  }
+
+:root[data-theme="dark"] .fileName {
+    color: #ededed;
+  }
+
+:root[data-theme="dark"] .fileMeta {
+    color: #a1a1aa;
+  }
+
+:root[data-theme="dark"] .fileNote {
+    color: #fcd34d;
+  }
+
+:root[data-theme="dark"] .statusReady {
+    color: #4ade80;
+  }
+
+:root[data-theme="dark"] .statusWarn {
+    color: #fbbf24;
+  }
+
+:root[data-theme="dark"] .statusError {
+    color: #ff8f8f;
+  }
+
+:root[data-theme="dark"] .errorBox {
+    background: #2a1212;
+    border-color: #5a2a2a;
+    color: #ff8f8f;
+  }
+
+:root[data-theme="dark"] .roleNote {
+    background: #0f1f3d;
+    border-color: #1e3a8a;
+    color: #93c5fd;
+  }
+
+:root[data-theme="dark"] .promptPart {
+    background: #131318;
+    border-color: #27272a;
+  }
+
+:root[data-theme="dark"] .promptPartHead {
+    background: #17132e;
+    border-bottom-color: #2a2350;
+  }
+
+:root[data-theme="dark"] .promptPartLabel {
+    color: #c4b5fd;
+  }
+
+:root[data-theme="dark"] .promptText,
+  :root[data-theme="dark"] .promptFile {
+    color: #d4d4d8;
+  }
+
+:root[data-theme="dark"] .promptRaw {
+    background: #0f0f13;
+    border-color: #27272a;
+    color: #d4d4d8;
+  }
+
+:root[data-theme="dark"] .promptWarn {
+    background: #241c07;
+    border-top-color: #5a4a14;
+    color: #fcd34d;
+  }
+
+:root[data-theme="dark"] .testChat {
+    border-top-color: #27272a;
+  }
+
+:root[data-theme="dark"] .dropZone {
+    background: #17132e;
+    border-color: #3b2f6b;
+    color: #c4b5fd;
+  }
+
+:root[data-theme="dark"] .dropZone:hover {
+    background: #221a45;
+    border-color: #7c3aed;
+  }
+
+:root[data-theme="dark"] .qaRow {
+    border-bottom-color: #27272a;
+  }
+
+:root[data-theme="dark"] .qaToggle {
+    color: #a1a1aa;
+  }
+
+:root[data-theme="dark"] .qaText {
+    color: #d4d4d8;
+  }
+
+:root[data-theme="dark"] .modelOption:hover {
+    background: #1a1530;
+    border-color: #6d28d9;
+  }
+
+:root[data-theme="dark"] .modelSelected {
+    background: #1a1530;
+    border-color: #7c3aed;
+  }
+
+:root[data-theme="dark"] .sliderValue {
+    background: #221a45;
+    color: #c4b5fd;
+  }
+
+:root[data-theme="dark"] .tempHint {
+    color: #c4b5fd;
+  }
+
+:root[data-theme="dark"] .note,
+  :root[data-theme="dark"] .previewBanner {
+    background: #241c07;
+    border-color: #5a4a14;
+    color: #fcd34d;
+  }
+
+:root[data-theme="dark"] .segmented,
+  :root[data-theme="dark"] .dropZone {
+    background: #131318;
+    border-color: #27272a;
+  }
+
+:root[data-theme="dark"] .segment {
+    color: #a1a1aa;
+  }
+
+:root[data-theme="dark"] .segmentActive {
+    background: #7c3aed;
+    color: #fff;
+  }
+
+:root[data-theme="dark"] .removeButton {
+    background: #1c1c22;
+    border-color: #3f3f46;
+    color: #a1a1aa;
+  }
+
+:root[data-theme="dark"] .empty {
+    border-color: #3f3f46;
+    color: #71717a;
+  }
+
+/* themeified */

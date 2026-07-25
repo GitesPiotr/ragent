@@ -1,0 +1,169 @@
+.bars {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.bar {
+  border: 1px solid #ddd6fe;
+  border-radius: 10px;
+  background: #faf5ff;
+  overflow: hidden;
+}
+
+.trigger {
+  width: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+  font-family: inherit;
+}
+
+.trigger:hover {
+  background: #f3ebff;
+}
+
+.triggerLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #6d28d9;
+}
+
+.icon {
+  font-size: 14px;
+}
+
+.chevron {
+  font-size: 18px;
+  font-weight: 700;
+  color: #a78bfa;
+  line-height: 1;
+}
+
+.body {
+  padding: 4px 16px 16px;
+  border-top: 1px solid #ede9fe;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: #3f3f46;
+}
+
+.body h1,
+.body h2,
+.body h3 {
+  font-size: 14px;
+  font-weight: 700;
+  color: #18181b;
+  margin: 14px 0 6px;
+}
+
+.body p {
+  margin: 8px 0;
+}
+
+.body ul,
+.body ol {
+  margin: 8px 0;
+  padding-left: 20px;
+}
+
+.body li {
+  margin: 4px 0;
+}
+
+.body blockquote {
+  margin: 10px 0;
+  padding: 8px 12px;
+  border-left: 3px solid #c4b5fd;
+  background: #f5f3ff;
+  color: #52525b;
+}
+
+.body code {
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: #ede9fe;
+  font-size: 12.5px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .bar {
+    background: #17132e;
+    border-color: #3b2f6b;
+  }
+
+  :root:not([data-theme="light"]) .trigger:hover {
+    background: #1e1838;
+  }
+
+  :root:not([data-theme="light"]) .triggerLabel {
+    color: #c4b5fd;
+  }
+
+  :root:not([data-theme="light"]) .body {
+    border-top-color: #2a2350;
+    color: #c9c9d4;
+  }
+
+  :root:not([data-theme="light"]) .body h1,
+  :root:not([data-theme="light"]) .body h2,
+  :root:not([data-theme="light"]) .body h3 {
+    color: #ededed;
+  }
+
+  :root:not([data-theme="light"]) .body blockquote {
+    background: #1a1530;
+    border-left-color: #6d28d9;
+    color: #a1a1aa;
+  }
+
+  :root:not([data-theme="light"]) .body code {
+    background: #2a2350;
+  }
+}
+
+:root[data-theme="dark"] .bar {
+    background: #17132e;
+    border-color: #3b2f6b;
+  }
+
+:root[data-theme="dark"] .trigger:hover {
+    background: #1e1838;
+  }
+
+:root[data-theme="dark"] .triggerLabel {
+    color: #c4b5fd;
+  }
+
+:root[data-theme="dark"] .body {
+    border-top-color: #2a2350;
+    color: #c9c9d4;
+  }
+
+:root[data-theme="dark"] .body h1,
+  :root[data-theme="dark"] .body h2,
+  :root[data-theme="dark"] .body h3 {
+    color: #ededed;
+  }
+
+:root[data-theme="dark"] .body blockquote {
+    background: #1a1530;
+    border-left-color: #6d28d9;
+    color: #a1a1aa;
+  }
+
+:root[data-theme="dark"] .body code {
+    background: #2a2350;
+  }
+
+/* themeified */
