@@ -32,6 +32,8 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+# wyjatek: plik-przyklad BEZ wartosci ma byc w repo (.env.local dalej ignorowany)
+!.env.example
 
 # vercel
 .vercel
