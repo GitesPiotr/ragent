@@ -16,9 +16,17 @@ Trzy zakresy i ich zastosowania:
 - **Top-p** — pozwala modelowi wybierać z ograniczonego zbioru odpowiedzi, co dodatkowo stabilizuje generowanie.
 - **Max tokens** — kontroluje długość odpowiedzi.
 
+## Kiedy temperatury nie ustawia się wcale
+Nie każdy model przyjmuje ręcznie ustawianą temperaturę. **Nowsze modele — na przykład Opus 4.8 i Sonnet 5 — same dobierają poziom losowości** i tego parametru nie przyjmują. Przy takim modelu temperatury po prostu się nie ustawia: opisane wyżej zakresy 0–0.3 / 0.4–0.6 / 0.7–1.0 wtedy nie mają zastosowania, bo model dopasowuje losowość samodzielnie do charakteru zadania.
+
+Ręczne ustawianie temperatury działa natomiast w modelach, które ten parametr przyjmują — na przykład w Haiku 4.5 oraz w modelach lokalnych. Tam wszystko opisane powyżej obowiązuje bez zmian.
+
+**W praktyce:** najpierw sprawdź, czy wybrany model w ogóle przyjmuje temperaturę. Jeśli tak — dobierz wartość według trzech zakresów. Jeśli nie — pomiń ten krok i zadbaj o precyzję inaczej: dokładniejszym opisem osobowości agenta i jasnymi zasadami.
+
 ## Typowe błędy
 - **Zbyt wysoka temperatura w zadaniach formalnych** (np. raporty, audyty) → odpowiedzi nielogiczne, rozwlekłe, odbiegające od tematu. Rozwiązanie: ustaw **0–0.3**.
 - **Zbyt niska temperatura w zadaniach kreatywnych** (np. treści marketingowe, burze mózgów) → odpowiedzi nudne i powtarzalne. Rozwiązanie: ustaw **0.7–1.0**.
+- **Założenie, że każdy model przyjmuje temperaturę** → przy modelach, które dobierają losowość samodzielnie (np. Opus 4.8, Sonnet 5), nie ma czego ustawiać, a próba narzucenia wartości kończy się błędem. Rozwiązanie: sprawdź wybrany model i przy takich modelach pomiń ten krok.
 
 ## Krótki przykład
 - Agent przygotowujący **raport dla zarządu** → temperatura **0.2** (wymagana precyzja i spójność, bez dygresji).
@@ -30,7 +38,8 @@ Trzy zakresy i ich zastosowania:
 ## Rozstrzygnięcie skali temperatury
 > W tej aplikacji obowiązuje skala 0–1 (wersja z Szóstego kroku:
 > 0–0.3 / 0.4–0.6 / 0.7–1.0), ponieważ suwak temperatury w kreatorze działa
-> w zakresie 0–1, a API dostawców przyjmuje temperaturę w tym zakresie.
+> w zakresie 0–1, a API dostawców — w modelach, które temperaturę przyjmują —
+> oczekuje jej właśnie w tym zakresie.
 > Skala z Modułu 3 (do 1.5 i więcej) jest podana wyłącznie jako kontekst
 > historyczny z materiałów AIDEAS i NIE ma zastosowania w tej aplikacji.
 

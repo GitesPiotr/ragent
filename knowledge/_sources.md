@@ -1,6 +1,6 @@
 # Raport źródeł — baza wiedzy mentora AIDEAS
 
-Ten plik jest listą kontrolną do ręcznego domknięcia. Dla każdego pojęcia: z których plików PDF pochodzi, gdzie nastąpiło scalenie oraz wszystkie znaczniki `[SPRZECZNOŚĆ...]` i `[DO UZUPEŁNIENIA...]`.
+Ten plik jest zapisem pochodzenia wiedzy. Dla każdego pojęcia: z których plików PDF pochodzi, gdzie nastąpiło scalenie oraz jak rozstrzygnięto rozbieżności i braki w materiałach. Wszystkie pozycje są domknięte — w plikach wiedzy nie ma już otwartych miejsc do uzupełnienia.
 
 Materiały źródłowe: szkolenie **AIDEAS Vibe Coding, 2025**. Pliki PDF traktowane jako tylko-do-odczytu (nie modyfikowane).
 
@@ -37,8 +37,8 @@ Materiały źródłowe: szkolenie **AIDEAS Vibe Coding, 2025**. Pliki PDF trakto
 
 **Uwaga (niespójność nazewnictwa w samych materiałach — do ewentualnego ujednolicenia ręcznego):** slajdy zapisują różnie: „GPT-4o" vs „GPT-4"; „Gemini 2.0 Pro" vs „Gemini Pro 2.0" vs „Gemini Pro"; „Claude 3" vs „Claude 3.5". W pliku zachowano każde wystąpienie wiernie ze slajdu.
 
-**Znaczniki:**
-- `[DO UZUPEŁNIENIA: ewentualne dodatkowe „typowe błędy" dot. wyboru modelu — brak dedykowanej listy w materiałach AIDEAS.]` — sekcja „Typowe błędy" w model.md. (Wypisane błędy wyprowadzono z sekcji o kosztach i planie B; osobnego slajdu „błędy" dla modelu nie ma.)
+**Braki w materiałach i sposób ich domknięcia:**
+- Materiały AIDEAS nie mają osobnego slajdu „typowe błędy" dla wyboru modelu. Trzy pierwsze punkty tej sekcji w model.md wyprowadzono z materiałów kursu (sekcje o kosztach i planie B). Sekcję **uzupełniono następnie o cztery punkty spoza materiałów AIDEAS** — pochodzą z ogólnych, aktualnych dobrych praktyk budowania agentów: dobór mocy modelu do trudności zadania (w obie strony), różnice w przyjmowaniu parametrów przez nowsze modele oraz okno kontekstu. Notka atrybucyjna w pliku zawęża pochodzenie z kursu do trzech pierwszych punktów, żeby nie przypisywać materiałom AIDEAS treści, których w nich nie ma.
 - Uwaga jakościowa: kwoty $45,000 / $270,000 opisane w pliku jako **ilustracja proporcji**, nie realny cennik (zgodnie z poleceniem — mentor nie ma podawać ich laikowi jako stawek).
 
 ---
@@ -54,7 +54,9 @@ Materiały źródłowe: szkolenie **AIDEAS Vibe Coding, 2025**. Pliki PDF trakto
 
 **Wartości odzyskane z obrazów slajdów** (Szósty krok): skala 0 = maks. przewidywalność, 1 = wysoka losowość *(s. 3)*; 0–0.3 *(s. 4)*, 0.4–0.6 *(s. 5)*, 0.7–1.0 *(s. 6)*; przykłady: raport zarządu 0.2 *(s. 7)*, analiza marketingowa 0.4–0.5 *(s. 8)*, pomysły na kampanię 0.7–0.9 *(s. 9)*.
 
-**Znaczniki:**
+**Korekta spoza materiałów AIDEAS (stan na 2026):** materiały kursu zakładają, że temperaturę ustawia się dla każdego modelu. To już nieaktualne — **nowsze modele (np. Opus 4.8, Sonnet 5) nie przyjmują ręcznej temperatury i same dobierają poziom losowości**. Do `temperature.md` dopisano z tego powodu sekcję „Kiedy temperatury nie ustawia się wcale" oraz jeden punkt w „Typowych błędach"; treści te **nie pochodzą z materiałów AIDEAS**, tylko z aktualnego stanu API dostawców. Wiedza o skali 0–1 została zachowana bez zmian — dla modeli, które temperaturę przyjmują, pozostaje poprawna. Odpowiada temu flaga `supportsTemperature` w `lib/config/models.js`.
+
+**Rozstrzygnięcia:**
 - **ROZSTRZYGNIĘTE: obowiązuje skala 0–1 (Szósty krok); skala z Modułu 3 zachowana tylko jako kontekst historyczny.** Dwie różne skale temperatury w materiałach:
   - **Szósty krok** (obowiązująca): niska **0–0.3**, średnia **0.4–0.6**, wysoka **0.7–1.0** (skala 0–1).
   - **MODUŁ 3 – Co to AI Pogłębienie** (s. 14): niska **0.2–0.5**, średnia **0.7–1.0**, wysoka **1.5 i więcej** (skala >1).
@@ -70,7 +72,7 @@ Materiały źródłowe: szkolenie **AIDEAS Vibe Coding, 2025**. Pliki PDF trakto
 
 **Miejsca scalenia:** Siódmy krok (czego mają dotyczyć zasady) + Drugi krok (jak projektować kroki-zadania) połączone jako komplementarne; brak powtórzeń.
 
-**Znaczniki:** brak `[SPRZECZNOŚĆ]` i brak `[DO UZUPEŁNIENIA]` — pojęcie w pełni pokryte w materiałach.
+**Rozbieżności i braki:** żadnych — pojęcie w pełni pokryte w materiałach.
 
 ---
 
@@ -87,8 +89,8 @@ Materiały źródłowe: szkolenie **AIDEAS Vibe Coding, 2025**. Pliki PDF trakto
 
 **Miejsca scalenia:** pojęcie „narzędzia" jest w materiałach **rozproszone** (nie ma jednego slajdu). Złożone z: (a) źródeł wiedzy/danych (Czwarty krok, RAG), (b) funkcji platformy (Dziewiąty krok), (c) integracji no-code (Rozwój bez kodu) — ujęte jako przykłady wokół jednej definicji zewnętrznych zdolności.
 
-**Znaczniki:**
-- `[DO UZUPEŁNIENIA: brak w materiałach AIDEAS jednego, dedykowanego slajdu o „narzędziach" jako wywoływanych zdolnościach agenta — sekcja „Typowe błędy" w tools.md wyprowadzona z materiałów o bazie wiedzy, źródłach i integracjach; warto potwierdzić/rozszerzyć.]`
+**Braki w materiałach i sposób ich domknięcia:**
+- Materiały AIDEAS nie mają jednego, dedykowanego slajdu o „narzędziach" rozumianych jako wywoływane zdolności agenta. Trzy pierwsze punkty sekcji „Typowe błędy" w tools.md wyprowadzono z materiałów o bazie wiedzy, źródłach danych i integracjach. Sekcję **uzupełniono następnie o cztery punkty spoza materiałów AIDEAS** — pochodzą z ogólnych, aktualnych dobrych praktyk budowania agentów: dobór zestawu narzędzi do potrzeb, jakość opisu narzędzia, oczekiwania wobec narzędzi niepodłączonych oraz zachowanie agenta przy błędzie narzędzia. Punkty te celowo nie mają odniesienia do slajdów — nie pochodzą z kursu.
 
 ---
 
@@ -96,4 +98,4 @@ Materiały źródłowe: szkolenie **AIDEAS Vibe Coding, 2025**. Pliki PDF trakto
 Sygnalizuję dla porządku — nie destylowane do osobnych plików: **Kontekst / baza wiedzy** (częściowo wykorzystany w tools.md jako źródła danych), **Format odpowiedzi**, **testowanie / cykl PDCA** (Ósmy i Dziesiąty krok), **OKR** (Pierwszy krok).
 
 ## Uwaga techniczna o ekstrakcji
-Nazwy plików PDF miały polskie znaki w formie zdekomponowanej (NFD), a ekstraktor tekstu gubił wszystkie cyfry. Wszystkie wartości liczbowe i nazwy modeli w model.md i temperature.md odczytano z **renderu stron PDF do obrazu** i przepisano wiernie. Fragmenty, których nie dało się odczytać jednoznacznie, oznaczono `[DO UZUPEŁNIENIA]` (w tej kuracji takich braków w warstwie liczbowej nie było — wszystkie kluczowe wartości udało się odczytać z pełną pewnością).
+Nazwy plików PDF miały polskie znaki w formie zdekomponowanej (NFD), a ekstraktor tekstu gubił wszystkie cyfry. Wszystkie wartości liczbowe i nazwy modeli w model.md i temperature.md odczytano z **renderu stron PDF do obrazu** i przepisano wiernie. Fragmenty niemożliwe do jednoznacznego odczytania zostałyby odnotowane jako braki do ręcznego uzupełnienia — w tej kuracji takich braków w warstwie liczbowej nie było, wszystkie kluczowe wartości udało się odczytać z pełną pewnością.
