@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabase, isSupabaseConfigured } from "@/lib/supabase/client";
+import { createClient, isSupabaseConfigured } from "@/lib/supabase/server";
 import { fetchOllamaModels } from "@/lib/providers/ollama";
 import { resolveOllamaUrl } from "@/lib/settings/serverSettings";
 
@@ -11,7 +11,8 @@ export const dynamic = "force-dynamic";
 // Adres Ollamy przychodzi z ustawień przeglądarki (walidowany serwerowo).
 
 async function checkSupabase() {
-  if (!isSupabaseConfigured || !supabase) {
+  const supabase = isSupabaseConfigured ? await createClient() : null;
+  if (!supabase) {
     return {
       status: "error",
       detail: "Brak konfiguracji (NEXT_PUBLIC_SUPABASE_URL / ANON_KEY).",

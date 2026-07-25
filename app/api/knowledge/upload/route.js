@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { supabase, isSupabaseConfigured } from "@/lib/supabase/client";
+import { createClient, isSupabaseConfigured } from "@/lib/supabase/server";
 import {
   extractTextFromFile,
   isAcceptedFile,
@@ -24,7 +24,8 @@ function safeStorageName(fileName) {
 // Ekstrakcja MUSI byc serwerowa (PDF.js), dlatego plik idzie przez ten endpoint,
 // a nie prosto z przegladarki do Storage.
 export async function POST(request) {
-  if (!isSupabaseConfigured || !supabase) {
+  const supabase = isSupabaseConfigured ? await createClient() : null;
+  if (!supabase) {
     return NextResponse.json(
       { error: "Brak konfiguracji Supabase. Uzupełnij .env.local." },
       { status: 500 },

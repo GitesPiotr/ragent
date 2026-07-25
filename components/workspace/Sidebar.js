@@ -1,7 +1,9 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname, useParams } from "next/navigation";
+import { usePathname, useParams, useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase/client";
 import styles from "./Sidebar.module.css";
 
 // Nawigacja obszaru roboczego. Aktywna zakladka wynika z URL (usePathname),
@@ -9,7 +11,41 @@ import styles from "./Sidebar.module.css";
 export function Sidebar() {
   const pathname = usePathname();
   const params = useParams();
+  const router = useRouter();
   const projectId = params?.projectId;
+
+  // Email zalogowanego uzytkownika — pokazywany nad przyciskiem wylogowania.
+  const [email, setEmail] = useState(null);
+  const [loggingOut, setLoggingOut] = useState(false);
+
+  useEffect(() => {
+    let alive = true;
+    if (!supabase) return;
+    (async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+      if (alive) setEmail(user?.email ?? null);
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  async function handleLogout() {
+    if (loggingOut) return;
+    setLoggingOut(true);
+    try {
+      // Wylogowanie po stronie serwera czysci ciasteczka sesji; klient czysci
+      // swoj stan. Dopiero oba razem daja pewne wylogowanie.
+      await fetch("/api/auth/wyloguj", { method: "POST" });
+      if (supabase) await supabase.auth.signOut();
+    } catch {
+      /* i tak przechodzimy na ekran logowania */
+    }
+    router.replace("/logowanie");
+    router.refresh();
+  }
 
   const onProjects = pathname === "/projekty";
   // Aktywne na kazdej trasie agentow: /agenty oraz /projekty/[id]/agenty(/[id]).
@@ -66,6 +102,22 @@ export function Sidebar() {
           </span>
           Ustawienia
         </Link>
+
+        <div className={styles.account}>
+          {email && (
+            <span className={styles.accountEmail} title={email}>
+              {email}
+            </span>
+          )}
+          <button
+            type="button"
+            className={styles.logoutButton}
+            onClick={handleLogout}
+            disabled={loggingOut}
+          >
+            {loggingOut ? "Wylogowuję…" : "Wyloguj się"}
+          </button>
+        </div>
       </div>
     </nav>
   );

@@ -138,3 +138,72 @@
 }
 
 /* themeified */
+
+/* --- Konto zalogowanego uzytkownika (na dole sidebara) --- */
+.account {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid #ececf1;
+}
+
+.accountEmail {
+  font-size: 11px;
+  color: #71717a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.logoutButton {
+  padding: 7px 10px;
+  border: 1px solid #d4d4d8;
+  border-radius: 8px;
+  background: transparent;
+  color: #52525b;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.logoutButton:hover:not(:disabled) {
+  background: #f4f4f5;
+  color: #18181b;
+}
+
+.logoutButton:disabled {
+  color: #a1a1aa;
+  cursor: not-allowed;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .account {
+    border-top-color: #262233;
+  }
+  :root:not([data-theme="light"]) .logoutButton {
+    border-color: #3f3a4d;
+    color: #a1a1aa;
+  }
+  :root:not([data-theme="light"]) .logoutButton:hover:not(:disabled) {
+    background: #211d2c;
+    color: #ededed;
+  }
+}
+
+:root[data-theme="dark"] .account {
+  border-top-color: #262233;
+}
+
+:root[data-theme="dark"] .logoutButton {
+  border-color: #3f3a4d;
+  color: #a1a1aa;
+}
+
+:root[data-theme="dark"] .logoutButton:hover:not(:disabled) {
+  background: #211d2c;
+  color: #ededed;
+}

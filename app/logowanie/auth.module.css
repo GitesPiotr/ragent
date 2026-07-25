@@ -1,0 +1,183 @@
+/* Wspolny styl ekranow logowania i rejestracji.
+   Tokeny (fiolet #7c3aed, promien 8px, obramowanie #d4d4d8) sa te same,
+   co w sections.module.css i workspace.module.css. */
+
+.screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: #fafafa;
+}
+
+.card {
+  width: 100%;
+  max-width: 400px;
+  background: #fff;
+  border: 1px solid #e4e4e7;
+  border-radius: 14px;
+  padding: 32px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+}
+
+.brand {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #7c3aed;
+  margin-bottom: 6px;
+}
+
+.title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #18181b;
+  margin: 0 0 6px;
+}
+
+.subtitle {
+  font-size: 14px;
+  color: #52525b;
+  margin: 0 0 24px;
+  line-height: 1.5;
+}
+
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.label {
+  font-size: 13px;
+  font-weight: 600;
+  color: #3f3f46;
+}
+
+.input {
+  padding: 10px 12px;
+  border: 1px solid #d4d4d8;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  background: #fff;
+  color: #18181b;
+}
+
+.input:focus {
+  outline: 2px solid #c4b5fd;
+  outline-offset: -1px;
+  border-color: #a78bfa;
+}
+
+.input:disabled {
+  background: #f4f4f5;
+  color: #a1a1aa;
+}
+
+.button {
+  padding: 11px 16px;
+  border: none;
+  border-radius: 8px;
+  background: #7c3aed;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.button:hover:not(:disabled) {
+  background: #6d28d9;
+}
+
+.button:disabled {
+  background: #c4b5fd;
+  cursor: not-allowed;
+}
+
+.error {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.info {
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  color: #166534;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.footer {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid #f4f4f5;
+  font-size: 13px;
+  color: #52525b;
+  text-align: center;
+}
+
+.link {
+  color: #7c3aed;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.link:hover {
+  text-decoration: underline;
+}
+
+/* --- Logowanie deweloperskie (tylko tryb dev) --- */
+.devBlock {
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px dashed #d4d4d8;
+}
+
+.devButton {
+  width: 100%;
+  padding: 10px 16px;
+  border: 1px solid #d4d4d8;
+  border-radius: 8px;
+  background: #fff;
+  color: #3f3f46;
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.devButton:hover:not(:disabled) {
+  background: #fafafa;
+  border-color: #a1a1aa;
+}
+
+.devButton:disabled {
+  color: #a1a1aa;
+  cursor: not-allowed;
+}
+
+.devHint {
+  display: block;
+  margin-top: 8px;
+  font-size: 12px;
+  color: #71717a;
+  line-height: 1.5;
+  text-align: center;
+}
