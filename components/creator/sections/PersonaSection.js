@@ -6,22 +6,11 @@ import {
   setActivity,
   setLastEvent,
 } from "@/lib/state/actions";
-import { modelSupportsTemperature } from "@/lib/config/models";
 import styles from "./sections.module.css";
-
-// Opis charakteru danej temperatury (ten sam podzial co w starym kreatorze).
-function temperatureHint(value) {
-  if (value <= 0.3) return "Precyzja — raporty, analizy, fakty";
-  if (value <= 0.6) return "Równowaga — materiały robocze, rekomendacje";
-  return "Kreatywność — burze mózgów, treści twórcze";
-}
 
 export function PersonaSection() {
   const { state, dispatch } = useAppState();
   const agent = state.agent;
-
-  // Nie kazdy model przyjmuje temperature (Opus 4.8 / Sonnet 5 dobieraja ja same).
-  const tempSupported = modelSupportsTemperature(agent.provider, agent.model);
 
   function changeField(field, value) {
     dispatch(updateAgentField(field, value));
@@ -59,46 +48,6 @@ export function PersonaSection() {
         <span className={styles.counter}>
           {(agent.persona || "").length} znaków
         </span>
-      </div>
-
-      <div className={styles.field}>
-        <label className={styles.label} htmlFor="persona-temperature">
-          Temperatura (kreatywność odpowiedzi)
-        </label>
-        <span className={styles.hint}>
-          Niska = przewidywalnie i pod fakty. Wysoka = swobodnie i twórczo.
-        </span>
-
-        <div className={styles.sliderRow}>
-          <input
-            id="persona-temperature"
-            className={styles.slider}
-            type="range"
-            min="0"
-            max="1"
-            step="0.1"
-            value={agent.temperature}
-            disabled={!tempSupported}
-            onChange={(e) =>
-              changeField("temperature", parseFloat(e.target.value))
-            }
-          />
-          <span className={styles.sliderValue}>
-            {Number(agent.temperature).toFixed(1)}
-          </span>
-        </div>
-
-        {tempSupported ? (
-          <span className={styles.tempHint}>
-            {temperatureHint(agent.temperature)}
-          </span>
-        ) : (
-          <div className={styles.note}>
-            Model <strong>{agent.model}</strong> sam dobiera poziom losowości i
-            nie pozwala ustawiać temperatury ręcznie. Suwak jest nieaktywny —
-            to normalne, nie błąd.
-          </div>
-        )}
       </div>
     </div>
   );

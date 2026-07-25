@@ -12,6 +12,7 @@ import {
 import { ConceptBar } from "./ConceptBar";
 import { PersonaSection } from "./sections/PersonaSection";
 import { ModelSection } from "./sections/ModelSection";
+import { TemperatureSection } from "./sections/TemperatureSection";
 import { RulesSection } from "./sections/RulesSection";
 import { ToolsSection } from "./sections/ToolsSection";
 import { QaSection } from "./sections/QaSection";
@@ -24,6 +25,7 @@ import styles from "./MasterDetailCreator.module.css";
 const SECTION_COMPONENTS = {
   persona: PersonaSection,
   model: ModelSection,
+  temperature: TemperatureSection,
   rules: RulesSection,
   tools: ToolsSection,
   knowledgeBase: KnowledgeBaseSection,
