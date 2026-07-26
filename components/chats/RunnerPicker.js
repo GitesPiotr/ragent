@@ -52,6 +52,10 @@ export function RunnerLabel({
 export function RunnerSelect({ value, onChange }) {
   const { settings } = useSettings();
   const [groups, setGroups] = useState([]);
+  // Blad wczytywania agentow. MUSI byc widoczny: po wlaczeniu RLS (Sesja 4)
+  // nieudane zapytanie objawia sie pusta lista, a nie wyjatkiem, wiec bez
+  // tego komunikatu awaria wyglada identycznie jak „nie masz jeszcze agentow”.
+  const [agentsError, setAgentsError] = useState(null);
   const [ollama, setOllama] = useState([]);
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
@@ -77,8 +81,14 @@ export function RunnerSelect({ value, onChange }) {
             .filter((p) => byProject.has(p.id))
             .map((p) => ({ project: p, agents: byProject.get(p.id) })),
         );
-      } catch {
+        setAgentsError(null);
+      } catch (e) {
+        if (!alive) return;
+        // Wczesniej stalo tu samo setGroups([]) — blad znikal bez sladu,
+        // a uzytkownik widzial liste bez agentow i nie mial jak sie
+        // dowiedziec, ze cos poszlo nie tak.
         setGroups([]);
+        setAgentsError(e?.message || "Nie udało się wczytać listy agentów.");
       }
     })();
     return () => {
@@ -256,7 +266,14 @@ export function RunnerSelect({ value, onChange }) {
 
         {open && (
           <ul className={styles.dropdownList} role="listbox" ref={listRef}>
-            {options.length === 0 && (
+            {/* Modele AI sa na liscie zawsze, wiec sam brak agentow nie zrobilby
+                z options pustej tablicy — blad musi miec wlasny wiersz. */}
+            {agentsError && (
+              <li className={styles.dropdownError} role="presentation">
+                Nie udało się wczytać agentów: {agentsError}
+              </li>
+            )}
+            {options.length === 0 && !agentsError && (
               <li className={styles.dropdownEmpty}>
                 Brak dostępnych rozmówców
               </li>
