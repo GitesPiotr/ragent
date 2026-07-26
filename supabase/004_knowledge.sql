@@ -25,24 +25,43 @@ insert into storage.buckets (id, name, public)
 values ('knowledge', 'knowledge', false)
 on conflict (id) do nothing;
 
--- Polityki dostepu do bucketu.
--- UWAGA: aplikacja jest JEDNOUZYTKOWNIKOWA i dziala lokalnie, wiec dajemy
--- pelny dostep rolom anon/authenticated — spojnie z decyzja o wylaczonym RLS
--- na tabelach (patrz supabase/schema.sql). Nie wystawiaj tego publicznie.
-do $$
-begin
-  if not exists (
-    select 1 from pg_policies
-     where schemaname = 'storage' and tablename = 'objects'
-       and policyname = 'aideas_knowledge_all'
-  ) then
-    create policy "aideas_knowledge_all" on storage.objects
-      for all
-      to anon, authenticated
-      using (bucket_id = 'knowledge')
-      with check (bucket_id = 'knowledge');
-  end if;
-end $$;
+-- Polityki dostepu do bucketu — NIEAKTUALNE, CELOWO WYLACZONE Z TEGO SKRYPTU.
+--
+-- !!! NIE ODKOMENTOWUJ TEGO BLOKU !!!
+--
+-- Pierwotnie skrypt zakladal tu polityke aideas_knowledge_all: "for all,
+-- to anon + authenticated, using (bucket_id = 'knowledge')". Zaden warunek
+-- nie dotyczyl wlasciciela — kazdy, kto znal sciezke, mial dostep do kazdego
+-- pliku, lacznie z niezalogowanymi. Bylo to spojne z owczesna decyzja
+-- o aplikacji JEDNOUZYTKOWNIKOWEJ i wylaczonym RLS na tabelach.
+--
+-- Od Sesji 5 (migracja 013_rls_storage.sql) obowiazuje polityka
+-- knowledge_wlasne_pliki, ktora dopuszcza konto wylacznie do jego wlasnego
+-- folderu <owner_id>/ w buckecie.
+--
+-- Skrypty w tym folderze sa idempotentne i uruchamia sie je ponownie
+-- "na wszelki wypadek". Gdyby ten blok zostal aktywny, takie uruchomienie
+-- ODTWORZYLOBY otwarta polityke obok nowej. Polityki PERMISSIVE lacza sie
+-- przez OR, wiec bucket zostalby OTWARTY DLA WSZYSTKICH — po cichu, bez
+-- bledu i bez ostrzezenia.
+--
+-- Zostaje zakomentowane, a nie usuniete: zeby bylo widac, co tu stalo
+-- i dlaczego juz nie stoi.
+--
+--   do $$
+--   begin
+--     if not exists (
+--       select 1 from pg_policies
+--        where schemaname = 'storage' and tablename = 'objects'
+--          and policyname = 'aideas_knowledge_all'
+--     ) then
+--       create policy "aideas_knowledge_all" on storage.objects
+--         for all
+--         to anon, authenticated
+--         using (bucket_id = 'knowledge')
+--         with check (bucket_id = 'knowledge');
+--     end if;
+--   end $$;
 
 -- ------------------------------------------------------------
 --  2) TABELA knowledge_files
