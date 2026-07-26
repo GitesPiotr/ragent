@@ -78,14 +78,34 @@ create index if not exists messages_conversation_idx
   on public.messages (conversation_id, created_at);
 
 -- ------------------------------------------------------------
---  RLS — WYLACZONE (spojnie z pozostalymi tabelami).
---  Supabase potrafi wlaczyc RLS na nowych tabelach; wylaczamy je jawnie,
---  bo aplikacja jest JEDNOUZYTKOWNIKOWA i dziala lokalnie. Bez tego klucz
---  anon nie mialby prawa zapisu i rozmowy nie zapisywalyby sie.
---  UWAGA: nie wystawiaj tej bazy publicznie w tym stanie.
+--  RLS — NIEAKTUALNE, CELOWO WYLACZONE Z TEGO SKRYPTU.
+--
+--  !!! NIE ODKOMENTOWUJ TYCH DWOCH LINII !!!
+--
+--  Pierwotnie ten skrypt jawnie WYLACZAL Row Level Security na
+--  conversations i messages — bo aplikacja byla jednouzytkownikowa,
+--  chodzila lokalnie i pisala kluczem anon.
+--
+--  Od Sesji 4 (migracje 008-012) aplikacja jest WIELOKONTOWA, a izolacja
+--  danych opiera sie wlasnie na RLS. Kazda z pieciu tabel ma polityke
+--  "<tabela>_wlasne" filtrujaca po auth.uid() = owner_id.
+--
+--  Skrypty w tym folderze sa idempotentne i uruchamia sie je ponownie
+--  "na wszelki wypadek". Gdyby te dwie linie zostaly aktywne, takie
+--  ponowne uruchomienie WYLACZYLOBY IZOLACJE na conversations i messages
+--  — po cichu, bez bledu i bez ostrzezenia. Kazde konto zobaczyloby
+--  wtedy cudze rozmowy i ich tresc.
+--
+--  Dlatego zostaja zakomentowane, a nie usuniete: zeby bylo widac,
+--  co tu kiedys stalo i dlaczego juz nie stoi.
+--
+--    alter table public.conversations disable row level security;
+--    alter table public.messages      disable row level security;
+--
+--  Wlasciwe polityki zakladaja:
+--    supabase/011_rls_conversations.sql
+--    supabase/012_rls_messages.sql
 -- ------------------------------------------------------------
-alter table public.conversations disable row level security;
-alter table public.messages      disable row level security;
 
 -- Kontrola po migracji:
 -- select count(*) from public.conversations;
