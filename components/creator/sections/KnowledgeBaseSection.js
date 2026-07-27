@@ -229,10 +229,20 @@ export function KnowledgeBaseSection() {
           ))}
         </div>
 
-        {mode === "selected" && (
+        {/* Tryb „z wybranych" i zero zaznaczonych to stan, ktory WYGLADA
+            na wlaczona wiedze, a dziala jak wylaczona. Mowimy o tym wprost,
+            zamiast pokazywac spokojne „wybrane: 0". */}
+        {mode === "selected" && selectedIds.length === 0 && files.length > 0 && (
+          <span className={styles.note}>
+            Nie zaznaczyłeś ani jednego pliku, więc agent nadal nie korzysta z
+            żadnej wiedzy. Zaznacz poniżej te dokumenty, które ma czytać.
+          </span>
+        )}
+        {mode === "selected" && selectedIds.length > 0 && (
           <span className={styles.hint} style={{ marginTop: 8 }}>
-            Zaznacz poniżej pliki, z których agent ma korzystać (wybrane:{" "}
-            {selectedIds.length}).
+            Agent czyta {selectedIds.length}{" "}
+            {selectedIds.length === 1 ? "zaznaczony plik" : "zaznaczone pliki"}{" "}
+            z magazynu. Pozostałe go nie dotyczą.
           </span>
         )}
         {mode === "none" && (
@@ -245,15 +255,34 @@ export function KnowledgeBaseSection() {
 
       {/* --- MAGAZYN KONTA --- */}
       <div className={styles.field}>
-        <span className={styles.label}>
-          Twój magazyn wiedzy ({files.length})
-        </span>
+        <div className={styles.labelRow}>
+          <span className={styles.label}>
+            Twój magazyn wiedzy ({files.length})
+          </span>
+
+          {/* NOWA KARTA, i to nie jest ozdobnik.
+              Kreator nie ma autosave, a strona agenta przy kazdym montazu
+              wczytuje go z bazy i nadpisuje state.agent. Zwykly link
+              wyprowadzilby uzytkownika ze srodka konfiguracji i po powrocie
+              skasowalby jego niezapisane zmiany — bez ostrzezenia, bo
+              beforeunload lapie tylko zamkniecie karty, nie nawigacje
+              wewnatrz aplikacji. Nowa karta zostawia kreator zamontowany. */}
+          <a
+            href="/wiedza"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.manageLink}
+          >
+            Zarządzaj magazynem ↗
+          </a>
+        </div>
 
         {loading ? (
           <div className={styles.empty}>Wczytuję pliki…</div>
         ) : files.length === 0 ? (
           <div className={styles.empty}>
-            Magazyn jest pusty. Wgraj pierwszy dokument powyżej.
+            Magazyn jest pusty. Wgraj pierwszy dokument powyżej — będzie
+            dostępny dla wszystkich Twoich agentów, nie tylko dla tego.
           </div>
         ) : (
           <div className={styles.list}>
