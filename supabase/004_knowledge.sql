@@ -12,8 +12,25 @@
 --
 --  Skrypt jest idempotentny — mozna go uruchomic ponownie.
 --
---  MODEL DANYCH: pliki wiedzy naleza do PROJEKTU (knowledge_files.project_id).
---  Agent tylko WSKAZUJE, ktorych uzywa (agents.knowledge_mode + knowledge_file_ids).
+--  MODEL DANYCH — UWAGA, TEN OPIS JEST JUZ HISTORYCZNY.
+--
+--  Ten skrypt zakladal, ze pliki wiedzy naleza do PROJEKTU
+--  (knowledge_files.project_id), a agent tylko WSKAZUJE, ktorych uzywa
+--  (agents.knowledge_mode + knowledge_file_ids).
+--
+--  Druga polowa zdania obowiazuje do dzis. Pierwsza NIE: od migracji 015
+--  pliki naleza do KONTA (owner_id), tworza jedna plaska pule wspolna dla
+--  wszystkich projektow, a kolumny project_id juz nie ma. Kaskade
+--  "on delete cascade", przez ktora usuniecie projektu kasowalo pliki,
+--  zdjela migracja 014.
+--
+--  Znikl tez tryb knowledge_mode = 'all' opisany nizej w punkcie 3 —
+--  w magazynie konta znaczylby "wszystko, co mam". Ograniczenie zaciesnila
+--  migracja 015 do ('none', 'selected').
+--
+--  Skrypt zostaje w tej postaci, bo odtwarza stan historyczny: na swiezej
+--  bazie uruchamia sie go PRZED 014 i 015, ktore doprowadzaja schemat
+--  do dzisiejszego ksztaltu.
 -- ============================================================
 
 -- ------------------------------------------------------------
@@ -68,9 +85,15 @@ on conflict (id) do nothing;
 -- ------------------------------------------------------------
 create table if not exists public.knowledge_files (
   id             uuid primary key default gen_random_uuid(),
+  -- USUNIETA przez migracje 015. Kaskade zdjela wczesniej 014 — to wlasnie
+  -- ona sprawiala, ze usuniecie projektu kasowalo pliki po cichu,
+  -- z pominieciem RLS, zostawiajac sieroty w Storage.
   project_id     uuid not null references public.projects(id) on delete cascade,
   file_name      text not null,
-  -- Sciezka w Storage (bucket "knowledge"), np. "<project_id>/<uuid>-nazwa.pdf".
+  -- Sciezka w Storage (bucket "knowledge").
+  -- Byla "<project_id>/<uuid>-nazwa.pdf". Od Sesji 5 jest
+  -- "<owner_id>/<timestamp>-nazwa.pdf" — na tym pierwszym segmencie opiera
+  -- sie polityka knowledge_wlasne_pliki (migracja 013).
   file_path      text not null,
   size           bigint not null default 0,
   mime_type      text,
@@ -86,8 +109,30 @@ create table if not exists public.knowledge_files (
   updated_at     timestamptz not null default now()
 );
 
-create index if not exists knowledge_files_project_id_idx
-  on public.knowledge_files (project_id);
+-- Indeks po project_id — TYLKO gdy kolumna jeszcze istnieje.
+--
+-- Migracja 015 usuwa knowledge_files.project_id (pliki naleza do konta,
+-- nie do projektu). Postgres kasuje wtedy ten indeks razem z kolumna.
+--
+-- Bez tego warunku ponowne uruchomienie 004 "na wszelki wypadek" — a tak
+-- sie te skrypty uruchamia — wywracaloby sie na "column project_id does
+-- not exist". Blad glosny, wiec nie grozny, ale psulby obietnice, ze pliki
+-- w tym folderze sa idempotentne.
+--
+-- Na swiezej bazie warunek jest spelniony i indeks powstaje normalnie;
+-- migracja 015 usunie go razem z kolumna, tak jak na bazie istniejacej.
+do $$
+begin
+  if exists (
+    select 1 from information_schema.columns
+     where table_schema = 'public'
+       and table_name   = 'knowledge_files'
+       and column_name  = 'project_id'
+  ) then
+    create index if not exists knowledge_files_project_id_idx
+      on public.knowledge_files (project_id);
+  end if;
+end $$;
 
 create index if not exists knowledge_files_created_at_idx
   on public.knowledge_files (created_at desc);
@@ -101,8 +146,14 @@ create trigger knowledge_files_set_updated_at
 --  3) AGENT: ktore pliki wykorzystuje
 -- ------------------------------------------------------------
 -- 'none'     = agent nie korzysta z bazy wiedzy
--- 'all'      = korzysta ze WSZYSTKICH plikow projektu
+-- 'all'      = korzysta ze WSZYSTKICH plikow projektu — WARTOSC USUNIETA.
+--              Migracja 014 zamrozila takich agentow na 'selected'
+--              z imienna lista, 015 zaciesnila ograniczenie ponizej
+--              do ('none', 'selected'). Ponowne uruchomienie tego skryptu
+--              starej wartosci NIE przywroci: blok "if not exists" nizej
+--              widzi ograniczenie o tej samej nazwie i nie rusza go.
 -- 'selected' = korzysta tylko z plikow wskazanych w knowledge_file_ids
+--              (id z magazynu KONTA, nie z projektu)
 alter table public.agents
   add column if not exists knowledge_mode text not null default 'none';
 

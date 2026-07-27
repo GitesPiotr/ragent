@@ -1,14 +1,13 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useParams } from "next/navigation";
 import { useAppState } from "@/lib/state/StateContext";
 import {
   updateAgentField,
   setActivity,
   setLastEvent,
 } from "@/lib/state/actions";
-import { listKnowledgeFiles, deleteKnowledgeFile } from "@/lib/data/knowledge";
+import { listKnowledgeFiles } from "@/lib/data/knowledge";
 import { ACCEPTED_EXTENSIONS } from "@/lib/knowledge/extractText";
 import styles from "./sections.module.css";
 
@@ -34,11 +33,26 @@ const STATUS_LABELS = {
   error: { text: "Błąd odczytu", className: "statusError" },
 };
 
+// SEKCJA "BAZA WIEDZY" W KREATORZE — WYBOR, NIE POSIADANIE.
+//
+// Pula plikow to caly magazyn KONTA, nie pliki jednego projektu. Agent
+// niczego tu nie posiada: zaznacza, z ktorych plikow ma korzystac
+// (agents.knowledge_file_ids). Ten sam plik moze byc zaznaczony przez wielu
+// agentow w roznych projektach — to jeden obiekt i jeden wiersz, bez kopii.
+//
+// CZEGO TU CELOWO NIE MA: PRZYCISKU "USUN" PRZY PLIKU.
+//
+// Wczesniej kasowal plik projektu. Przy puli calego konta kasowalby go
+// CALEMU KONTU — nowicjusz usuwajacy "swoj" plik z jednego agenta zabralby
+// go po cichu wszystkim pozostalym. Kasowanie zyje wylacznie w zakladce
+// "Baza wiedzy", gdzie modal wymienia z nazwy agentow, ktorzy plik traca.
+//
+// CZEGO TU JUZ NIE MA: TRYBU "WSZYSTKIE PLIKI".
+//
+// Znaczyl "wszystkie pliki tego projektu". W magazynie konta znaczylby
+// "wszystko, co mam" — zakres wiedzy agenta rosnacy sam przy kazdym
+// uploadzie. Zostaly dwa stany: nie korzysta / korzysta z wybranych.
 export function KnowledgeBaseSection() {
-  // Pliki wiedzy naleza do PROJEKTU — bierzemy go z adresu.
-  const params = useParams();
-  const projectId = params?.projectId;
-
   const { state, dispatch } = useAppState();
   const agent = state.agent;
   const mode = agent.knowledge_mode || "none";
@@ -56,12 +70,13 @@ export function KnowledgeBaseSection() {
   const reload = useCallback(() => setReloadKey((k) => k + 1), []);
 
   useEffect(() => {
-    if (!projectId) return;
     let alive = true;
 
     (async () => {
       try {
-        const data = await listKnowledgeFiles(projectId);
+        // Bez argumentu — caly magazyn konta. Zawezenie do wlasciciela
+        // robi RLS po stronie bazy, nie ten kod.
+        const data = await listKnowledgeFiles();
         if (!alive) return;
         setFiles(data);
         setError(null);
@@ -75,7 +90,7 @@ export function KnowledgeBaseSection() {
     return () => {
       alive = false;
     };
-  }, [projectId, reloadKey]);
+  }, [reloadKey]);
 
   function changeField(field, value, action) {
     dispatch(updateAgentField(field, value));
@@ -83,6 +98,13 @@ export function KnowledgeBaseSection() {
     dispatch(setLastEvent({ type: "config-changed", field, action }));
   }
 
+  // Wgrywanie WPROST DO MAGAZYNU, z poziomu kreatora.
+  //
+  // Alternatywa — odeslanie uzytkownika do zakladki "Baza wiedzy" — jest
+  // pulapka: strona agenta przy kazdym montazu wczytuje go z bazy i nadpisuje
+  // state.agent, a kreator nie ma autosave. Wyjscie w trakcie konfiguracji
+  // i powrot skasowalyby niezapisane zmiany, i to bez ostrzezenia
+  // (beforeunload lapie tylko zamkniecie karty, nie nawigacje w aplikacji).
   async function handleUpload(event) {
     const file = event.target.files?.[0];
     if (!file || uploading) return;
@@ -91,7 +113,6 @@ export function KnowledgeBaseSection() {
     setError(null);
     try {
       const form = new FormData();
-      form.append("projectId", projectId);
       form.append("file", file);
 
       const res = await fetch("/api/knowledge/upload", {
@@ -101,9 +122,24 @@ export function KnowledgeBaseSection() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Nie udało się wgrać pliku.");
 
-      // Pierwszy wgrany plik: wlaczamy tryb "wszystkie", zeby agent
-      // od razu z niego korzystal (bez tego wiedza lezalaby nieuzywana).
-      if (mode === "none") changeField("knowledge_mode", "all", "auto-all");
+      // Swiezo wgrany plik od razu zaznaczamy dla TEGO agenta. Bez tego
+      // wgranie wygladaloby jak brak efektu: plik lezalby w magazynie,
+      // a agent i tak by go nie czytal. To nastepca dawnego automatycznego
+      // wlaczania trybu "wszystkie pliki" — ten sam odruch, ale zamyka sie
+      // na jednym pliku zamiast na calym magazynie.
+      const uploaded = data.file;
+      if (uploaded?.id && uploaded.status === "ready") {
+        if (!selectedIds.includes(uploaded.id)) {
+          changeField(
+            "knowledge_file_ids",
+            [...selectedIds, uploaded.id],
+            "auto-select-uploaded",
+          );
+        }
+        if (mode !== "selected") {
+          changeField("knowledge_mode", "selected", "auto-select-uploaded");
+        }
+      }
 
       reload();
     } catch (e) {
@@ -114,32 +150,12 @@ export function KnowledgeBaseSection() {
     }
   }
 
-  async function handleDelete(file) {
-    setError(null);
-    try {
-      await deleteKnowledgeFile(file);
-      // Sprzatamy tez wybor agenta, zeby nie wskazywal nieistniejacego pliku.
-      if (selectedIds.includes(file.id)) {
-        changeField(
-          "knowledge_file_ids",
-          selectedIds.filter((id) => id !== file.id),
-          "remove-selected",
-        );
-      }
-      reload();
-    } catch (e) {
-      setError(e.message);
-    }
-  }
-
   function toggleSelected(fileId) {
     const next = selectedIds.includes(fileId)
       ? selectedIds.filter((id) => id !== fileId)
       : [...selectedIds, fileId];
     changeField("knowledge_file_ids", next, "toggle-file");
   }
-
-  const readyCount = files.filter((f) => f.status === "ready").length;
 
   return (
     <div className={styles.section}>
@@ -148,8 +164,10 @@ export function KnowledgeBaseSection() {
           <span aria-hidden="true">📚</span> Baza wiedzy
         </h2>
         <p className={styles.subtitle}>
-          Twoje dokumenty, z których korzysta agent. Treść plików trafia do jego
-          instrukcji, więc odpowiada na ich podstawie, a nie z ogólnej wiedzy.
+          Dokumenty z Twojego magazynu, z których ma korzystać ten agent. Treść
+          zaznaczonych plików trafia do jego instrukcji, więc odpowiada na ich
+          podstawie, a nie z ogólnej wiedzy. Magazyn jest wspólny dla całego
+          konta — ten sam plik może wskazać wielu agentów w różnych projektach.
         </p>
       </div>
 
@@ -159,12 +177,14 @@ export function KnowledgeBaseSection() {
         </div>
       )}
 
-      {/* --- WGRYWANIE --- */}
+      {/* --- WGRYWANIE DO MAGAZYNU --- */}
       <div className={styles.field}>
-        <span className={styles.label}>Dodaj dokument</span>
+        <span className={styles.label}>Wgraj nowy plik do magazynu</span>
         <span className={styles.hint}>
-          Obsługiwane formaty: {ACCEPTED_EXTENSIONS.join(", ")} (do 4 MB). Z PDF-a
-          wyciągamy warstwę tekstową — skany bez tekstu oznaczymy statusem.
+          Plik trafia do Twojego magazynu wiedzy (nie do tego projektu) i od
+          razu zaznaczamy go dla tego agenta. Obsługiwane formaty:{" "}
+          {ACCEPTED_EXTENSIONS.join(", ")} (do 4 MB). Z PDF-a wyciągamy warstwę
+          tekstową — skany bez tekstu oznaczymy statusem.
         </span>
 
         <input
@@ -173,7 +193,7 @@ export function KnowledgeBaseSection() {
           type="file"
           accept={ACCEPTED_EXTENSIONS.join(",")}
           onChange={handleUpload}
-          disabled={uploading || !projectId}
+          disabled={uploading}
           style={{ display: "none" }}
         />
         <label
@@ -192,8 +212,7 @@ export function KnowledgeBaseSection() {
         <div className={styles.segmented}>
           {[
             { id: "none", label: "Nie korzysta" },
-            { id: "all", label: "Wszystkie pliki" },
-            { id: "selected", label: "Wybrane pliki" },
+            { id: "selected", label: "Korzysta z wybranych" },
           ].map((option) => (
             <button
               key={option.id}
@@ -210,34 +229,60 @@ export function KnowledgeBaseSection() {
           ))}
         </div>
 
-        {mode === "all" && readyCount > 0 && (
-          <span className={styles.hint} style={{ marginTop: 8 }}>
-            Agent korzysta ze wszystkich {readyCount} plików z wczytanym tekstem.
+        {/* Tryb „z wybranych" i zero zaznaczonych to stan, ktory WYGLADA
+            na wlaczona wiedze, a dziala jak wylaczona. Mowimy o tym wprost,
+            zamiast pokazywac spokojne „wybrane: 0". */}
+        {mode === "selected" && selectedIds.length === 0 && files.length > 0 && (
+          <span className={styles.note}>
+            Nie zaznaczyłeś ani jednego pliku, więc agent nadal nie korzysta z
+            żadnej wiedzy. Zaznacz poniżej te dokumenty, które ma czytać.
           </span>
         )}
-        {mode === "selected" && (
+        {mode === "selected" && selectedIds.length > 0 && (
           <span className={styles.hint} style={{ marginTop: 8 }}>
-            Zaznacz poniżej pliki, z których agent ma korzystać (wybrane:{" "}
-            {selectedIds.length}).
+            Agent czyta {selectedIds.length}{" "}
+            {selectedIds.length === 1 ? "zaznaczony plik" : "zaznaczone pliki"}{" "}
+            z magazynu. Pozostałe go nie dotyczą.
           </span>
         )}
         {mode === "none" && (
           <span className={styles.hint} style={{ marginTop: 8 }}>
-            Agent ignoruje bazę wiedzy — pliki zostają w projekcie, ale nie
+            Agent ignoruje bazę wiedzy — pliki zostają w magazynie, ale nie
             trafiają do jego instrukcji.
           </span>
         )}
       </div>
 
-      {/* --- LISTA PLIKOW --- */}
+      {/* --- MAGAZYN KONTA --- */}
       <div className={styles.field}>
-        <span className={styles.label}>Pliki w projekcie ({files.length})</span>
+        <div className={styles.labelRow}>
+          <span className={styles.label}>
+            Twój magazyn wiedzy ({files.length})
+          </span>
+
+          {/* NOWA KARTA, i to nie jest ozdobnik.
+              Kreator nie ma autosave, a strona agenta przy kazdym montazu
+              wczytuje go z bazy i nadpisuje state.agent. Zwykly link
+              wyprowadzilby uzytkownika ze srodka konfiguracji i po powrocie
+              skasowalby jego niezapisane zmiany — bez ostrzezenia, bo
+              beforeunload lapie tylko zamkniecie karty, nie nawigacje
+              wewnatrz aplikacji. Nowa karta zostawia kreator zamontowany. */}
+          <a
+            href="/wiedza"
+            target="_blank"
+            rel="noopener noreferrer"
+            className={styles.manageLink}
+          >
+            Zarządzaj magazynem ↗
+          </a>
+        </div>
 
         {loading ? (
           <div className={styles.empty}>Wczytuję pliki…</div>
         ) : files.length === 0 ? (
           <div className={styles.empty}>
-            Brak plików. Wgraj pierwszy dokument powyżej.
+            Magazyn jest pusty. Wgraj pierwszy dokument powyżej — będzie
+            dostępny dla wszystkich Twoich agentów, nie tylko dla tego.
           </div>
         ) : (
           <div className={styles.list}>
@@ -271,14 +316,6 @@ export function KnowledgeBaseSection() {
                       </span>
                     )}
                   </span>
-
-                  <button
-                    type="button"
-                    className={styles.removeButton}
-                    onClick={() => handleDelete(file)}
-                  >
-                    Usuń
-                  </button>
                 </div>
               );
             })}

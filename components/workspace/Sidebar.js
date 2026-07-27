@@ -50,6 +50,7 @@ export function Sidebar() {
   const onProjects = pathname === "/projekty";
   // Aktywne na kazdej trasie agentow: /agenty oraz /projekty/[id]/agenty(/[id]).
   const onAgents = pathname.includes("/agenty");
+  const onKnowledge = pathname.startsWith("/wiedza");
   const onChats = pathname.startsWith("/czaty");
   const onSettings = pathname.startsWith("/ustawienia");
 
@@ -77,6 +78,15 @@ export function Sidebar() {
           className={`${styles.link} ${onAgents ? styles.active : ""}`}
         >
           Agenty
+        </Link>
+
+        {/* Magazyn wiedzy jest wspolny dla calego konta, wiec link NIE niesie
+            kontekstu projektu — w odroznieniu od „Agenty” powyzej. */}
+        <Link
+          href="/wiedza"
+          className={`${styles.link} ${onKnowledge ? styles.active : ""}`}
+        >
+          Baza wiedzy
         </Link>
 
         <Link

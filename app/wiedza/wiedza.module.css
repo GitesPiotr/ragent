@@ -1,0 +1,244 @@
+/* Magazyn wiedzy. Ramę ekranu (naglowek, bledy, przyciski, modal) bierzemy
+   z ../projekty/workspace.module.css — tu siedzi tylko to, czego tamten
+   arkusz nie ma: strefa wgrywania i karta pliku z lista uzywajacych. */
+
+/* --- WGRYWANIE --- */
+.uploadBox {
+  margin-bottom: 24px;
+}
+
+.uploadHint {
+  margin: 0 0 10px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #71717a;
+}
+
+.dropZone {
+  display: block;
+  padding: 26px 20px;
+  border: 2px dashed #c4b5fd;
+  border-radius: 12px;
+  text-align: center;
+  color: #6d28d9;
+  font-size: 13.5px;
+  font-weight: 600;
+  background: #faf5ff;
+  cursor: pointer;
+}
+
+.dropZone:hover {
+  background: #f3ebff;
+  border-color: #7c3aed;
+}
+
+.dropZoneBusy {
+  opacity: 0.7;
+  cursor: progress;
+}
+
+/* --- KARTA PLIKU --- */
+.fileCard {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  border: 1px solid #e4e4e7;
+  border-radius: 12px;
+  background: #fff;
+}
+
+.fileMain {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.fileName {
+  font-size: 14px;
+  font-weight: 700;
+  color: #18181b;
+  word-break: break-word;
+}
+
+.fileMeta {
+  font-size: 12px;
+  color: #71717a;
+}
+
+.fileNote {
+  font-size: 12px;
+  line-height: 1.45;
+  color: #92400e;
+}
+
+.statusReady {
+  color: #15803d;
+  font-weight: 600;
+}
+
+.statusWarn {
+  color: #b45309;
+  font-weight: 600;
+}
+
+.statusError {
+  color: #b91c1c;
+  font-weight: 600;
+}
+
+/* --- KTO UZYWA --- */
+.usage {
+  margin-top: 6px;
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: #52525b;
+}
+
+/* Brak uzywajacych to informacja neutralna — ale MUSI wygladac inaczej niz
+   "nie wiadomo", bo tylko jedno z tych dwoch zaprasza do skasowania. */
+.usageNone {
+  color: #a1a1aa;
+}
+
+/* Nieudane sprawdzenie. Kolor ostrzegawczy, nie bledu: lista plikow dziala,
+   niepewna jest wylacznie ta jedna informacja. */
+.usageUnknown {
+  color: #b45309;
+  font-weight: 600;
+}
+
+.agentTag {
+  display: inline-block;
+  padding: 1px 8px;
+  margin: 2px 4px 2px 0;
+  border-radius: 999px;
+  background: #f1ecfe;
+  color: #6d28d9;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.agentTagArchived {
+  background: #f4f4f5;
+  color: #71717a;
+}
+
+/* --- LISTA W MODALU KASOWANIA --- */
+.modalAgentList {
+  margin: 8px 0 0;
+  padding-left: 20px;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: #3f3f46;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .fileName {
+    color: #ededed;
+  }
+
+  :root:not([data-theme="light"]) .fileCard {
+    background: #131318;
+    border-color: #27272a;
+  }
+
+  :root:not([data-theme="light"]) .dropZone {
+    background: #17132a;
+    border-color: #4c3a86;
+    color: #c4b5fd;
+  }
+
+  :root:not([data-theme="light"]) .dropZone:hover {
+    background: #1e1838;
+    border-color: #7c3aed;
+  }
+
+  :root:not([data-theme="light"]) .usage,
+  :root:not([data-theme="light"]) .uploadHint,
+  :root:not([data-theme="light"]) .modalAgentList {
+    color: #a1a1aa;
+  }
+
+  :root:not([data-theme="light"]) .agentTag {
+    background: #221a45;
+    color: #c4b5fd;
+  }
+
+  :root:not([data-theme="light"]) .agentTagArchived {
+    background: #27272a;
+    color: #a1a1aa;
+  }
+
+  :root:not([data-theme="light"]) .statusReady {
+    color: #4ade80;
+  }
+
+  :root:not([data-theme="light"]) .statusWarn,
+  :root:not([data-theme="light"]) .usageUnknown {
+    color: #fbbf24;
+  }
+
+  :root:not([data-theme="light"]) .statusError {
+    color: #ff8f8f;
+  }
+
+  :root:not([data-theme="light"]) .fileNote {
+    color: #fbbf24;
+  }
+}
+
+:root[data-theme="dark"] .fileName {
+  color: #ededed;
+}
+
+:root[data-theme="dark"] .fileCard {
+  background: #131318;
+  border-color: #27272a;
+}
+
+:root[data-theme="dark"] .dropZone {
+  background: #17132a;
+  border-color: #4c3a86;
+  color: #c4b5fd;
+}
+
+:root[data-theme="dark"] .dropZone:hover {
+  background: #1e1838;
+  border-color: #7c3aed;
+}
+
+:root[data-theme="dark"] .usage,
+:root[data-theme="dark"] .uploadHint,
+:root[data-theme="dark"] .modalAgentList {
+  color: #a1a1aa;
+}
+
+:root[data-theme="dark"] .agentTag {
+  background: #221a45;
+  color: #c4b5fd;
+}
+
+:root[data-theme="dark"] .agentTagArchived {
+  background: #27272a;
+  color: #a1a1aa;
+}
+
+:root[data-theme="dark"] .statusReady {
+  color: #4ade80;
+}
+
+:root[data-theme="dark"] .statusWarn,
+:root[data-theme="dark"] .usageUnknown {
+  color: #fbbf24;
+}
+
+:root[data-theme="dark"] .statusError {
+  color: #ff8f8f;
+}
+
+:root[data-theme="dark"] .fileNote {
+  color: #fbbf24;
+}
