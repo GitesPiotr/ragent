@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { supabase, isSupabaseConfigured, SUPABASE_CONFIG_ERROR } from "@/lib/supabase/client";
@@ -25,7 +25,34 @@ function readableAuthError(error) {
   return msg || "Nie udało się zalogować.";
 }
 
-export default function LoginPage() {
+// Szkielet formularza na czas, gdy sam formularz jeszcze sie nie renderuje.
+//
+// Ma DOKLADNIE te sama budowe co prawdziwy formularz (dwa pola + przycisk),
+// zeby karta logowania nie zmieniala wysokosci w momencie podmiany.
+// aria-hidden, bo to atrapa — czytnik ekranu nie ma czego z niej odczytac,
+// a pola sa wylaczone, wiec nie da sie w nie wejsc tabulatorem.
+function LoginFormFallback() {
+  return (
+    <div className={styles.form} aria-hidden="true">
+      <div className={styles.field}>
+        <span className={styles.label}>Email</span>
+        <input className={styles.input} type="email" disabled />
+      </div>
+
+      <div className={styles.field}>
+        <span className={styles.label}>Hasło</span>
+        <input className={styles.input} type="password" disabled />
+      </div>
+
+      <button className={styles.button} type="button" disabled>
+        Wczytuję…
+      </button>
+    </div>
+  );
+}
+
+// CZESC ZALEZNA OD ADRESU — wydzielona celowo, patrz komentarz przy LoginPage.
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   // Dokad wrocic po zalogowaniu (ustawia proxy.js przy przekierowaniu).
@@ -107,6 +134,89 @@ export default function LoginPage() {
   }
 
   return (
+    <>
+      <form className={styles.form} onSubmit={handleSubmit}>
+        {error && (
+          <div className={styles.error} role="alert">
+            {error}
+          </div>
+        )}
+
+        <div className={styles.field}>
+          <label className={styles.label} htmlFor="login-email">
+            Email
+          </label>
+          <input
+            id="login-email"
+            className={styles.input}
+            type="email"
+            autoComplete="email"
+            required
+            disabled={loading}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+          />
+        </div>
+
+        <div className={styles.field}>
+          <label className={styles.label} htmlFor="login-password">
+            Hasło
+          </label>
+          <input
+            id="login-password"
+            className={styles.input}
+            type="password"
+            autoComplete="current-password"
+            required
+            disabled={loading}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+        </div>
+
+        <button className={styles.button} type="submit" disabled={loading}>
+          {loading ? "Logowanie…" : "Zaloguj się"}
+        </button>
+      </form>
+
+      {devAvailable && (
+        <div className={styles.devBlock}>
+          <button
+            type="button"
+            className={styles.devButton}
+            onClick={handleDevLogin}
+            disabled={loading}
+          >
+            Zaloguj jako deweloper
+          </button>
+          <span className={styles.devHint}>
+            Skrót dostępny tylko lokalnie. Loguje przez zwykły mechanizm
+            Supabase, danymi z pliku .env.local.
+          </span>
+        </div>
+      )}
+    </>
+  );
+}
+
+// DLACZEGO FORMULARZ SIEDZI W <Suspense>.
+//
+// useSearchParams() czyta adres, a adresu NIE DA SIE znac podczas
+// prerenderowania. Next.js radzi sobie z tym tak, ze cale poddrzewo az do
+// najblizszej bariery Suspense renderuje dopiero po stronie klienta.
+// Gdy takiej bariery nie ma, "najblizsza" jest cala strona — a poniewaz
+// /logowanie nie ma zadnych parametrow dynamicznych, Next.js probuje ja
+// prerenderowac i przerywa BUILD bledem
+// "useSearchParams() should be wrapped in a suspense boundary".
+//
+// Tryb deweloperski tego nie widzial, bo tam nic sie nie prerenderuje —
+// bledu nie bylo widac az do `npm run build`.
+//
+// Skorupa karty (logo, tytul, opis, stopka) nie zaglada do adresu, wiec
+// zostaje POZA bariera i trafia do gotowego HTML-a. Wewnatrz jest tylko to,
+// co naprawde zalezy od "?powrot=": formularz i skrot deweloperski.
+export default function LoginPage() {
+  return (
     <div className={styles.screen}>
       <div className={styles.card}>
         <div className={styles.brand}>AIdeas</div>
@@ -115,66 +225,9 @@ export default function LoginPage() {
           Podaj email i hasło, aby przejść do swoich projektów i agentów.
         </p>
 
-        <form className={styles.form} onSubmit={handleSubmit}>
-          {error && (
-            <div className={styles.error} role="alert">
-              {error}
-            </div>
-          )}
-
-          <div className={styles.field}>
-            <label className={styles.label} htmlFor="login-email">
-              Email
-            </label>
-            <input
-              id="login-email"
-              className={styles.input}
-              type="email"
-              autoComplete="email"
-              required
-              disabled={loading}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-            />
-          </div>
-
-          <div className={styles.field}>
-            <label className={styles.label} htmlFor="login-password">
-              Hasło
-            </label>
-            <input
-              id="login-password"
-              className={styles.input}
-              type="password"
-              autoComplete="current-password"
-              required
-              disabled={loading}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-            />
-          </div>
-
-          <button className={styles.button} type="submit" disabled={loading}>
-            {loading ? "Logowanie…" : "Zaloguj się"}
-          </button>
-        </form>
-
-        {devAvailable && (
-          <div className={styles.devBlock}>
-            <button
-              type="button"
-              className={styles.devButton}
-              onClick={handleDevLogin}
-              disabled={loading}
-            >
-              Zaloguj jako deweloper
-            </button>
-            <span className={styles.devHint}>
-              Skrót dostępny tylko lokalnie. Loguje przez zwykły mechanizm
-              Supabase, danymi z pliku .env.local.
-            </span>
-          </div>
-        )}
+        <Suspense fallback={<LoginFormFallback />}>
+          <LoginForm />
+        </Suspense>
 
         <div className={styles.footer}>
           Nie masz jeszcze konta?{" "}
