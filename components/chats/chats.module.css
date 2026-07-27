@@ -841,6 +841,20 @@
   text-align: center;
 }
 
+/* Blad wczytywania agentow — w srodku listy rozwijanej. Celowo krzykliwy:
+   po wlaczeniu RLS nieudane zapytanie daje pusta liste, a nie wyjatek,
+   wiec bez wyraznego komunikatu awaria wyglada jak brak agentow. */
+.dropdownError {
+  margin: 6px;
+  padding: 8px 10px;
+  border: 1px solid #fca5a5;
+  background: #fef2f2;
+  color: #991b1b;
+  border-radius: 6px;
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+
 .hint {
   font-size: 11.5px;
   color: #a1a1aa;
@@ -964,7 +978,8 @@
     color: #ff8f8f;
   }
 
-  :root:not([data-theme="light"]) .error {
+  :root:not([data-theme="light"]) .error,
+  :root:not([data-theme="light"]) .dropdownError {
     background: #2a1212;
     border-color: #5a2a2a;
     color: #ff8f8f;
@@ -1112,7 +1127,8 @@
     color: #ff8f8f;
   }
 
-:root[data-theme="dark"] .error {
+:root[data-theme="dark"] .error,
+:root[data-theme="dark"] .dropdownError {
     background: #2a1212;
     border-color: #5a2a2a;
     color: #ff8f8f;

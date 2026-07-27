@@ -137,6 +137,9 @@ function ConnectionsSection({ settings, updateSettings }) {
 
       <div className={styles.statusList}>
         <StatusRow name="Supabase" status={diag?.supabase} />
+        {/* Czy sesja z ciasteczka dociera do kodu serwerowego. Kluczowe przed
+            włączeniem izolacji danych (RLS) — patrz komentarz w trasie. */}
+        <StatusRow name="Konto (sesja na serwerze)" status={diag?.account} />
         <StatusRow name="Anthropic (klucz API)" status={diag?.anthropic} />
         <StatusRow name="OpenAI (klucz API)" status={diag?.openai} />
         <StatusRow name="Ollama (lokalne modele)" status={diag?.ollama} />

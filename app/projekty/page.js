@@ -41,6 +41,12 @@ function contentsPhrase(counts) {
   return parts.join(" i ");
 }
 
+// Pusty projekt dostaje wlasne zdanie w oknie potwierdzenia — contentsPhrase()
+// zwrocilo by dla niego pusty string, a zdanie skonczylo by sie na „wraz z .”.
+function isProjectEmpty(counts) {
+  return !(counts?.agents > 0) && !(counts?.knowledgeFiles > 0);
+}
+
 // Modal tworzenia i edycji projektu — te same pola, inne etykiety.
 // Obudowa (X, Escape, klik w tlo, Anuluj) siedzi w FormModal.
 function ProjectModal({
@@ -219,9 +225,17 @@ export default function ProjectsPage() {
     }
   }
 
-  // Liczniki decyduja, czy w ogole pytamy: pusty projekt (0 agentow, 0 plikow)
-  // nie ma czego stracic, wiec kasujemy go od razu. Projekt z zawartoscia
-  // przechodzi przez modal, ktory pokazuje, co dokladnie zniknie.
+  // Liczniki sluza WYLACZNIE do tresci komunikatu — nigdy do decyzji, czy
+  // pytac o potwierdzenie. Modal pokazujemy ZAWSZE.
+  //
+  // Wczesniej przy zerowych licznikach projekt kasowal sie od razu, bez
+  // pytania („pusty projekt nie ma czego stracic”). Po wlaczeniu RLS (Sesja 4)
+  // to zalozenie stalo sie niebezpieczne: nieudane zapytanie NIE rzuca bledem,
+  // tylko zwraca zero. Zepsuty odczyt licznikow zamienial sie wiec w ciche,
+  // nieodwracalne skasowanie projektu razem z agentami i plikami wiedzy.
+  //
+  // Teraz najgorsze, co moze zrobic zly licznik, to pokazac nieprawdziwa
+  // tresc w oknie — a nie skasowac dane bez pytania.
   async function startDelete(project) {
     if (saving) return;
 
@@ -229,19 +243,11 @@ export default function ProjectsPage() {
     setError(null);
     try {
       const counts = await getProjectContentCounts(project.id);
-
-      if (counts.agents === 0 && counts.knowledgeFiles === 0) {
-        await deleteProject(project.id);
-        reload();
-        return;
-      }
-
       setDeleteCounts(counts);
       setModalError(null);
       setDeleting(project);
     } catch (e) {
-      // Brak modala na ekranie, wiec blad (liczenia albo kasowania pustego
-      // projektu) pokazujemy nad lista.
+      // Brak modala na ekranie, wiec blad liczenia pokazujemy nad lista.
       setError(e.message);
     } finally {
       setSaving(false);
@@ -441,12 +447,21 @@ export default function ProjectsPage() {
           canSubmit
           error={modalError}
         >
-          <p className={styles.confirmText}>
-            Usuniesz projekt <strong>{deleting.name}</strong> wraz z{" "}
-            <strong>{contentsPhrase(deleteCounts)}</strong>.
-            {deleteCounts?.knowledgeFiles > 0 &&
-              " Pliki zostaną skasowane także z magazynu (Storage)."}
-          </p>
+          {/* Projekt bez zawartosci wymaga innego zdania — contentsPhrase()
+              zwraca wtedy pusty string i wyszlo by „wraz z .”. */}
+          {isProjectEmpty(deleteCounts) ? (
+            <p className={styles.confirmText}>
+              Usuniesz projekt <strong>{deleting.name}</strong>. Nie ma w nim
+              żadnych agentów ani plików wiedzy.
+            </p>
+          ) : (
+            <p className={styles.confirmText}>
+              Usuniesz projekt <strong>{deleting.name}</strong> wraz z{" "}
+              <strong>{contentsPhrase(deleteCounts)}</strong>.
+              {deleteCounts?.knowledgeFiles > 0 &&
+                " Pliki zostaną skasowane także z magazynu (Storage)."}
+            </p>
+          )}
           <p className={styles.confirmWarning}>
             Tej operacji nie można cofnąć. Jeśli chcesz tylko schować projekt z
             listy, użyj „Archiwizuj”.
