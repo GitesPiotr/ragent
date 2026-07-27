@@ -78,7 +78,8 @@ export function MasterDetailCreator({
     if (id === "qa") dispatch(updateAgentField("qas", []));
     if (id === "knowledgeBase") {
       // Karta znika -> agent przestaje korzystac z wiedzy.
-      // Same pliki zostaja w projekcie (naleza do niego, nie do agenta).
+      // Same pliki zostaja w magazynie konta — agent ich nie posiadal,
+      // tylko wskazywal, wiec nie ma czego kasowac.
       dispatch(updateAgentField("knowledge_mode", "none"));
       dispatch(updateAgentField("knowledge_file_ids", []));
     }

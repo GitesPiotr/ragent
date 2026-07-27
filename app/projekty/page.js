@@ -23,28 +23,17 @@ function formatDate(value) {
 }
 
 // Odmiana w narzedniku ("wraz z ..."): 1 agentem / N agentami.
+//
+// Plikow wiedzy juz tu nie odmieniamy — nie znikaja razem z projektem.
+// Naleza do konta i zostaja w magazynie, o czym modal mowi wprost.
 function agentsPhrase(count) {
   return count === 1 ? "1 agentem" : `${count} agentami`;
 }
 
-function filesPhrase(count) {
-  return count === 1 ? "1 plikiem wiedzy" : `${count} plikami wiedzy`;
-}
-
-// Co zniknie razem z projektem. Pomijamy zerowe skladniki — modal pokazuje sie
-// tylko dla projektu z zawartoscia, ale jedna z dwoch liczb moze byc zerem
-// (np. same pliki, bez agentow) i "wraz z 0 agentami" czytaloby sie zle.
-function contentsPhrase(counts) {
-  const parts = [];
-  if (counts?.agents > 0) parts.push(agentsPhrase(counts.agents));
-  if (counts?.knowledgeFiles > 0) parts.push(filesPhrase(counts.knowledgeFiles));
-  return parts.join(" i ");
-}
-
-// Pusty projekt dostaje wlasne zdanie w oknie potwierdzenia — contentsPhrase()
-// zwrocilo by dla niego pusty string, a zdanie skonczylo by sie na „wraz z .”.
+// Pusty projekt dostaje wlasne zdanie w oknie potwierdzenia — inaczej
+// zdanie skonczylo by sie na „wraz z 0 agentami”, co czyta sie zle.
 function isProjectEmpty(counts) {
-  return !(counts?.agents > 0) && !(counts?.knowledgeFiles > 0);
+  return !(counts?.agents > 0);
 }
 
 // Modal tworzenia i edycji projektu — te same pola, inne etykiety.
@@ -123,7 +112,8 @@ export default function ProjectsPage() {
   const [editDescription, setEditDescription] = useState("");
 
   // Trwale usuniecie: projekt czekajacy na potwierdzenie w modalu wraz
-  // z licznikami jego zawartosci. Pusty projekt kasujemy bez modala.
+  // z licznikiem jego zawartosci. Modal pokazujemy ZAWSZE, takze dla
+  // projektu pustego — uzasadnienie przy startDelete().
   const [deleting, setDeleting] = useState(null);
   const [deleteCounts, setDeleteCounts] = useState(null);
 
@@ -260,8 +250,9 @@ export default function ProjectsPage() {
     setModalError(null);
   }, []);
 
-  // TRWALE usuniecie projektu z cala zawartoscia. Kaskade (Storage -> pliki ->
-  // agenci -> projekt) wykonuje deleteProject; tu tylko obsluga UI i bledow.
+  // TRWALE usuniecie projektu wraz z agentami (agenci -> projekt) wykonuje
+  // deleteProject; tu tylko obsluga UI i bledow. Pliki wiedzy zostaja
+  // w magazynie konta — nie sa czescia projektu.
   async function confirmDelete(e) {
     e.preventDefault();
     if (!deleting || saving) return;
@@ -447,21 +438,26 @@ export default function ProjectsPage() {
           canSubmit
           error={modalError}
         >
-          {/* Projekt bez zawartosci wymaga innego zdania — contentsPhrase()
-              zwraca wtedy pusty string i wyszlo by „wraz z .”. */}
+          {/* Projekt bez agentow wymaga innego zdania — inaczej wyszlo by
+              „wraz z 0 agentami”. */}
           {isProjectEmpty(deleteCounts) ? (
             <p className={styles.confirmText}>
               Usuniesz projekt <strong>{deleting.name}</strong>. Nie ma w nim
-              żadnych agentów ani plików wiedzy.
+              żadnych agentów.
             </p>
           ) : (
             <p className={styles.confirmText}>
               Usuniesz projekt <strong>{deleting.name}</strong> wraz z{" "}
-              <strong>{contentsPhrase(deleteCounts)}</strong>.
-              {deleteCounts?.knowledgeFiles > 0 &&
-                " Pliki zostaną skasowane także z magazynu (Storage)."}
+              <strong>{agentsPhrase(deleteCounts.agents)}</strong>.
             </p>
           )}
+          {/* Pliki wiedzy naleza do konta, nie do projektu. Mowimy to wprost:
+              uzytkownik, ktory przez pol roku wgrywal pliki „do projektu”,
+              musi zobaczyc, ze ich NIE traci. */}
+          <p className={styles.confirmText}>
+            Pliki wiedzy <strong>zostaną</strong> — należą do Twojego konta, nie
+            do projektu, i nadal będą dostępne dla agentów w innych projektach.
+          </p>
           <p className={styles.confirmWarning}>
             Tej operacji nie można cofnąć. Jeśli chcesz tylko schować projekt z
             listy, użyj „Archiwizuj”.

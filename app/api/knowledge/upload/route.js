@@ -24,6 +24,12 @@ function safeStorageName(fileName) {
 // Ekstrakcja MUSI byc serwerowa (PDF.js), dlatego plik idzie przez ten endpoint,
 // a nie prosto z przegladarki do Storage.
 //
+// PLIK TRAFIA DO MAGAZYNU KONTA, NIE DO PROJEKTU.
+//
+// Trasa nie przyjmuje juz projectId. Wgrany plik jest od razu dostepny
+// kazdemu agentowi tego konta, w kazdym projekcie — agent go sobie WSKAZE
+// (agents.knowledge_file_ids), nie dostanie na wlasnosc.
+//
 // SCIEZKA W STORAGE: <owner_id>/<timestamp>-<nazwa>
 //
 // Pierwszy segment to id WLASCICIELA, nie projektu. Dwa powody:
@@ -33,12 +39,23 @@ function safeStorageName(fileName) {
 //     do zadnej tabeli. Gdyby opierala sie o knowledge_files, nie mialaby
 //     sie o co oprzec przy zapisie: plik laduje w Storage ZANIM powstanie
 //     wiersz w bazie (patrz kolejnosc krokow 2 i 3 nizej).
-//  2. Baza wiedzy staje sie magazynem KONTA, nie projektu — pliki przestana
-//     byc przypisane do jednego projektu. Sciezka oparta o wlasciciela
-//     przetrwa te zmiane bez migracji.
+//  2. Baza wiedzy miala stac sie magazynem KONTA — i wlasnie sie stala.
+//     Sciezka oparta o wlasciciela przetrwala te zmiane bez migracji
+//     plikow: ani jeden obiekt nie musial sie ruszyc.
 //
-// knowledge_files.project_id NADAL istnieje i jest wypelniane — zmienil sie
-// wylacznie uklad katalogow w Storage.
+// CO ZNIKNELO STAD W ETAPIE B — I DLACZEGO NIC SIE PRZEZ TO NIE ROZSZCZELNILO.
+//
+// Stala tu bariera sprawdzajaca, czy projectId z formularza nalezy do tego
+// konta. Chronila przed zasmiecaniem CUDZEGO projektu wlasnymi plikami:
+// klucz obcy knowledge_files.project_id -> projects.id Postgres sprawdza
+// systemowo, z pominieciem polityk, wiec wiersz z cudzym project_id
+// i wlasnym owner_id przechodzil przez "with check" bez mrugniecia.
+//
+// Skoro plik nie trafia juz do zadnego projektu, bariera nie ma przedmiotu.
+// To, co zostalo, wystarcza w calosci: getUser() nizej daje tozsamosc,
+// z niej powstaje sciezka <owner_id>/..., polityka knowledge_wlasne_pliki
+// pilnuje bucketu, a "with check" polityki knowledge_files_wlasne pilnuje
+// wiersza. Zaden z tych bezpiecznikow nie odwolywal sie do projektu.
 export async function POST(request) {
   const supabase = isSupabaseConfigured ? await createClient() : null;
   if (!supabase) {
@@ -48,10 +65,8 @@ export async function POST(request) {
     );
   }
 
-  // Tozsamosc jest tu potrzebna do DWOCH rzeczy: zbudowania sciezki w Storage
-  // oraz sprawdzenia, czy projekt nalezy do tego konta. Trasy /api/* sa juz
-  // chronione przez proxy.js, wiec to drugi bezpiecznik — ale bez user.id
-  // nie da sie zlozyc sciezki, wiec i tak musi byc jawny.
+  // Tozsamosc: bez user.id nie da sie zlozyc sciezki w Storage, wiec musi byc
+  // jawna. Trasy /api/* sa juz chronione przez proxy.js — to drugi bezpiecznik.
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -73,53 +88,10 @@ export async function POST(request) {
     );
   }
 
-  const projectId = form.get("projectId");
   const file = form.get("file");
 
-  if (!projectId || typeof projectId !== "string") {
-    return NextResponse.json(
-      { error: "Brak identyfikatora projektu." },
-      { status: 400 },
-    );
-  }
   if (!file || typeof file.arrayBuffer !== "function") {
     return NextResponse.json({ error: "Nie wybrano pliku." }, { status: 400 });
-  }
-
-  // CZY TEN PROJEKT NALEZY DO CIEBIE.
-  //
-  // projectId przychodzi z formularza, czyli od klienta — dokladnie ta sama
-  // klasa problemu co pulapka nr 1 (loadKnowledgeFilesForAgent ufal project_id
-  // z ciala zadania). Samo RLS tego NIE domyka: klucz obcy
-  // knowledge_files.project_id -> projects.id Postgres sprawdza systemowo,
-  // z pominieciem polityk, wiec wiersz z cudzym project_id i wlasnym owner_id
-  // przeszedlby przez "with check" bez mrugniecia.
-  //
-  // Skutkiem nie jest wyciek (cudzego projektu i tak nie widac), tylko
-  // zasmiecanie go wlasnymi plikami. Tanio to zamknac tutaj: zapytanie
-  // podlega RLS, wiec cudzy projekt zwroci null.
-  //
-  // Sprawdzamy PRZED ekstrakcja tekstu — nie ma po co mielic pliku, zeby
-  // za chwile go odrzucic.
-  const { data: project, error: projectError } = await supabase
-    .from("projects")
-    .select("id")
-    .eq("id", projectId)
-    .maybeSingle();
-
-  if (projectError) {
-    // Najczestszy przypadek: projectId nie jest poprawnym UUID (kod 22P02).
-    return NextResponse.json(
-      { error: "Nieprawidłowy identyfikator projektu." },
-      { status: 400 },
-    );
-  }
-  if (!project) {
-    // 404, a nie 403 — nie potwierdzamy, ze taki projekt w ogole istnieje.
-    return NextResponse.json(
-      { error: "Nie znaleziono projektu albo nie masz do niego dostępu." },
-      { status: 404 },
-    );
   }
 
   const fileName = file.name || "plik";
@@ -191,11 +163,11 @@ export async function POST(request) {
       );
     }
 
-    // 3) Rekord w bazie.
+    // 3) Rekord w bazie. Bez project_id — owner_id wpisuje baza z auth.uid()
+    //    (migracja 007), i to on jest jedynym zakresem wlasnosci pliku.
     const { data, error: insertError } = await supabase
       .from("knowledge_files")
       .insert({
-        project_id: projectId,
         file_name: fileName,
         file_path: path,
         size: file.size,
@@ -204,8 +176,10 @@ export async function POST(request) {
         status,
         status_message: message,
       })
+      // Ten sam zestaw kolumn co LIST_COLUMNS w lib/data/knowledge.js —
+      // bez project_id, zeby migracja 015 nie wywrocila tej trasy.
       .select(
-        "id, project_id, file_name, file_path, size, mime_type, status, status_message, created_at",
+        "id, file_name, file_path, size, mime_type, status, status_message, created_at",
       )
       .single();
 
