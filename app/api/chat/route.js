@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { sendChat } from "@/lib/providers";
+import { createClient } from "@/lib/supabase/server";
 // System prompt (persona + zasady + przyklady Q&A + format wyjscia)
 // budowany w lib/agent/systemPrompt.js — jedno miejsce dla wszystkich
 // parametrow kreatora, ktore wplywaja na zachowanie agenta.
@@ -115,6 +116,36 @@ export async function POST(request) {
     );
   }
 
+  // =========================================================================
+  //  TOZSAMOSC — WYLACZNIE Z SESJI, NIGDY Z CIALA ZADANIA
+  //
+  //  Do tej pory ta trasa nie wolala getUser() w ogole i polegala na proxy.js,
+  //  ktory odcina zadania bez sesji na 401. To dalej dziala i zostaje — ale
+  //  proxy odpowiada wylacznie na pytanie „czy ktokolwiek jest zalogowany",
+  //  a narzedzia agenta potrzebuja odpowiedzi na „KTO". Bez tego narzedzie
+  //  RAG nie ma jak ustalic, czyjej kolekcji szukac.
+  //
+  //  ZRODLEM TOZSAMOSCI JEST CIASTECZKO SESJI, nie cialo POST. Powod jest
+  //  zapisany w lib/agent/knowledgeForAgent.js:44-52: caly obiekt `agent`
+  //  przychodzi od klienta i knowledge_file_ids da sie spreparowac, a jedynym
+  //  bezpiecznikiem jest RLS, ktory dokleja owner_id = auth.uid() po stronie
+  //  bazy. Tego zalozenia NIE OSLABIAMY — dokladamy drugie, niezalezne.
+  //
+  //  getUser(), nie getSession(): getUser weryfikuje token po stronie Supabase,
+  //  getSession ufa ciasteczku, ktore moglo zostac podrobione.
+  // =========================================================================
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = supabase ? await supabase.auth.getUser() : { data: { user: null } };
+
+  if (!user) {
+    return NextResponse.json(
+      { error: "Wymagane zalogowanie." },
+      { status: 401 },
+    );
+  }
+
   const knowledgeFiles = await loadKnowledgeFilesForAgent(agent);
   // Limit znakow wiedzy z ustawien przegladarki — walidowany serwerowo.
   const knowledgeCharLimit = resolveKnowledgeLimit(body?.knowledgeCharLimit);
@@ -133,6 +164,27 @@ export async function POST(request) {
         controller.enqueue(encoder.encode(JSON.stringify(obj) + "\n"));
 
       try {
+        // KONTEKST NARZEDZI — budowany TU, w jednym miejscu, i przekazywany
+        // w dol przez sendChat. Dostawcy go NIE TWORZA: gdyby kazdy skladal
+        // wlasny, dolozenie pola znaczyloby trzy zmiany zamiast jednej,
+        // a rozjazd miedzy dostawcami bylby niewidoczny do pierwszej awarii.
+        const ctx = {
+          // Z SESJI, zweryfikowane przez getUser(). To jedyne pole w ctx,
+          // na ktorym wolno oprzec decyzje o dostepie do danych.
+          user: { id: user.id, email: user.email ?? null },
+
+          // OD KLIENTA — NIEZAUFANE. Przychodzi w ciele POST i nikt go nie
+          // porownuje z baza; da sie podmienic knowledge_file_ids, tools,
+          // a nawet id. Wolno go uzywac WYLACZNIE do wyboru PODZBIORU tego,
+          // co uzytkownik i tak ma prawo zobaczyc (ktore dokumenty przeszukac,
+          // ktore narzedzia wlaczyc). NIGDY do autoryzacji — od tego jest
+          // ctx.user i RLS.
+          agent,
+
+          // Zrodla odkladane przez narzedzia; trafiaja do UI polem `sources`.
+          sources: [],
+        };
+
         const { text, toolCalls, sources } = await sendChat({
           provider: agent.provider,
           model: agent.model,
@@ -141,6 +193,7 @@ export async function POST(request) {
           messages,
           tools,
           onEvent: (ev) => write(ev),
+          ctx,
         });
         write({
           type: "done",
