@@ -242,3 +242,108 @@
 :root[data-theme="dark"] .fileNote {
   color: #fbbf24;
 }
+
+/* --- STAN INDEKSOWANIA W RAG (runda 5b) ---------------------------------
+   Blok pod metadanymi pliku: stan, przycisk i pasek postepu.
+   Pasek czyta done/total z odpowiedzi serwera (regula 12.9) — nie ma tu
+   zadnej animacji „w kolko", bo taka udawalaby prace, ktorej nie widac. */
+
+.ragRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+}
+
+.ragState {
+  font-size: 12.5px;
+  color: #52525b;
+}
+
+.ragStateReady {
+  color: #15803d;
+  font-weight: 600;
+}
+
+.ragStateNone {
+  color: #71717a;
+}
+
+.ragStateBusy {
+  color: #b45309;
+  font-weight: 600;
+}
+
+.ragButton {
+  font-size: 12.5px;
+  padding: 4px 12px;
+  border: 1px solid #d4d4d8;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #3f3f46;
+  cursor: pointer;
+}
+
+.ragButton:hover:not(:disabled) {
+  background: #f4f4f5;
+}
+
+.ragButton:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.ragBar {
+  flex: 1;
+  min-width: 140px;
+  height: 6px;
+  background: #e4e4e7;
+  border: 1px solid #d4d4d8;
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.ragBarFill {
+  height: 100%;
+  background: #16a34a;
+  transition: width 0.2s ease;
+}
+
+.ragError {
+  font-size: 12.5px;
+  color: #b91c1c;
+  margin-top: 4px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .ragState { color: #a1a1aa; }
+  :root:not([data-theme="light"]) .ragStateReady { color: #4ade80; }
+  :root:not([data-theme="light"]) .ragStateBusy { color: #fbbf24; }
+  :root:not([data-theme="light"]) .ragButton {
+    background: #18181b;
+    border-color: #3f3f46;
+    color: #e4e4e7;
+  }
+  :root:not([data-theme="light"]) .ragButton:hover:not(:disabled) { background: #27272a; }
+  :root:not([data-theme="light"]) .ragBar {
+    background: #27272a;
+    border-color: #3f3f46;
+  }
+  :root:not([data-theme="light"]) .ragError { color: #ff8f8f; }
+}
+
+:root[data-theme="dark"] .ragState { color: #a1a1aa; }
+:root[data-theme="dark"] .ragStateReady { color: #4ade80; }
+:root[data-theme="dark"] .ragStateBusy { color: #fbbf24; }
+:root[data-theme="dark"] .ragButton {
+  background: #18181b;
+  border-color: #3f3f46;
+  color: #e4e4e7;
+}
+:root[data-theme="dark"] .ragButton:hover:not(:disabled) { background: #27272a; }
+:root[data-theme="dark"] .ragBar {
+  background: #27272a;
+  border-color: #3f3f46;
+}
+:root[data-theme="dark"] .ragError { color: #ff8f8f; }
