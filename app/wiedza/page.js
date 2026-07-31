@@ -1,18 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  listKnowledgeFiles,
-  listKnowledgeUsage,
-} from "@/lib/data/knowledge";
+import { listKnowledgeFiles, listKnowledgeUsage } from "@/lib/data/knowledge";
 import { ACCEPTED_EXTENSIONS } from "@/lib/knowledge/extractText";
 import { FormModal } from "@/components/workspace/FormModal";
-// Pętla embedowania — TEN SAM hook, którego używa Kreator RAG. Świadomie nie
-// piszemy drugiej: hook jest przetestowany, wznawia się z bazy po przerwaniu,
-// a pasek czyta done/total z odpowiedzi serwera zamiast animować się sam (12.9).
-// Druga kopia znaczyłaby, że poprawka zrobiona w jednym miejscu po cichu nie
-// działa w drugim — dokładnie ten powód, dla którego hook powstał.
-import { useIndeksowanie } from "@/app/kreator-rag/_hooks/useIndeksowanie.js";
 // Rama ekranu wspolna z Projektami i Agentami; specyfika magazynu w wiedza.module.
 import shell from "../projekty/workspace.module.css";
 import styles from "./wiedza.module.css";
@@ -44,93 +35,6 @@ function agentLabel(agent) {
   const project = agent.projectName ? ` (${agent.projectName})` : "";
   const archived = agent.archived ? " — zarchiwizowany" : "";
   return `${agent.name}${project}${archived}`;
-}
-
-// STAN PLIKU W WYSZUKIWANIU SEMANTYCZNYM — jeden wiersz pod metadanymi.
-//
-// CZTERY STANY, KAŻDY MUSI BYĆ ODRÓŻNIALNY:
-//   • „nie wiadomo"   — odczyt stanu się nie udał. NIE wolno pokazać tego jako
-//                       „nie zindeksowany", bo to zaprasza do kliknięcia,
-//                       które może utworzyć duplikat.
-//   • „nie da się"    — plik bez warstwy tekstowej albo z błędem odczytu.
-//                       Przycisk WYŁĄCZONY, z powodem wprost przy nim.
-//   • „nie zindeksowany" — można kliknąć.
-//   • „zindeksowany"  — z liczbą fragmentów; przycisk znika, bo nie ma czego
-//                       robić drugi raz (trasa i tak jest idempotentna).
-//
-// Pasek pokazuje się WYŁĄCZNIE, gdy `postep` niesie total > 0. Nie ma stanu
-// „kręci się w kółko": zgodnie z 12.9 pasek pokazuje policzone przez serwer
-// done/total albo nie pokazuje nic.
-function RagWiersz({ file, stan, postep, zajety, zablokowany, blad, onIndeksuj }) {
-  const dokument = stan?.document || null;
-  const wTrakcie = Boolean(postep?.running) || zajety;
-  const total = Number(postep?.total) || 0;
-  const done = Number(postep?.done) || 0;
-
-  let etykieta;
-  let klasa = styles.ragStateNone;
-
-  if (stan === null || stan === undefined) {
-    etykieta = "Nie udało się sprawdzić stanu indeksowania.";
-    klasa = styles.ragState;
-  } else if (wTrakcie) {
-    etykieta = total > 0 ? `Indeksuję… ${done} / ${total}` : "Indeksuję…";
-    klasa = styles.ragStateBusy;
-  } else if (dokument) {
-    const ile = dokument.chunkCount ?? 0;
-    etykieta =
-      dokument.status === "ready"
-        ? `W wyszukiwaniu: ${ile} fragmentów`
-        : `Pocięty na ${ile} fragmentów — bez wektorów`;
-    klasa = dokument.status === "ready" ? styles.ragStateReady : styles.ragStateBusy;
-  } else if (stan.mozliwe === false) {
-    etykieta = "Nie da się zindeksować";
-    klasa = styles.ragState;
-  } else {
-    etykieta = "Nie zindeksowany do wyszukiwania";
-  }
-
-  // Przycisk ma sens tylko wtedy, gdy jest co zrobić I da się to zrobić.
-  const pokazPrzycisk =
-    stan && !dokument && stan.mozliwe !== false && !wTrakcie;
-
-  return (
-    <>
-      <div className={styles.ragRow}>
-        <span className={`${styles.ragState} ${klasa}`}>{etykieta}</span>
-
-        {pokazPrzycisk && (
-          <button
-            type="button"
-            className={styles.ragButton}
-            onClick={onIndeksuj}
-            disabled={zablokowany}
-          >
-            Zindeksuj do RAG
-          </button>
-        )}
-
-        {wTrakcie && total > 0 && (
-          <span className={styles.ragBar}>
-            <span
-              className={styles.ragBarFill}
-              style={{ width: `${Math.round((done / total) * 100)}%` }}
-            />
-          </span>
-        )}
-      </div>
-
-      {/* Powód odmowy pokazujemy ZAWSZE, gdy istnieje — bez niego „nie da się"
-          jest samą odmową bez wyjaśnienia, a użytkownik nie ma jak zgadnąć,
-          że chodzi o brak warstwy tekstowej. */}
-      {stan?.powod && !dokument && (
-        <span className={styles.fileNote}>{stan.powod}</span>
-      )}
-
-      {blad && <span className={styles.ragError}>{blad}</span>}
-      {postep?.error && <span className={styles.ragError}>{postep.error}</span>}
-    </>
-  );
 }
 
 // MAGAZYN WIEDZY — GLOWNA ZAKLADKA.
@@ -165,22 +69,7 @@ export default function KnowledgePage() {
   const [reloadKey, setReloadKey] = useState(0);
   const inputRef = useRef(null);
 
-  // --- STAN RAG ---------------------------------------------------------
-  // Mapa: id pliku -> { document, mozliwe, powod } z GET /api/knowledge/[id]/index.
-  // `null` dla pliku znaczy „jeszcze nie wiadomo", a nie „nie zindeksowany" —
-  // ta sama zasada co przy `usage` wyżej: brak odpowiedzi nie może wyglądać
-  // jak odpowiedź przecząca.
-  const [rag, setRag] = useState({});
-  const [indeksowany, setIndeksowany] = useState(null); // id pliku w trakcie ingestu
-  const [ragError, setRagError] = useState({}); // id pliku -> komunikat
-
   const reload = useCallback(() => setReloadKey((k) => k + 1), []);
-
-  const { postep, indeksuj, wczytajPostep } = useIndeksowanie({
-    // Po zakończeniu embedowania odświeżamy stan RAG, żeby licznik fragmentów
-    // i etykieta przeszły na „gotowy" bez przeładowania strony.
-    onKoniec: useCallback(() => setReloadKey((k) => k + 1), []),
-  });
 
   useEffect(() => {
     let alive = true;
@@ -213,42 +102,12 @@ export default function KnowledgePage() {
       }
 
       setLoading(false);
-
-      // Stan RAG dociągamy PO liście plików i osobno dla każdego — świadomie
-      // po kolei, a nie jednym zapytaniem zbiorczym. Powód: trasa jest per plik
-      // (RLS sprawdza własność każdego wiersza), a magazyn ma dziś kilka pozycji.
-      // Przy kilkudziesięciu plikach trzeba to będzie zamienić na jeden odczyt.
-      if (filesResult.status === "fulfilled") {
-        const lista = filesResult.value;
-        const stany = await Promise.all(
-          lista.map(async (f) => {
-            try {
-              const r = await fetch(`/api/knowledge/${f.id}/index`, {
-                cache: "no-store",
-              });
-              const j = await r.json();
-              return [f.id, r.ok ? j : null];
-            } catch {
-              return [f.id, null];
-            }
-          }),
-        );
-        if (!alive) return;
-        setRag(Object.fromEntries(stany));
-
-        // Pasek startuje od stanu z bazy, nie od zera — dokument przerwany
-        // na 64/108 ma to od razu pokazać.
-        const doWczytania = stany
-          .map(([, s]) => s?.document?.id)
-          .filter(Boolean);
-        if (doWczytania.length) wczytajPostep(doWczytania);
-      }
     })();
 
     return () => {
       alive = false;
     };
-  }, [reloadKey, wczytajPostep]);
+  }, [reloadKey]);
 
   // Agenci uzywajacy danego pliku albo null, gdy sprawdzenie sie nie udalo.
   // Rozroznienie null vs [] jest tu cala trescia funkcji.
@@ -305,10 +164,11 @@ export default function KnowledgePage() {
     setBusy(true);
     setModalError(null);
     try {
-      // Kasowanie idzie TRASĄ, nie wprost z przeglądarki. Powód jest w nagłówku
-      // app/api/knowledge/[id]/route.js: plik ma drugie życie w RAG (dokument,
-      // fragmenty, wektory, kopia w buckecie rag-files) i to wszystko musi
-      // zniknąć razem z nim. Z przeglądarki nie ma się gdzie tego podpiąć.
+      // Kasowanie idzie TRASA, nie wprost z przegladarki. To jedyna rzecz,
+      // ktora z rundy 5b zostaje w tym pliku — przeniesienie trzech krokow
+      // (odpiecie od agentow, Storage, wiersz) na serwer jest poprawa samo
+      // w sobie, niezaleznie od RAG: kolejnosc i komunikaty sa teraz w jednym
+      // miejscu, a nie w kodzie wykonywanym w przegladarce.
       const res = await fetch(`/api/knowledge/${deleting.id}`, {
         method: "DELETE",
       });
@@ -322,43 +182,6 @@ export default function KnowledgePage() {
       setModalError(e.message);
     } finally {
       setBusy(false);
-    }
-  }
-
-  // --- INDEKSOWANIE DO RAG ------------------------------------------------
-  // Dwa etapy, świadomie rozdzielone: POST /index tnie plik na fragmenty
-  // (sekundy), a pętla /embed liczy wektory partiami po 32 (minuty przy dużym
-  // dokumencie). Zlepienie ich w jedno żądanie dałoby request bez końca.
-  async function zindeksuj(file) {
-    if (indeksowany) return;
-    setIndeksowany(file.id);
-    setRagError((p) => ({ ...p, [file.id]: null }));
-    try {
-      const res = await fetch(`/api/knowledge/${file.id}/index`, {
-        method: "POST",
-      });
-      const data = await res.json().catch(() => ({}));
-      if (!res.ok) throw new Error(data.error || "Nie udało się zindeksować pliku.");
-
-      setRag((p) => ({
-        ...p,
-        [file.id]: {
-          ...(p[file.id] || {}),
-          collectionId: data.collectionId,
-          document: {
-            id: data.documentId,
-            status: data.status,
-            chunkCount: data.chunkCount,
-          },
-        },
-      }));
-
-      // Wektory — ta sama pętla co w Kreatorze.
-      await indeksuj(data.documentId);
-    } catch (e) {
-      setRagError((p) => ({ ...p, [file.id]: e.message }));
-    } finally {
-      setIndeksowany(null);
     }
   }
 
@@ -478,24 +301,13 @@ export default function KnowledgePage() {
                       ))}
                     </span>
                   )}
-
-                  {/* --- WYSZUKIWANIE SEMANTYCZNE (RAG) --- */}
-                  <RagWiersz
-                    file={file}
-                    stan={rag[file.id]}
-                    postep={postep[rag[file.id]?.document?.id]}
-                    zajety={indeksowany === file.id}
-                    zablokowany={Boolean(indeksowany) || busy}
-                    blad={ragError[file.id]}
-                    onIndeksuj={() => zindeksuj(file)}
-                  />
                 </div>
 
                 <button
                   type="button"
                   className={shell.dangerButton}
                   onClick={() => startDelete(file)}
-                  disabled={busy || Boolean(indeksowany)}
+                  disabled={busy}
                 >
                   Usuń
                 </button>

@@ -8,12 +8,11 @@
 //  z klienta, bez żadnej trasy API. Działało, dopóki kasowanie dotyczyło
 //  wyłącznie AIDEAS.
 //
-//  Od integracji z RAG plik ma DRUGIE życie: dokument w rag_documents,
-//  jego fragmenty, wektory i kopię oryginału w buckecie rag-files. To wszystko
-//  musi zniknąć razem z plikiem. Nie ma się gdzie tego podpiąć od strony
-//  przeglądarki — nie ma triggera, nie ma hooka, nie ma jednego miejsca,
-//  przez które przechodzi kasowanie. Stąd trasa: JEDNO miejsce, w którym
-//  kasowanie pliku znaczy „skasuj wszystkie jego ślady".
+//  Powstala przy integracji z RAG, ale POWOD JEJ ISTNIENIA JEST NIEZALEZNY
+//  i dlatego trasa zostaje mimo wycofania tamtego pomyslu: kasowanie ma trzy
+//  kroki, ich KOLEJNOSC jest tresciowa (patrz nizej), a komunikaty bledow
+//  opisuja stany posrednie. To nalezy do serwera, nie do kodu wykonywanego
+//  w przegladarce, gdzie nie da sie tego ani przetestowac, ani wymusic.
 //
 //  Logika odpinania od agentów jest przeniesiona z lib/data/knowledge.js
 //  BEZ ZMIAN CO DO KOLEJNOŚCI I KOMUNIKATÓW — razem z uzasadnieniem, bo ono
@@ -22,8 +21,6 @@
 
 import { NextResponse } from 'next/server';
 import { createClient } from '@/lib/supabase/server';
-import { getCollectionByExternalRef } from '@/lib/rag/collections.js';
-import { findDocumentByExternalRef, deleteDocument } from '@/lib/rag/documents.js';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -114,45 +111,21 @@ export async function DELETE(request, { params }) {
     }
 
     // -----------------------------------------------------------------------
-    //  2) DOKUMENT RAG — nowy krok.
+    //  KROKU „SKASUJ DOKUMENT RAG" TU NIE MA — I TO JEST DECYZJA, NIE BRAK.
     //
-    //  deleteDocument sprząta komplet: wiersz rag_documents, kaskadą jego
-    //  fragmenty z wektorami, oraz kopię oryginału w buckecie rag-files.
+    //  W rundzie 5b stal tutaj krok kasujacy odpowiednik pliku w rag_documents.
+    //  Zostal usuniety razem z calym pomyslem „plik z Bazy wiedzy indeksuje sie
+    //  do RAG": Baza wiedzy i Kreator RAG sa DWOMA OSOBNYMI NARZEDZIAMI.
+    //  Baza wiedzy dokleja pliki do promptu w calosci; Kreator RAG ma wlasne
+    //  kolekcje i wlasne wgrywanie. Zaden plik nie zyje juz w obu miejscach
+    //  naraz, wiec kasowanie w jednym nie ma czego sprzatac w drugim.
     //
-    //  NA BŁĘDZIE PRZERYWAMY, tak samo jak przy Storage niżej — i to jest
-    //  wybór, nie zaniechanie. Dokument RAG niesie PEŁNĄ TREŚĆ pliku
-    //  w extracted_text i we fragmentach. Gdybyśmy przepuścili błąd dalej
-    //  i skasowali sam plik, użytkownik zobaczyłby, że plik zniknął, a jego
-    //  treść zostałaby w bazie i dalej wychodziłaby w wynikach wyszukiwania.
-    //  „Usunięte" musi znaczyć usunięte.
-    //
-    //  Brak kolekcji albo brak dokumentu to NIE jest błąd: plik mógł nigdy
-    //  nie zostać zindeksowany. Wtedy po prostu nie ma czego kasować.
+    //  Kolekcje i dokumenty RAG kasuje sie w Kreatorze RAG, swiadomie —
+    //  a nie jako skutek uboczny usuniecia pliku z innej zakladki.
     // -----------------------------------------------------------------------
-    let ragUsuniety = false;
-    try {
-      const kolekcja = await getCollectionByExternalRef(user.id, { client: supabase });
-      if (kolekcja) {
-        const dokument = await findDocumentByExternalRef(kolekcja.id, plik.id, {
-          client: supabase,
-        });
-        if (dokument) {
-          await deleteDocument(dokument.id, { client: supabase });
-          ragUsuniety = true;
-        }
-      }
-    } catch (e) {
-      return blad(
-        'Plik został odpięty od agentów, ale nie udało się usunąć jego odpowiednika w Kreatorze RAG. ' +
-          'Plik NIE został usunięty — inaczej jego treść zostałaby w wyszukiwarce mimo zniknięcia z listy. ' +
-          'Spróbuj ponownie; ponowienie jest bezpieczne. Szczegóły: ' +
-          (e?.message || 'nieznany błąd'),
-        500
-      );
-    }
 
     // -----------------------------------------------------------------------
-    //  3) STORAGE (bucket "knowledge").
+    //  2) STORAGE (bucket "knowledge").
     //
     //  Na błędzie PRZERYWAMY (nie kasujemy wiersza mimo wszystko): wiersz jest
     //  jedynym śladem ścieżki obiektu, więc skasowany zostawiłby w buckecie
@@ -174,7 +147,7 @@ export async function DELETE(request, { params }) {
       }
     }
 
-    // --- 4) WIERSZ -----------------------------------------------------------
+    // --- 3) WIERSZ -----------------------------------------------------------
     const { error: bladWiersza } = await supabase
       .from('knowledge_files')
       .delete()
@@ -192,7 +165,6 @@ export async function DELETE(request, { params }) {
     return NextResponse.json({
       deleted: true,
       unpinnedFrom: uzywajacy.length,
-      ragUsuniety,
     });
   } catch (e) {
     return blad(e?.message || 'Nieoczekiwany błąd podczas usuwania pliku.', 500);
