@@ -22,6 +22,20 @@ const AVAILABLE_TOOLS = [
     description: "Sprawdza bieżącą datę i godzinę.",
   },
   {
+    id: "rag_search",
+    label: "Przeszukiwanie dokumentów",
+    description:
+      "Agent szuka odpowiedzi w zaznaczonej niżej bazie wiedzy i cytuje konkretne " +
+      "fragmenty z nazwą pliku i sekcją, zamiast dostawać całe pliki doklejone " +
+      "do promptu. Włącz przy większych dokumentach — regulaminach, umowach, " +
+      "instrukcjach. Pliki muszą być wcześniej zindeksowane w zakładce " +
+      "„Baza wiedzy” przyciskiem „Zindeksuj do RAG”.",
+    costNote:
+      "Bez kosztów zewnętrznych: wyszukiwanie liczy się lokalnie (Ollama). " +
+      "Wymaga uruchomionej Ollamy — bez niej agent odpowie bez dokumentów " +
+      "i powie o tym wprost.",
+  },
+  {
     id: "web_search",
     label: "Wyszukiwanie w internecie",
     description:

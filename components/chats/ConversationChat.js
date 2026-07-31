@@ -10,6 +10,7 @@ const TOOL_LABELS = {
   datetime: "data/czas",
   web_search: "wyszukiwanie",
   web_search_local: "wyszukiwanie",
+  rag_search: "dokumenty",
 };
 
 // Okno czatu (kompaktowe): lista wiadomosci bez baniek (ikona + boks),

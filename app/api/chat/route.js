@@ -181,6 +181,22 @@ export async function POST(request) {
           // ctx.user i RLS.
           agent,
 
+          // KLIENT BAZY Z SESJA — dla narzedzi, ktore czytaja dane konta.
+          //
+          // Tworzony RAZ, tutaj, zanim ruszy strumien odpowiedzi. Narzedzie
+          // NIE MOZE zbudowac go sobie samo: createClient() czyta ciasteczka
+          // przez cookies() z next/headers, a to dziala wylacznie w kontekscie
+          // zadania — narzedzie wykonuje sie w petli tool-use, juz po zwroceniu
+          // strumienia, czyli na granicy tego kontekstu albo poza nim.
+          //
+          // Klient stoi na kluczu ANON + sesji, wiec RLS dokleja
+          // owner_id = auth.uid() do kazdego zapytania. Alternatywa —
+          // pozwolic rdzeniowi siegnac po domyslny getSupabaseClient() —
+          // dalaby klucz service_role z BYPASSRLS, czyli narzedzie czytajace
+          // dokumenty WSZYSTKICH kont, chronione wylacznie poprawnoscia
+          // wyliczenia collectionId. Izolacja ma stac na bazie, nie na kodzie.
+          db: supabase,
+
           // Zrodla odkladane przez narzedzia; trafiaja do UI polem `sources`.
           sources: [],
         };
