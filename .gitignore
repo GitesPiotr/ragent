@@ -35,9 +35,6 @@ yarn-error.log*
 # wyjatek: plik-przyklad BEZ wartosci ma byc w repo (.env.local dalej ignorowany)
 !.env.example
 
-# zrodlo modulu RAG — folder tymczasowy, tylko do odczytu, kasowany po rundzie 5
-/_zrodlo-rag/
-
 # vercel
 .vercel
 

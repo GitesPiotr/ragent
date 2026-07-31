@@ -3162,6 +3162,13 @@ Narzędzie „przeszukaj bazę wiedzy" w `lib/tools/` wywołujące `searchCollec
 _DoD:_ agent odpowiada z fragmentów i podaje źródła ze stroną; przy pytaniu spoza bazy
 mówi wprost, że nie znalazł; działa dla Claude i modeli lokalnych.
 
+> **NOTA PO WDROŻENIU (2026-07-31).** Zdanie „limit 24 000 znaków znika" jest
+> NIEAKTUALNE i sprzeczne z punktem 4 w sekcji 18.0. **Obowiązuje 18.0:** limit NIE
+> znika — dotyczy odtąd wyłącznie plikowej części trybów 1 i 3. RAG go nie likwiduje,
+> bo z nim współistnieje. W kodzie: `buildKnowledgeBlock` w `lib/agent/systemPrompt.js`
+> działa niezależnie od narzędzia `rag_search`, bez żadnego `if`-a wykluczającego —
+> oba mechanizmy mogą działać naraz i to jest tryb 3.
+
 **Razem: 11–12 sesji + 2 na integrację.**
 
 ---
@@ -3390,6 +3397,18 @@ pytań, na które korpus ma prawdziwą odpowiedź — czyli żaden próg tego ni
 1. **Jeden agent = jedna kolekcja RAG.** Powiązanie realizuje POJEDYNCZY
    `external_ref` (nie lista). W trybach 2 i 3 agent wskazuje dokładnie jedną
    kolekcję.
+
+   > **NOTA PO WDROŻENIU (2026-07-31).** Zasada OBOWIĄZUJE, ale zrealizowana jest
+   > INACZEJ niż zapowiada nagłówek 18.a („konto → kolekcja, agent wybiera podzbiór").
+   > Model „konto → jedna kolekcja zakładana automatycznie, agent wskazuje pliki"
+   > został WYCOFANY. W AIDEAS agent wskazuje kolekcję kolumną
+   > `agents.rag_collection_id` (migracja 019, bez klucza obcego), a zakresem
+   > wyszukiwania jest **CAŁA** kolekcja — `documentIds` jest zawsze `null`.
+   > Wyboru podzbioru dokumentów nie ma: kolekcja JEST jednostką organizacyjną,
+   > więc dzielenie jej w kreatorze agenta znaczyłoby, że użytkownik utrzymuje
+   > ten sam podział w dwóch miejscach. Baza wiedzy i Kreator RAG są dwoma
+   > osobnymi narzędziami; `rag_documents.external_ref` (migracja 018) pozostaje
+   > w schemacie NIEUŻYWANE.
 2. **Tryb 3 łączy DWA źródła, ale drugim źródłem NIE jest druga kolekcja RAG** —
    jest nim plik doklejany po stronie AIDEAS. RAG nadal obsługuje tylko jedną
    kolekcję.
