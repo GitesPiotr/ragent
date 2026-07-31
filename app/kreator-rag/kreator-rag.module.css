@@ -1,0 +1,670 @@
+/* =============================================================================
+   Kreator RAG — arkusz panelu. Powstal z globals.css modulu zrodlowego.
+
+   CO SIE ZMIENILO WZGLEDEM ORYGINALU I DLACZEGO:
+   modul byl samodzielna aplikacja, wiec malowal DOKUMENT: :root, *, body, h1,
+   button, input[type='text'], textarea, label. Tutaj to jest jedna zakladka
+   obok pozostalych, a CSS Modules zakresuje WYLACZNIE selektory klas —
+   selektor elementu w pliku .module.css zostaje globalny i przemalowalby
+   cale AIDEAS. Kazda z tych regul zostala wiec zdjeta z dokumentu i podpieta
+   pod .panel, ktore opakowuje zawartosc zakladki w layout.js.
+
+   Zmienne z :root mieszkaja teraz w .panel — dziala tak samo, bo dziedzicza
+   je wszyscy potomkowie, a poza zakladka nie istnieja.
+   ============================================================================= */
+
+.panel {
+  --tlo: #0f1115;
+  --karta: #1a1d24;
+  --obwod: #2a2f3a;
+  --tekst: #e6e8ec;
+  --przygaszony: #9aa2b1;
+  --ok: #37b26b;
+  --blad: #e5484d;
+  --nieznane: #d1a53a;
+
+  /* Z reguly body oryginalu. Bez margin: 0 — to nalezy do dokumentu,
+     a dokumentem zarzadza AIDEAS. */
+  background: var(--tlo);
+  color: var(--tekst);
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  line-height: 1.5;
+  /* Bez min-height: .panel siedzi na tym samym elemencie co .content
+     z app/projekty/layout.module.css, a ten jest `flex: 1` w kontenerze
+     o `min-height: 100dvh` — wysokosc daje wiec uklad, nie ta regula.
+     Szczegoly w komentarzu w app/kreator-rag/layout.js. */
+}
+
+/* Z reguly "*" oryginalu — zawezone do poddrzewa panelu. */
+.panel *,
+.panel *::before,
+.panel *::after {
+  box-sizing: border-box;
+}
+
+.panel h1 {
+  font-size: 22px;
+  margin: 0 0 4px;
+}
+
+.panel button {
+  background: #2a2f3a;
+  color: var(--tekst);
+  border: 1px solid var(--obwod);
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-size: 14px;
+  cursor: pointer;
+  margin-bottom: 20px;
+}
+.panel button:hover {
+  background: #333a47;
+}
+.panel button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.panel input[type='text'],
+.panel textarea {
+  width: 100%;
+  background: #12151b;
+  color: var(--tekst);
+  border: 1px solid var(--obwod);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 14px;
+  font-family: inherit;
+  margin-bottom: 10px;
+}
+.panel textarea {
+  min-height: 60px;
+  resize: vertical;
+}
+.panel label {
+  display: block;
+  font-size: 13px;
+  color: var(--przygaszony);
+  margin-bottom: 4px;
+}
+
+.strona {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 32px 20px 64px;
+}
+
+
+.podtytul {
+  color: var(--przygaszony);
+  margin: 0 0 24px;
+  font-size: 14px;
+}
+
+.karta {
+  background: var(--karta);
+  border: 1px solid var(--obwod);
+  border-radius: 10px;
+  padding: 16px 18px;
+  margin-bottom: 14px;
+}
+
+.naglowek-karty {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+  font-size: 15px;
+}
+
+.kropka {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+.kropka.ok { background: var(--ok); }
+.kropka.blad { background: var(--blad); }
+.kropka.nieznane { background: var(--nieznane); }
+
+.komunikat {
+  color: var(--przygaszony);
+  font-size: 14px;
+  margin: 8px 0 0;
+}
+
+.kod {
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 12px;
+  color: var(--nieznane);
+  margin-left: auto;
+}
+
+.modele {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.modele li {
+  background: #232733;
+  border: 1px solid var(--obwod);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 13px;
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+}
+
+.meta {
+  color: var(--przygaszony);
+  font-size: 13px;
+  margin-top: 24px;
+  border-top: 1px solid var(--obwod);
+  padding-top: 16px;
+}
+
+.meta code {
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  color: var(--tekst);
+}
+
+
+.nawigacja {
+  display: flex;
+  gap: 16px;
+  margin-bottom: 24px;
+  font-size: 14px;
+}
+.nawigacja a {
+  color: var(--przygaszony);
+  text-decoration: none;
+}
+.nawigacja a:hover {
+  color: var(--tekst);
+}
+.nawigacja a.aktywny {
+  color: var(--tekst);
+  font-weight: 600;
+}
+
+
+.przyciski-rzad {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.przyciski-rzad button {
+  margin-bottom: 0;
+}
+
+.rzad-kolekcji {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  justify-content: space-between;
+}
+.rzad-kolekcji .tresc {
+  min-width: 0;
+}
+.rzad-kolekcji h3 {
+  margin: 0 0 2px;
+  font-size: 15px;
+}
+.rzad-kolekcji .detale {
+  color: var(--przygaszony);
+  font-size: 13px;
+}
+.rzad-kolekcji .detale code {
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  color: var(--tekst);
+}
+
+.znacznik {
+  display: inline-block;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--obwod);
+  color: var(--przygaszony);
+}
+.znacznik.zarchiwizowana {
+  color: var(--nieznane);
+  border-color: var(--nieznane);
+}
+
+.pusto {
+  color: var(--przygaszony);
+  font-size: 14px;
+  padding: 8px 0;
+}
+
+.blad-formularza {
+  color: var(--blad);
+  font-size: 13px;
+  margin: 4px 0 10px;
+}
+
+.checkbox-rzad {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--przygaszony);
+  margin-bottom: 16px;
+}
+.checkbox-rzad input {
+  margin: 0;
+}
+
+.pasek {
+  height: 8px;
+  background: #12151b;
+  border: 1px solid var(--obwod);
+  border-radius: 999px;
+  overflow: hidden;
+}
+.pasek-wypelnienie {
+  height: 100%;
+  background: var(--ok);
+  transition: width 0.2s ease;
+}
+
+/* --- wyszukiwanie (Sesja 5) --- */
+
+.trafienie {
+  border-top: 1px solid var(--obwod);
+  padding: 12px 0;
+}
+.trafienie:first-of-type {
+  border-top: none;
+}
+/* Trafienie poniżej progu — pokazywane WYŁĄCZNIE w diagnostyce progu, przygaszone,
+   żeby na pierwszy rzut oka było widać, co normalne wyszukiwanie odrzuca. */
+.trafienie.odrzucone {
+  opacity: 0.55;
+}
+
+.trafienie-naglowek {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  justify-content: space-between;
+}
+.trafienie-plik {
+  font-size: 14px;
+  font-weight: 600;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.trafienie-tresc {
+  font-size: 13px;
+  white-space: pre-wrap;
+  margin-top: 6px;
+  overflow-wrap: anywhere;
+}
+
+/* Score liczbowo — potrzebny do strojenia progu, więc monospace i stała szerokość,
+   żeby kolumna liczb dała się porównywać wzrokiem. */
+.score {
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 13px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  border: 1px solid var(--obwod);
+  flex: 0 0 auto;
+}
+.score.mocny { color: var(--ok); border-color: var(--ok); }
+.score.sredni { color: var(--nieznane); border-color: var(--nieznane); }
+.score.slaby { color: var(--przygaszony); }
+
+/* Kreska progu w diagnostyce: dokładnie w miejscu, gdzie RAG_MIN_SCORE tnie listę. */
+.linia-odciecia {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 14px 0 2px;
+  color: var(--blad);
+  font-size: 12px;
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+}
+.linia-odciecia::before,
+.linia-odciecia::after {
+  content: '';
+  height: 1px;
+  background: var(--blad);
+  flex: 1;
+  opacity: 0.6;
+}
+
+.brak-trafien {
+  border: 1px dashed var(--nieznane);
+  border-radius: 8px;
+  padding: 14px 16px;
+  color: var(--nieznane);
+  font-size: 14px;
+}
+
+.filtr-dokumentow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 4px 0 12px;
+}
+.filtr-dokumentow label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 13px;
+  color: var(--tekst);
+  cursor: pointer;
+}
+.filtr-dokumentow input {
+  margin: 0;
+}
+
+/* --- mapa punktów (Sesja 6) --- */
+
+.strona-szeroka {
+  max-width: 1180px;
+  margin: 0 auto;
+  padding: 24px 20px 48px;
+}
+
+.mapa-obudowa {
+  position: relative;
+  background: #0b0d12;
+  border: 1px solid var(--obwod);
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+.mapa-plotno {
+  display: block;
+  width: 100%;
+  height: 560px;
+  cursor: grab;
+  touch-action: none;
+}
+.mapa-plotno.chwyt {
+  cursor: grabbing;
+}
+
+/* Dymek pod kursorem. pointer-events: none, żeby sam nie łapał myszy i nie migotał. */
+.mapa-dymek {
+  position: absolute;
+  pointer-events: none;
+  max-width: 340px;
+  background: rgba(16, 19, 26, 0.97);
+  border: 1px solid var(--obwod);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.45;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  z-index: 3;
+}
+.mapa-dymek .zrodlo {
+  color: var(--przygaszony);
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 11px;
+  margin-bottom: 4px;
+  overflow-wrap: anywhere;
+}
+
+.mapa-panel {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  background: rgba(16, 19, 26, 0.9);
+  border: 1px solid var(--obwod);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 12px;
+  z-index: 2;
+  max-width: 260px;
+}
+.mapa-panel .legenda-wpis {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--przygaszony);
+  overflow-wrap: anywhere;
+}
+.mapa-panel .probka {
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  flex: 0 0 auto;
+}
+
+.mapa-sterowanie {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  display: flex;
+  gap: 6px;
+  align-items: center;
+  z-index: 2;
+}
+.mapa-sterowanie button {
+  margin-bottom: 0;
+  padding: 5px 10px;
+  font-size: 12px;
+  background: rgba(16, 19, 26, 0.9);
+}
+.mapa-skala {
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 12px;
+  color: var(--przygaszony);
+  background: rgba(16, 19, 26, 0.9);
+  border: 1px solid var(--obwod);
+  border-radius: 6px;
+  padding: 5px 8px;
+}
+
+/* Graf: legenda OBOK płótna, nie na nim (Sesja 9b).
+   Nałożona panelem absolutnym przykrywała węzły — „03-pracownicy.csv" był przez nią
+   przycięty do „3-pracownicy.csv". Widok, który zasłania własne dane, sam sobie
+   przeczy, więc legenda dostaje własną kolumnę. Przy wąskim oknie schodzi nad płótno,
+   bo 260 px kolumny plus czytelny graf nie zmieszczą się obok siebie na telefonie. */
+.graf-uklad {
+  display: grid;
+  /* minmax(0, …) w obu kolumnach: bez tego kolumna gridu ma min-width:auto
+     i płótno rozpycha układ, zamiast się w nim zmieścić. */
+  grid-template-columns: minmax(0, 260px) minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+.graf-legenda .mapa-panel {
+  /* Ten sam wygląd panelu, ale w toku dokumentu, nie nad płótnem. */
+  position: static;
+  max-width: none;
+}
+@media (max-width: 980px) {
+  .graf-uklad {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* Suwak progu wystąpień w grafie (Sesja 10). Wygląda jak .mapa-skala, bo stoi
+   w tym samym pasku i pokazuje tę samą klasę rzeczy: liczbę opisującą widok. */
+.graf-suwak {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(16, 19, 26, 0.9);
+  border: 1px solid var(--obwod);
+  border-radius: 6px;
+  padding: 4px 9px;
+  font-size: 12px;
+  color: var(--przygaszony);
+}
+.graf-suwak span {
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  /* Stała szerokość: bez niej przejście z „≥ 9×" na „≥ 10×" przesuwa suwak
+     pod palcem, co przy przeciąganiu wygląda jak zacinanie się kontrolki. */
+  min-width: 34px;
+  text-align: right;
+}
+.graf-suwak input[type='range'] {
+  width: 96px;
+  margin: 0;
+  accent-color: #fbbf24;
+  cursor: pointer;
+}
+
+.mapa-stan {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 560px;
+  flex-direction: column;
+  gap: 10px;
+  text-align: center;
+  padding: 0 24px;
+}
+.mapa-licznik {
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 28px;
+  color: var(--nieznane);
+}
+
+/* Przełącznik trybów mapy (Sesja 6b) — segmentowany, żeby było widać, że to jeden
+   wybór z dwóch, a nie dwa niezależne przyciski. */
+.przelacznik {
+  display: flex;
+  border: 1px solid var(--obwod);
+  border-radius: 6px;
+  overflow: hidden;
+}
+.przelacznik button {
+  margin-bottom: 0;
+  border: none;
+  border-radius: 0;
+  padding: 5px 10px;
+  font-size: 12px;
+  background: rgba(16, 19, 26, 0.9);
+}
+.przelacznik button + button {
+  border-left: 1px solid var(--obwod);
+}
+.przelacznik button.wybrany {
+  background: #2f3a4d;
+  color: var(--tekst);
+  font-weight: 600;
+}
+
+/* --- strona kolekcji: lista po lewej, mapa po prawej (Sesja 6b) --- */
+
+.kolekcja-uklad {
+  display: grid;
+  /* minmax(0, …) jest konieczne: bez tego kolumna gridu ma min-width:auto i szeroka
+     zawartość (płótno, długie nazwy plików) rozpycha układ zamiast się zmieścić. */
+  grid-template-columns: minmax(0, 1fr) minmax(0, 480px);
+  gap: 24px;
+  align-items: start;
+}
+
+.kolekcja-mapa {
+  position: sticky;
+  top: 16px;
+}
+
+@media (max-width: 1100px) {
+  .kolekcja-uklad {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  /* Przyklejenie w jednej kolumnie nie ma sensu — mapa zasłaniałaby listę. */
+  .kolekcja-mapa {
+    position: static;
+  }
+}
+
+/* --- mapa osadzona: ciaśniej niż na pełnym ekranie --- */
+
+.mapa-belka {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 8px;
+  font-size: 13px;
+}
+.mapa-belka .zrodlo {
+  margin: 0;
+}
+.mapa-pelny {
+  margin-left: auto;
+  font-size: 12px;
+}
+
+/* Legenda i sterowanie leżą na płótnie po przeciwnych rogach. W wąskiej kolumnie
+   zderzyłyby się, więc każde dostaje połowę szerokości, a przyciski się zawijają. */
+.mapa-komponent.osadzona .mapa-panel {
+  max-height: 120px;
+  max-width: 44%;
+  overflow-y: auto;
+  font-size: 11px;
+  padding: 6px 8px;
+}
+.mapa-komponent.osadzona .mapa-sterowanie {
+  gap: 5px;
+  max-width: 54%;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+.mapa-komponent.osadzona .zastrzezenie {
+  margin-bottom: 0;
+}
+
+/* Pasek postępu indeksowania na mapie (Sesja 6b) — nad płótnem, żeby nie przesuwał
+   canvasa w trakcie liczenia. Ta sama para .pasek/.pasek-wypelnienie co na stronie
+   kolekcji: jedna pętla, jeden wygląd. */
+.mapa-postep {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 260px;
+  background: rgba(16, 19, 26, 0.92);
+  border: 1px solid var(--obwod);
+  border-radius: 6px;
+  padding: 6px 12px;
+  font-size: 12px;
+  color: var(--nieznane);
+}
+.mapa-postep .pasek {
+  flex: 1;
+  min-width: 120px;
+}
+
+.mapa-info-3d {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  z-index: 2;
+  background: rgba(16, 19, 26, 0.92);
+  border: 1px solid var(--obwod);
+  border-radius: 6px;
+  padding: 5px 10px;
+  font-size: 12px;
+  color: var(--nieznane);
+}
+
+.zastrzezenie {
+  color: var(--przygaszony);
+  font-size: 12px;
+  margin: 10px 0 0;
+  border-left: 2px solid var(--obwod);
+  padding-left: 10px;
+}

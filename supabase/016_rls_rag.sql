@@ -447,6 +447,44 @@ grant execute on function public.rag_diag(text, text) to authenticated;
 --  ktora uuid-em nie jest. Rzutujemy strone pewna (c.id), porownujemy tekst
 --  z tekstem, a niepasujacy obiekt po prostu sie nie dopasowuje.
 --
+--  =========================================================================
+--  !!! PULAPKA, KTORA JUZ RAZ ZADZIALALA — DLATEGO "objects.name", NIE "name"
+--
+--  Pierwsza wersja tej polityki miala w podzapytaniu SAM "name":
+--
+--      where c.id::text = split_part(name, '/', 1)          <-- ZLE
+--
+--  Zamiar byl taki, zeby "name" znaczylo storage.objects.name — czyli klucz
+--  obiektu. Postgres rozumie to inaczej: rozstrzyga nazwe w NAJBLIZSZYM
+--  zakresie, a tam stoi alias "c", czyli rag_collections, ktore MA WLASNA
+--  KOLUMNE "name" (nazwe kolekcji, session-2-schema.sql:22). Wyrazenie znaczy
+--  wiec "c.id = pierwszy segment NAZWY KOLEKCJI" i jest zawsze falszywe.
+--
+--  DLACZEGO TO BOLI BARDZIEJ NIZ ZWYKLA LITEROWKA: skladniowo jest bez zarzutu.
+--  Postgres nie zglasza bledu ani ostrzezenia, polityka tworzy sie poprawnie,
+--  a jedynym objawem jest odmowa zapisu z komunikatem "new row violates
+--  row-level security policy" — czyli dokladnie tym samym, ktory dostaniesz
+--  przy braku uprawnien. Diagnoza idzie wtedy w strone kluczy i sesji, a blad
+--  siedzi w rozstrzyganiu nazwy kolumny.
+--
+--  KWALIFIKUJEMY OBIE STRONY JAWNIE. "objects" to nazwa tabeli, na ktorej
+--  stoi polityka (storage.objects), wiec objects.name jest kluczem obiektu
+--  i nie da sie go pomylic z niczym z podzapytania.
+--
+--  JAK TO SPRAWDZIC, ZANIM ZAUFASZ POLITYCE — test w SQL Editor podstawia
+--  kontekst uzytkownika i pyta wprost, czy warunek przepusci dany klucz:
+--
+--      select exists (
+--        select 1 from public.rag_collections c
+--         where c.id::text = split_part('<WKLEJ-KLUCZ-OBIEKTU>', '/', 1)
+--           and c.owner_id = '<WKLEJ-UUID-KONTA>'::uuid
+--      ) as czy_polityka_przepusci;
+--
+--  Ma zwrocic true. Zwraca false przy KAZDEJ z trzech przyczyn naraz (zla
+--  kolumna, zla kolekcja, zle konto), wiec przy false sprawdz po kolei:
+--  czy kolekcja o tym id istnieje i czyja jest.
+--  =========================================================================
+--
 --  UWAGA O ZLOZENIU Z RLS NA rag_collections: podzapytanie wykonuje sie z prawami
 --  wolajacego, wiec dziala na nim rowniez polityka rag_collections_wlasne.
 --  Warunek "c.owner_id = auth.uid()" jest przez to formalnie nadmiarowy —
@@ -462,20 +500,20 @@ create policy "rag_files_wlasne_pliki"
   for all
   to authenticated
   using (
-    bucket_id = 'rag-files'
+    objects.bucket_id = 'rag-files'
     and exists (
       select 1
         from public.rag_collections c
-       where c.id::text = split_part(name, '/', 1)
+       where c.id::text = split_part(objects.name, '/', 1)
          and c.owner_id = auth.uid()
     )
   )
   with check (
-    bucket_id = 'rag-files'
+    objects.bucket_id = 'rag-files'
     and exists (
       select 1
         from public.rag_collections c
-       where c.id::text = split_part(name, '/', 1)
+       where c.id::text = split_part(objects.name, '/', 1)
          and c.owner_id = auth.uid()
     )
   );

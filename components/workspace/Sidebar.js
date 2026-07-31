@@ -51,6 +51,9 @@ export function Sidebar() {
   // Aktywne na kazdej trasie agentow: /agenty oraz /projekty/[id]/agenty(/[id]).
   const onAgents = pathname.includes("/agenty");
   const onKnowledge = pathname.startsWith("/wiedza");
+  // startsWith, nie ===, bo zakladka ma glebsze trasy: /kreator-rag/kolekcje/[id]
+  // oraz jej widoki /mapa i /graf. Podswietlenie ma zostac na calej gałęzi.
+  const onKreatorRag = pathname.startsWith("/kreator-rag");
   const onChats = pathname.startsWith("/czaty");
   const onSettings = pathname.startsWith("/ustawienia");
 
@@ -87,6 +90,15 @@ export function Sidebar() {
           className={`${styles.link} ${onKnowledge ? styles.active : ""}`}
         >
           Baza wiedzy
+        </Link>
+
+        {/* Kolekcje RAG naleza do konta, nie do projektu — link tak samo jak
+            „Baza wiedzy” nie niesie kontekstu projektu. */}
+        <Link
+          href="/kreator-rag"
+          className={`${styles.link} ${onKreatorRag ? styles.active : ""}`}
+        >
+          Kreator RAG
         </Link>
 
         <Link
