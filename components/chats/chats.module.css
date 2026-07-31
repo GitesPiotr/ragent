@@ -1160,3 +1160,12 @@
   }
 
 /* themeified */
+
+/* Fragment dokumentu (RAG) — NIE jest linkiem, wiec nie udaje linku. */
+.msgSourceDoc {
+  font-size: 12.5px;
+  color: #71717a;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
