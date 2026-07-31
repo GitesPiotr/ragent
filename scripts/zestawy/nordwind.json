@@ -95,5 +95,26 @@
       "fraza": "mobbing"
     }
   ],
-  "uwagaDoSzumuBliskiego": "CZTERY OSTATNIE POZYCJE SA NIEZWERYFIKOWANE — dopisane po korekcie, bez sprawdzenia w pelnej tresci. PRZED UZYCIEM sprawdz kazda z nich tak, jak opisano w jakDobranoSzumBliski, inaczej powtorzysz blad, ktory ten plik ma dokumentowac."
+  "uwagaDoSzumuBliskiego": "CZTERY OSTATNIE POZYCJE SA NIEZWERYFIKOWANE — dopisane po korekcie, bez sprawdzenia w pelnej tresci. PRZED UZYCIEM sprawdz kazda z nich tak, jak opisano w jakDobranoSzumBliski, inaczej powtorzysz blad, ktory ten plik ma dokumentowac.",
+  "wyniki": {
+    "jakPorownywac": "Kazdy przebieg to osobne losowanie przy temperature 0.2 — pojedyncza roznica o jedno pytanie NIE jest regresja. Alarm dopiero przy spadku poprawnych odmow ponizej 12/14 albo przy jakimkolwiek PRZEOCZENIU (odpowiedz mimo braku tresci w dokumencie), bo to jest konfabulacja z falszywym cytowaniem.",
+    "2026-07-31_runda10": {
+      "model": "anthropic / claude-haiku-4-5, temperature 0.2, tryb 2, kolekcja TEST",
+      "falszywyAlarm": "0 / 10",
+      "przeoczenie": "0 / 14",
+      "poprawnaOdmowa": "14 / 14",
+      "poprawneTrafienia": "10 / 10 we wlasciwy paragraf",
+      "szumDaleki": "8 / 8 odmow, narzedzie ani razu nie wolane",
+      "szumBliskiNadProgiem": "6 / 6 przeszlo prog 0.45 (top score 0.4829 - 0.6058) — kazda odmowa to zasluga akapitu SPEC 18.0, nie progu",
+      "identyfikatory": "1 / 4 — model prosil o doprecyzowanie zamiast wyszukac"
+    },
+    "2026-07-31_runda11": {
+      "zmiana": "regula w description: samo odwolanie do jednostki redakcyjnej (§ 45, art. 12, pkt 3) jest pytaniem KOMPLETNYM — przekazac bez zmian, nie prosic o doprecyzowanie",
+      "identyfikatory": "4 / 4 — kazdy przekazany DOSLOWNIE (prz=\"§ 45\") i trafiony we wlasciwy paragraf",
+      "regresjaPoprawne": "3 / 3 trafien (§ 45, § 79, § 8)",
+      "regresjaSzumBliski": "3 / 3 odmow (rekojmia, odprawa emerytalna, ekwiwalent)",
+      "regresjaOdcinajaca": "rachunek -> calculator (rag NIE wolany); pogawedka -> zadne narzedzie",
+      "uwaga": "Regula o rozwijaniu zaimkow NIE zostala oslabiona — przy pytaniach pelnych model dalej przepisuje ('gdzie znajduje sie apteczka pierwszej pomocy' -> '... w budynku', 'czy pracodawca ma obowiazek...' -> 'obowiazek pracodawcy przeciwdzialania mobbingowi')."
+    }
+  }
 }
