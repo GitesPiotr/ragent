@@ -10,6 +10,7 @@
 // Normalna ścieżka dla nowych kolekcji zostaje w embedNextBatch (finished: true).
 
 import { ok, fail } from '../../../../_lib/http.js';
+import { klientSesji } from '../../../../_lib/klientSesji.js';
 import { buildCollectionProjection } from '@/lib/rag/map.js';
 
 export const dynamic = 'force-dynamic';
@@ -18,7 +19,7 @@ export const maxDuration = 300;
 export async function POST(request, { params }) {
   try {
     const { id } = await params;
-    const result = await buildCollectionProjection(id);
+    const result = await buildCollectionProjection(id, { client: await klientSesji() });
     return ok(result);
   } catch (err) {
     return fail(err);

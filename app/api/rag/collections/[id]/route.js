@@ -4,6 +4,7 @@
 // W Next 15 params jest asynchroniczne — stąd await params.
 
 import { ok, fail } from '../../_lib/http.js';
+import { klientSesji } from '../../_lib/klientSesji.js';
 import {
   getCollection,
   archiveCollection,
@@ -17,12 +18,14 @@ export const dynamic = 'force-dynamic';
 export async function GET(request, { params }) {
   try {
     const { id } = await params;
-    const collection = await getCollection(id);
+    const client = await klientSesji();
+    const collection = await getCollection(id, { client });
     // Stan pośredni potoku dociągnięty TAM, GDZIE POWSTAJE PRZYCZYNA — na ekranie,
     // z którego wgrywa się dokumenty. Napis w grafie chroni tego, kto patrzy na graf;
     // nie chroni tego, kto wgrywa plik i idzie dalej, a to on właśnie zostawia pojęcia
     // niescalone. Dwa odczyty head-count, bez transferu wierszy.
     const normalizacjaOczekuje = await czyNormalizacjaOczekuje(id, {
+      client,
       concepts_normalized_at: collection.conceptsNormalizedAt,
     });
     return ok({ collection: { ...collection, normalizacjaOczekuje } });
@@ -45,9 +48,9 @@ export async function PATCH(request, { params }) {
     const action = body && body.action;
     let collection;
     if (action === 'archive' || (body && body.status === 'archived')) {
-      collection = await archiveCollection(id);
+      collection = await archiveCollection(id, { client: await klientSesji() });
     } else if (action === 'restore' || (body && body.status === 'active')) {
-      collection = await restoreCollection(id);
+      collection = await restoreCollection(id, { client: await klientSesji() });
     } else {
       const e = new Error('Nieobsługiwana zmiana. Użyj action: "archive" albo "restore".');
       e.code = 'invalid_input';
@@ -62,7 +65,7 @@ export async function PATCH(request, { params }) {
 export async function DELETE(request, { params }) {
   try {
     const { id } = await params;
-    const result = await deleteCollection(id);
+    const result = await deleteCollection(id, { client: await klientSesji() });
     return ok(result);
   } catch (err) {
     return fail(err);

@@ -2,6 +2,7 @@
 // Konwersja web File → bajty dzieje się tutaj; rdzeń dostaje czysty obiekt (bez zależności od Web API).
 
 import { ok, fail } from '../../../_lib/http.js';
+import { klientSesji } from '../../../_lib/klientSesji.js';
 import { ingestFile } from '@/lib/rag/documents.js';
 
 export const dynamic = 'force-dynamic';
@@ -27,10 +28,13 @@ export async function POST(request, { params }) {
     }
 
     const bytes = new Uint8Array(await file.arrayBuffer());
-    const document = await ingestFile({
-      collectionId: id,
-      file: { name: file.name, mimeType: file.type, size: file.size, bytes },
-    });
+    const document = await ingestFile(
+      {
+        collectionId: id,
+        file: { name: file.name, mimeType: file.type, size: file.size, bytes },
+      },
+      { client: await klientSesji() }
+    );
     return ok({ document }, { status: 201 });
   } catch (err) {
     return fail(err);

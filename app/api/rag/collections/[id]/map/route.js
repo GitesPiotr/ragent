@@ -8,6 +8,7 @@
 // to kilka MB na każde wejście (sekcja 9).
 
 import { ok, fail } from '../../../_lib/http.js';
+import { klientSesji } from '../../../_lib/klientSesji.js';
 import { getMapData } from '@/lib/rag/map.js';
 
 export const dynamic = 'force-dynamic';
@@ -17,7 +18,7 @@ export async function GET(request, { params }) {
     const { id } = await params;
     const url = new URL(request.url);
     const includeNeighbors = url.searchParams.get('neighbors') === '1';
-    const data = await getMapData(id, { includeNeighbors });
+    const data = await getMapData(id, { includeNeighbors }, { client: await klientSesji() });
     return ok(data);
   } catch (err) {
     return fail(err);

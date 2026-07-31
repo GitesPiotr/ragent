@@ -14,6 +14,7 @@
 // więc idzie GET-em — nie POST-em z pustą partią.
 
 import { ok, fail } from '../../../../_lib/http.js';
+import { klientSesji } from '../../../../_lib/klientSesji.js';
 import { extractConceptsForDocument } from '@/lib/rag/concepts.js';
 
 export const dynamic = 'force-dynamic';
@@ -29,7 +30,13 @@ export async function GET(request, { params }) {
     }
     // batch: 0 — ta sama ścieżka co wyciąganie, tylko bez partii do przerobienia.
     // Dzięki temu `total` liczy się w JEDNYM miejscu i nie ma jak się rozjechać.
-    return ok(await extractConceptsForDocument(documentId, { collectionId: id, batch: 0 }));
+    return ok(
+      await extractConceptsForDocument(documentId, {
+        client: await klientSesji(),
+        collectionId: id,
+        batch: 0,
+      })
+    );
   } catch (err) {
     return fail(err);
   }
@@ -45,7 +52,12 @@ export async function POST(request, { params }) {
       e.code = 'invalid_input';
       throw e;
     }
-    return ok(await extractConceptsForDocument(documentId, { collectionId: id }));
+    return ok(
+      await extractConceptsForDocument(documentId, {
+        client: await klientSesji(),
+        collectionId: id,
+      })
+    );
   } catch (err) {
     return fail(err);
   }

@@ -5,6 +5,7 @@
 // czyli dokładnie te duplikaty, których usunięcie jest celem Sesji 8.
 
 import { ok, fail } from '../../../_lib/http.js';
+import { klientSesji } from '../../../_lib/klientSesji.js';
 import { listConcepts } from '@/lib/rag/concepts.js';
 
 export const dynamic = 'force-dynamic';
@@ -12,7 +13,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(request, { params }) {
   try {
     const { id } = await params;
-    return ok(await listConcepts(id));
+    return ok(await listConcepts(id, { client: await klientSesji() }));
   } catch (err) {
     return fail(err);
   }

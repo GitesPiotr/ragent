@@ -6,6 +6,7 @@
 // ollama_unavailable (503), nie jako puste wyniki.
 
 import { ok, fail } from '../../../_lib/http.js';
+import { klientSesji } from '../../../_lib/klientSesji.js';
 import { searchCollection } from '@/lib/rag/search.js';
 
 export const dynamic = 'force-dynamic';
@@ -15,15 +16,20 @@ export async function POST(request, { params }) {
     const { id } = await params;
     const body = await request.json().catch(() => ({}));
 
-    const result = await searchCollection({
-      collectionId: id,
-      query: body.query,
-      topK: body.topK,
-      // minScore przekazujemy TYLKO gdy podane — inaczej rdzeń weźmie RAG_MIN_SCORE.
-      // Zero jest wartością sensowną (diagnostyka progu), więc sprawdzamy obecność klucza.
-      minScore: body.minScore === undefined || body.minScore === null ? undefined : body.minScore,
-      documentIds: body.documentIds,
-    });
+    const result = await searchCollection(
+      {
+        collectionId: id,
+        query: body.query,
+        topK: body.topK,
+        // minScore przekazujemy TYLKO gdy podane — inaczej rdzeń weźmie RAG_MIN_SCORE.
+        // Zero jest wartością sensowną (diagnostyka progu), więc sprawdzamy obecność klucza.
+        minScore: body.minScore === undefined || body.minScore === null ? undefined : body.minScore,
+        documentIds: body.documentIds,
+      },
+      // Ten sam klient obsłuży też wpis do rag_search_log — searchCollection podaje go
+      // dalej do zapiszWyszukiwanie, więc dziennik dostaje owner_id z sesji.
+      { client: await klientSesji() }
+    );
 
     return ok(result);
   } catch (err) {

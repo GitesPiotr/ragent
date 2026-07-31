@@ -13,6 +13,7 @@
 // o co ją poproszono, a rdzeń nie zgaduje, co się komu ładnie rysuje.
 
 import { ok, fail } from '../../../_lib/http.js';
+import { klientSesji } from '../../../_lib/klientSesji.js';
 import { getGraphData } from '@/lib/rag/graph.js';
 
 export const dynamic = 'force-dynamic';
@@ -27,6 +28,7 @@ export async function GET(request, { params }) {
     // „?minMentions=abc" nie zamieniło się po cichu w domyślną jedynkę.
     return ok(
       await getGraphData(id, {
+        client: await klientSesji(),
         ...(surowy === null || surowy === '' ? {} : { minMentions: surowy }),
         tylkoMosty: q.get('tylkoMosty') === '1',
       })

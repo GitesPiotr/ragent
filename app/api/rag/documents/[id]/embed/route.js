@@ -3,6 +3,7 @@
 // Oba zwracają { done, total, finished }. Ollama niedostępna → ollama_unavailable (503).
 
 import { ok, fail } from '../../../_lib/http.js';
+import { klientSesji } from '../../../_lib/klientSesji.js';
 import { embedNextBatch, getEmbedProgress } from '@/lib/rag/documents.js';
 
 export const dynamic = 'force-dynamic';
@@ -10,7 +11,7 @@ export const dynamic = 'force-dynamic';
 export async function POST(request, { params }) {
   try {
     const { id } = await params;
-    const result = await embedNextBatch(id);
+    const result = await embedNextBatch(id, { client: await klientSesji() });
     return ok(result);
   } catch (err) {
     return fail(err);
@@ -22,7 +23,7 @@ export async function POST(request, { params }) {
 export async function GET(request, { params }) {
   try {
     const { id } = await params;
-    const result = await getEmbedProgress(id);
+    const result = await getEmbedProgress(id, { client: await klientSesji() });
     return ok(result);
   } catch (err) {
     return fail(err);

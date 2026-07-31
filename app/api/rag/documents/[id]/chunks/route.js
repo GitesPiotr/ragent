@@ -2,6 +2,7 @@
 // Endpoint pomocniczy poza tabelą 10.1 — służy WERYFIKACJI cięcia w UI. Read-only.
 
 import { ok, fail } from '../../../_lib/http.js';
+import { klientSesji } from '../../../_lib/klientSesji.js';
 import { listDocumentChunks } from '@/lib/rag/documents.js';
 
 export const dynamic = 'force-dynamic';
@@ -9,7 +10,7 @@ export const dynamic = 'force-dynamic';
 export async function GET(request, { params }) {
   try {
     const { id } = await params;
-    const chunks = await listDocumentChunks(id);
+    const chunks = await listDocumentChunks(id, {}, { client: await klientSesji() });
     return ok({ chunks });
   } catch (err) {
     return fail(err);
