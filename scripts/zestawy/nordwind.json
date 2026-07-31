@@ -1,0 +1,99 @@
+{
+  "kolekcja": "TEST",
+  "opis": "Regulamin pracy Nordwind Technologies sp. z o.o. — jeden dokument PDF, 22 strony, 108 fragmentów, paragrafy § 1–§ 107. Zestaw do pomiaru CAŁEGO łańcucha (agent + narzędzie rag_search + akapit SPEC 18.0), nie samej warstwy wyszukiwania.",
+  "utworzony": "2026-07-31",
+  "uwaga": "PYTANIA PRZEPISUJ CO DO ZNAKU. Zmiana sformułowania unieważnia porównanie z historią — na tym samym korpusie „gdzie znajduje się apteczka\" daje 0,4581, a „gdzie znajduje się apteczka pierwszej pomocy\" 0,6052, czyli osiemnaście razy więcej niż cały margines progu. To dotyczy każdej klasy pytań, także szumu.",
+  "jakZmierzono": "Agent w trybie 2: knowledge_mode='none', tools=['rag_search'], rag_collection_id = kolekcja TEST, dostawca anthropic, model claude-haiku-4-5, temperature 0.2. KAŻDE pytanie w OSOBNEJ rozmowie — historia zanieczyszcza pomiar, bo model przepisuje pytanie z kontekstu.",
+  "jakDobranoSzumBliski": "Kazdy temat sprawdzony w PELNEJ TRESCI fragmentow (pole content z wyszukiwania), NIE w podgladach z /chunks. PODGLAD JEST UCIETY DO 240 ZNAKOW i wlasnie na tym potknal sie pierwszy wariant tego zestawu: '§ 96' w podgladzie konczy sie na 'Uzyskanie oceny koncowej 4,5 lub wyzsz...', a dalszy ciag mowi wprost o nagrodzie uznaniowej. Tak samo swiadectwo pracy — jest w § 90, poza urwaniem podgladu. Cztery z osmiu pierwotnych pytan trafily wiec w tematy OBECNE w dokumencie. ODRZUCONE JAKO OBECNE: godziny nadliczbowe (§ 21-23), podroze sluzbowe (§ 40, 78-80), niezdolnosc do pracy (§ 39), kary porzadkowe (§ 54, 56, 57), zgloszenie wypadku (§ 13), swiadectwo pracy (§ 90), nagroda uznaniowa (§ 96), poufnosc po ustaniu zatrudnienia z odwolaniem do ustawy o zwalczaniu nieuczciwej konkurencji (§ 11), wzmianka o wplatach do PPK przy potraceniach (§ 37).",
+  "poprawne": [
+    {
+      "pytanie": "gdzie znajduje się apteczka pierwszej pomocy",
+      "fraza": "Apteczka pierwszej pomocy",
+      "paragraf": "§ 45"
+    },
+    {
+      "pytanie": "ile wynosi okres wypowiedzenia po 3 latach pracy",
+      "fraza": "Okres wypowiedzenia umowy o pracę",
+      "paragraf": "§ 89"
+    },
+    {
+      "pytanie": "od której do której godziny odbywa się praca w zakładzie",
+      "fraza": "godzin",
+      "paragraf": "§ 18"
+    },
+    {
+      "pytanie": "jaki dodatek przysługuje za pracę w godzinach nadliczbowych",
+      "fraza": "dodatek",
+      "paragraf": "§ 23"
+    },
+    {
+      "pytanie": "jaka dieta przysługuje z tytułu podróży służbowej na obszarze kraju",
+      "fraza": "dieta",
+      "paragraf": "§ 79"
+    },
+    {
+      "pytanie": "w jakim terminie można zastosować karę porządkową wobec pracownika",
+      "fraza": "2 tygodni",
+      "paragraf": "§ 54"
+    },
+    {
+      "pytanie": "kiedy kara porządkowa uważana jest za niebyłą",
+      "fraza": "niebyłą",
+      "paragraf": "§ 57"
+    },
+    {
+      "pytanie": "co pracownik ma zrobić po zauważeniu wypadku w zakładzie pracy",
+      "fraza": "niezwłocznie zawiadomić przełożonego",
+      "paragraf": "§ 13"
+    },
+    {
+      "pytanie": "czy pracodawca ma obowiązek przeciwdziałać mobbingowi",
+      "fraza": "mobbing",
+      "paragraf": "§ 8"
+    },
+    {
+      "pytanie": "co przysługuje pracownikowi za czas niezdolności do pracy wskutek choroby",
+      "fraza": "niezdolności do pracy",
+      "paragraf": "§ 39"
+    }
+  ],
+  "szumDaleki": [
+    "jak upiec sernik na zimno",
+    "jaka jest stolica Nowej Zelandii",
+    "jakie są objawy zapalenia płuc",
+    "jak wymienić olej w silniku diesla",
+    "kiedy sadzić czosnek ozimy",
+    "ile kosztuje bilet lotniczy do Tokio",
+    "jak nauczyć się grać na gitarze basowej",
+    "który procesor wybrać do gier komputerowych"
+  ],
+  "szumBliski": [
+    "jaki jest termin przedawnienia roszczeń z tytułu rękojmi",
+    "czy pracownikowi przysługuje odprawa emerytalna",
+    "ile trwa urlop macierzyński",
+    "kiedy przysługuje ekwiwalent za niewykorzystany urlop wypoczynkowy",
+    "jakie są zasady odpowiedzialności materialnej za powierzone mienie",
+    "w jakich przypadkach przysługuje urlop bezpłatny",
+    "jakie uprawnienia ma zakładowa organizacja związkowa",
+    "na jakich zasadach pracownik może przystąpić do ubezpieczenia grupowego"
+  ],
+  "identyfikatory": [
+    {
+      "pytanie": "§ 45",
+      "fraza": "Apteczka"
+    },
+    {
+      "pytanie": "§ 89",
+      "fraza": "Okres wypowiedzenia"
+    },
+    {
+      "pytanie": "§ 23",
+      "fraza": "nadliczbow"
+    },
+    {
+      "pytanie": "§ 8",
+      "fraza": "mobbing"
+    }
+  ],
+  "uwagaDoSzumuBliskiego": "CZTERY OSTATNIE POZYCJE SA NIEZWERYFIKOWANE — dopisane po korekcie, bez sprawdzenia w pelnej tresci. PRZED UZYCIEM sprawdz kazda z nich tak, jak opisano w jakDobranoSzumBliski, inaczej powtorzysz blad, ktory ten plik ma dokumentowac."
+}
