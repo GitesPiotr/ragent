@@ -12,5 +12,6 @@ export async function GET() {
   return NextResponse.json({
     anthropic: { configured: Boolean(process.env.ANTHROPIC_API_KEY) },
     openai: { configured: Boolean(process.env.OPENAI_API_KEY) },
+    openrouter: { configured: Boolean(process.env.OPENROUTER_API_KEY) },
   });
 }

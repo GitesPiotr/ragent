@@ -130,6 +130,7 @@ export async function GET(request) {
     account: accountStatus,
     anthropic: checkKey("ANTHROPIC_API_KEY", { required: true }),
     openai: checkKey("OPENAI_API_KEY", { required: false }),
+    openrouter: checkKey("OPENROUTER_API_KEY", { required: false }),
     ollama: ollamaStatus,
   });
 }

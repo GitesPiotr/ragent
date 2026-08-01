@@ -100,6 +100,12 @@ export function ModelSection() {
 
   const staticModels = getModelsForProvider(agent.provider);
   const isOllama = agent.provider === "ollama";
+  // OpenRouter ma katalog DYNAMICZNY, ale — inaczej niz Ollama — nie mamy go
+  // jeszcze skad wziac (przyjdzie z API w rundzie 3). Do tego czasu model
+  // wpisuje sie recznie, jak identyfikator w OpenRouterze
+  // (np. "anthropic/claude-haiku-4.5"). Lista radiobuttonow byla by tu pusta,
+  // czyli agenta na tym dostawcy nie dalo by sie w ogole skonfigurowac.
+  const isOpenRouter = agent.provider === "openrouter";
   const visibleModels = isOllama ? ollama.models : staticModels;
 
   // Czy WSZYSTKIE modele tego dostawcy sa niesprawdzone (verified === false).
@@ -175,6 +181,35 @@ export function ModelSection() {
               ? ` Wymagają też klucza ${requiredKey} w pliku .env.local (obecnie go brakuje) — po dodaniu zrestartuj serwer.`
               : ""}
           </div>
+        )}
+
+        {/* OPENROUTER — POLE TEKSTOWE ZAMIAST LISTY, do czasu katalogu z API.
+            Identyfikator ma postać „dostawca/model", np. anthropic/claude-haiku-4.5.
+            Nie sprawdzamy go po swojej stronie: katalog OpenRoutera zmienia się
+            częściej niż ta aplikacja, więc lista dozwolonych wartości zaszyta
+            tutaj i tak byłaby nieaktualna. Zły identyfikator wraca z API jako
+            czytelny błąd „model nie istnieje", a nie jako cisza. */}
+        {isOpenRouter && (
+          <>
+            <span className={styles.hint}>
+              Wpisz identyfikator modelu z OpenRoutera, np.{" "}
+              <code>anthropic/claude-haiku-4.5</code>. Katalog do wyboru z listy
+              pojawi się w kolejnym kroku.
+            </span>
+            <input
+              className={styles.input}
+              type="text"
+              value={agent.model || ""}
+              placeholder="anthropic/claude-haiku-4.5"
+              onChange={(e) => changeField("model", e.target.value.trim())}
+            />
+            {keyConfigured === false && (
+              <div className={styles.note}>
+                ⚠️ Brakuje klucza OPENROUTER_API_KEY w pliku .env.local — po
+                dodaniu zrestartuj serwer, inaczej rozmowa zwróci błąd.
+              </div>
+            )}
+          </>
         )}
 
         <div className={styles.modelList}>
