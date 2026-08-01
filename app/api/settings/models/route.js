@@ -32,6 +32,7 @@ import {
   znormalizujDopuszczone,
   znormalizujPrzypisania,
   przypisaniaDoOdpowiedzi,
+  kluczModelu,
 } from "@/lib/settings/modeleKonta";
 
 export const runtime = "nodejs";
@@ -160,7 +161,12 @@ export async function PUT(request) {
   // (pary)". Zamiast walczyc ze skladnia filtrow czytamy stan i kasujemy po
   // identyfikatorach — jedno zapytanie wiecej, ale warunek jest w JavaScripcie,
   // gdzie widac go wprost.
-  const zachowaj = przyjete.map((m) => `${m.provider}:${m.model_id}`);
+  // kluczModelu, a nie wlasne sklejanie dwukropkiem. Trasa miala tu przez
+  // chwile drugi format klucza dla tego samego pojecia — dziala dopoki oba
+  // sa uzywane konsekwentnie, ale dwukropek jest tu akurat zlym wyborem:
+  // identyfikatory OpenRoutera go zawieraja ("ling-3.0-flash:free"), wiec
+  // rozbior klucza z powrotem na czesci trafialby w zle miejsce.
+  const zachowaj = przyjete.map((m) => kluczModelu(m.provider, m.model_id));
 
   const { data: obecne, error: bladOdczytu } = await supabase
     .from("allowed_models")
@@ -173,7 +179,7 @@ export async function PUT(request) {
 
   const maZostac = new Set(zachowaj);
   const doKasacji = (obecne || [])
-    .filter((m) => !maZostac.has(`${m.provider}:${m.model_id}`))
+    .filter((m) => !maZostac.has(kluczModelu(m.provider, m.model_id)))
     .map((m) => m.id);
 
   if (doKasacji.length > 0) {
