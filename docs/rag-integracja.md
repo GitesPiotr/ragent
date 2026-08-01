@@ -18,6 +18,7 @@ z AIDEAS.
 | `app/api/rag/` | 17 tras HTTP + `_lib/http.js`, `_lib/klientSesji.js` | cienka warstwa: walidacja → rdzeń → odpowiedź |
 | `app/kreator-rag/` | panel: diagnostyka, kolekcje, mapa fragmentów, graf wiedzy | 13 plików, własny `kreator-rag.module.css` |
 | `lib/tools/rag_search.js` | narzędzie agenta | jedyne miejsce, gdzie czat spotyka RAG |
+| `components/creator/sections/RagSection.js` | sekcja kreatora agenta | włącznik + wybór kolekcji; **własna karta, między „Bazą wiedzy" a „Narzędziami"** |
 | `supabase/rag/` | 9 skryptów SQL modułu (schemat, funkcje) | uruchamiane ręcznie, **nie** przez migracje AIDEAS |
 | `supabase/016..019` | migracje styku | opis niżej |
 | `scripts/` | narzędzia z konsoli + `zestawy/nordwind.json` | patrz „Skrypty" |
@@ -67,6 +68,12 @@ Propozycja rozwiązania (modal z listą agentów, potem jawny update) jest w nag
 ## Trzy tryby wiedzy i czym się przełączają
 
 Przełącznikiem jest **`agents.tools`** — żadnej dodatkowej kolumny, żadnej migracji.
+
+W kreatorze agenta obsługuje to **osobna karta „RAG"**, stojąca przy „Bazie wiedzy",
+a nie w „Narzędziach": obie karty odpowiadają na to samo pytanie — skąd agent bierze
+treść dokumentów — i różnią się tylko sposobem (doklejanie vs wyszukiwanie).
+Konsekwencja dla kodu: `agents.tools` jest **wspólną** kolumną dwóch kart, więc
+zdjęcie jednej z nich nie może czyścić całej tablicy (`MasterDetailCreator.removeParameter`).
 
 | tryb | konfiguracja | co dostaje model |
 |---|---|---|
