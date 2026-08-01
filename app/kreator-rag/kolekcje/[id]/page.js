@@ -8,6 +8,7 @@ import { usePojecia } from '@/app/kreator-rag/_hooks/usePojecia.js';
 import MapaFragmentow from '@/app/kreator-rag/_components/MapaFragmentow.jsx';
 import { komunikatBledu } from '@/app/kreator-rag/_lib/bledy.js';
 import styles from '../../kreator-rag.module.css';
+import PrzyciskDiagnostyki from '@/app/kreator-rag/_components/PrzyciskDiagnostyki.jsx';
 
 // Widok kolekcji: wgrywanie dokumentów + lista ze statusem + podgląd fragmentów.
 // Wyłącznie przez fetch do /api/rag/* — zero importu z lib/rag/.
@@ -392,13 +393,15 @@ export default function KolekcjaPage() {
 
   return (
     <main className={styles["strona-szeroka"]}>
-      <nav className={styles.nawigacja}>
-        <Link href="/kreator-rag">Diagnostyka</Link>
-        <Link href="/kreator-rag/kolekcje">Kolekcje</Link>
-        <span className={styles.aktywny}>{kolekcja ? kolekcja.name : '…'}</span>
-        <Link href={`/kreator-rag/kolekcje/${id}/mapa`} style={{ marginLeft: 'auto' }}>Mapa fragmentów →</Link>
-        <Link href={`/kreator-rag/kolekcje/${id}/graf`}>Graf wiedzy →</Link>
-      </nav>
+      <div className={styles["pasek-gorny"]}>
+        <nav className={styles.nawigacja}>
+          <Link href="/kreator-rag/kolekcje">Kolekcje</Link>
+          <span className={styles.aktywny}>{kolekcja ? kolekcja.name : '…'}</span>
+          <Link href={`/kreator-rag/kolekcje/${id}/mapa`} style={{ marginLeft: 'auto' }}>Mapa fragmentów →</Link>
+          <Link href={`/kreator-rag/kolekcje/${id}/graf`}>Graf wiedzy →</Link>
+        </nav>
+        <PrzyciskDiagnostyki />
+      </div>
 
       <h1>{kolekcja ? kolekcja.name : 'Kolekcja'}</h1>
       {kolekcja ? (

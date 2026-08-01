@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import GrafWiedzy from '@/app/kreator-rag/_components/GrafWiedzy.jsx';
 import styles from '../../../kreator-rag.module.css';
+import PrzyciskDiagnostyki from '@/app/kreator-rag/_components/PrzyciskDiagnostyki.jsx';
 
 // Graf wiedzy — OTOCZKA, ten sam wzorzec co strona mapy: cała robota (dane,
 // fizyka, rysowanie, rozwijanie pojęć) siedzi w GrafWiedzy, tutaj zostaje
@@ -30,13 +31,15 @@ export default function GrafPage() {
 
   return (
     <main className={styles["strona-szeroka"]}>
-      <nav className={styles.nawigacja}>
-        <Link href="/kreator-rag">Diagnostyka</Link>
-        <Link href="/kreator-rag/kolekcje">Kolekcje</Link>
-        <Link href={`/kreator-rag/kolekcje/${id}`}>{nazwa || 'Kolekcja'}</Link>
-        <Link href={`/kreator-rag/kolekcje/${id}/mapa`}>Mapa</Link>
-        <span className={styles.aktywny}>Graf</span>
-      </nav>
+      <div className={styles["pasek-gorny"]}>
+        <nav className={styles.nawigacja}>
+          <Link href="/kreator-rag/kolekcje">Kolekcje</Link>
+          <Link href={`/kreator-rag/kolekcje/${id}`}>{nazwa || 'Kolekcja'}</Link>
+          <Link href={`/kreator-rag/kolekcje/${id}/mapa`}>Mapa</Link>
+          <span className={styles.aktywny}>Graf</span>
+        </nav>
+        <PrzyciskDiagnostyki />
+      </div>
 
       <h1>Graf wiedzy{nazwa ? ` — ${nazwa}` : ''}</h1>
       <p className={styles.podtytul}>

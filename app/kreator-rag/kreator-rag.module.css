@@ -201,6 +201,53 @@
 }
 
 
+/* Pasek nad treścią strony: nawigacja z lewej, przycisk diagnostyki z prawej.
+   Osobny kontener, bo .nawigacja ma własny margines i sama nie ustawiłaby
+   pozycji przycisku bez rozpychania linków. */
+.pasek-gorny {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+.pasek-gorny .nawigacja {
+  margin-bottom: 0;
+}
+
+/* Przycisk „Diagnostyka" — wygląd .ghostButton z app/projekty/workspace.module.css,
+   plus flex-shrink/nowrap wzorem .headerAction: przycisk nie ma się zwężać ani
+   łamać, gdy ścieżka nawigacji urośnie o długą nazwę kolekcji. */
+.przycisk-diagnostyki {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  padding: 6px 12px;
+  border: 1px solid #d4d4d8;
+  border-radius: 8px;
+  background: #ffffff;
+  color: #3f3f46;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.przycisk-diagnostyki:hover {
+  background: #f4f4f5;
+  border-color: #a1a1aa;
+  color: #3f3f46;
+}
+
+/* Dioda. Kolor wchodzi stylem inline z funkcji stanSrodowiska() — tutaj sam
+   kształt, żeby CSS i JS nie trzymały dwóch list kolorów, które mogą się rozjechać. */
+.dioda {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
 .nawigacja {
   display: flex;
   gap: 16px;
@@ -709,4 +756,18 @@
   margin: 10px 0 0;
   border-left: 2px solid var(--obwod);
   padding-left: 10px;
+}
+
+/* Werdykt na stronie diagnostyki — ta sama dioda co w przycisku w rogu,
+   z rozwinięciem słownym obok. */
+.werdykt {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 0 16px;
+  font-size: 14px;
+  color: var(--przygaszony);
+}
+.werdykt strong {
+  color: var(--tekst);
 }

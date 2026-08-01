@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import MapaFragmentow from '@/app/kreator-rag/_components/MapaFragmentow.jsx';
 import styles from '../../../kreator-rag.module.css';
+import PrzyciskDiagnostyki from '@/app/kreator-rag/_components/PrzyciskDiagnostyki.jsx';
 
 // Pełnoekranowa mapa fragmentów — OTOCZKA. Cała mapa (dane, rysowanie, interakcja,
 // pętla indeksowania) siedzi w MapaFragmentow, bo ten sam komponent jest osadzony
@@ -34,12 +35,14 @@ export default function MapaPage() {
 
   return (
     <main className={styles["strona-szeroka"]}>
-      <nav className={styles.nawigacja}>
-        <Link href="/kreator-rag">Diagnostyka</Link>
-        <Link href="/kreator-rag/kolekcje">Kolekcje</Link>
-        <Link href={`/kreator-rag/kolekcje/${id}`}>{nazwa || 'Kolekcja'}</Link>
-        <span className={styles.aktywny}>Mapa</span>
-      </nav>
+      <div className={styles["pasek-gorny"]}>
+        <nav className={styles.nawigacja}>
+          <Link href="/kreator-rag/kolekcje">Kolekcje</Link>
+          <Link href={`/kreator-rag/kolekcje/${id}`}>{nazwa || 'Kolekcja'}</Link>
+          <span className={styles.aktywny}>Mapa</span>
+        </nav>
+        <PrzyciskDiagnostyki />
+      </div>
 
       <h1>Mapa fragmentów{nazwa ? ` — ${nazwa}` : ''}</h1>
 

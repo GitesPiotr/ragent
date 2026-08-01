@@ -4,15 +4,18 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { komunikatBledu } from '@/app/kreator-rag/_lib/bledy.js';
 import styles from '../kreator-rag.module.css';
+import PrzyciskDiagnostyki from '@/app/kreator-rag/_components/PrzyciskDiagnostyki.jsx';
 
 // UI nigdy nie sięga do bazy ani do rdzenia — wyłącznie przez /api/rag/collections*.
 
 function Nawigacja() {
   return (
-    <nav className={styles.nawigacja}>
-      <Link href="/kreator-rag">Diagnostyka</Link>
-      <Link href="/kreator-rag/kolekcje" className={styles.aktywny}>Kolekcje</Link>
-    </nav>
+    <div className={styles["pasek-gorny"]}>
+      <nav className={styles.nawigacja}>
+        <Link href="/kreator-rag/kolekcje" className={styles.aktywny}>Kolekcje</Link>
+      </nav>
+      <PrzyciskDiagnostyki />
+    </div>
   );
 }
 

@@ -52,7 +52,8 @@ export function Sidebar() {
   const onAgents = pathname.includes("/agenty");
   const onKnowledge = pathname.startsWith("/wiedza");
   // startsWith, nie ===, bo zakladka ma glebsze trasy: /kreator-rag/kolekcje/[id]
-  // oraz jej widoki /mapa i /graf. Podswietlenie ma zostac na calej gałęzi.
+  // oraz jej widoki /mapa i /graf, a takze /kreator-rag/diagnostyka. Podswietlenie
+  // ma zostac na calej gałęzi — takze wtedy, gdy link celuje glebiej niz korzen.
   const onKreatorRag = pathname.startsWith("/kreator-rag");
   const onChats = pathname.startsWith("/czaty");
   const onSettings = pathname.startsWith("/ustawienia");
@@ -93,9 +94,14 @@ export function Sidebar() {
         </Link>
 
         {/* Kolekcje RAG naleza do konta, nie do projektu — link tak samo jak
-            „Baza wiedzy” nie niesie kontekstu projektu. */}
+            „Baza wiedzy” nie niesie kontekstu projektu.
+
+            Link celuje WPROST w /kreator-rag/kolekcje, a nie w korzen modulu:
+            korzen i tak przekierowuje tutaj, wiec celowanie w niego kosztowaloby
+            jeden skok przy kazdym wejsciu do zakladki. Podswietlenie dziala,
+            bo `onKreatorRag` sprawdza startsWith, nie rownosc. */}
         <Link
-          href="/kreator-rag"
+          href="/kreator-rag/kolekcje"
           className={`${styles.link} ${onKreatorRag ? styles.active : ""}`}
         >
           Kreator RAG
