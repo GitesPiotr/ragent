@@ -483,3 +483,48 @@ w żadnym spisie. Przy każdej pochodzenie, bo od niego zależy, czyj to dług.
     bo stoi później. Efekt: strefa uploadu w kreatorze agenta jest w ciemnym
     motywie **szara zamiast fioletowej**, wbrew intencji obu reguł. To realna
     usterka wizualna, nie tylko nieporządek.
+
+11. **`lib/tools/rag_search.js:174-175` odsyła do nieistniejącego miejsca.**
+    *Dług po zmianie w AIDEAS* — komunikat był prawdziwy, gdy powstawał.
+    Gdy agent ma włączone `rag_search`, ale nie ma wskazanej kolekcji, narzędzie
+    zwraca modelowi instrukcję kończącą się słowami: *„zaproponuj, żeby wybrał ją
+    w kreatorze agenta (sekcja «Narzędzia», przy przełączniku «Przeszukiwanie
+    dokumentów»)"*. **RAG ma własną kartę w kreatorze od rundy „Sekcja RAG
+    w kreatorze agenta"** — w Narzędziach nie ma po nim śladu.
+    Tekst idzie DO MODELU, więc agent powtarza go użytkownikowi własnymi słowami
+    i odsyła go w miejsce, którego nie ma. Wyszło na jaw dopiero przy sprawdzaniu
+    OpenRoutera, bo trzeba było celowo odtworzyć stan „RAG bez kolekcji".
+    Naprawa to jedno zdanie, ale trzeba pamiętać, że **komunikat narzędzia jest
+    częścią promptu**, a nie tekstem interfejsu — nie znajdzie go nikt, kto
+    przeszukuje komponenty.
+
+12. **Model, który nie wywołał `rag_search`, i tak wypowiada się o zawartości
+    dokumentów.** *Luka mechanizmu, nie usterka konkretnego pliku.*
+    Zmierzone przy OpenRouterze, ale dotyczy wszystkich dostawców.
+    Agent z włączonym `rag_search` i wskazaną kolekcją, którego model **nie
+    zdecydował się** wywołać narzędzia, odpowiedział: *„Nie mam w dostępnych
+    dokumentach firmy Nordwind informacji o lokalizacji apteczki. Polecam:
+    zapytać przełożonego…"* — czyli wypowiedział zdanie o zawartości plików,
+    których nigdy nie otworzył. Nie skłamał świadomie i nie wywalił się;
+    po prostu zgadł, a zdanie brzmi jak wynik udanego wyszukiwania.
+
+    **Dwa tryby awarii dają dziś prawie identyczny obraz:**
+
+    | | RAG zepsuty (brak kolekcji) | model nie wywołał narzędzia |
+    |---|---|---|
+    | `toolCalls` | 1 wpis z `result` | **puste** |
+    | `sources` | puste | puste |
+    | plakietka w UI | jest | **nie ma** |
+    | treść odpowiedzi | mówi wprost, co naprawić | brzmi jak puste wyszukiwanie |
+
+    Rozróżnienie **istnieje w danych** — `rag_search` w `agent.tools` przy zerowej
+    liczbie `toolCalls` to stan jednoznaczny i wykrywalny po stronie serwera,
+    w `app/api/chat/route.js`, gdzie i tak składany jest wynik. Dziś nikt go nie
+    sprawdza, a jedynym sygnałem dla użytkownika jest **brak** plakietki, czyli
+    nieobecność, którą trzeba zauważyć.
+
+    Sekcja 5 SPEC opisuje niezawodność wywołania narzędzia jako zależną od modelu
+    („instrukcja dla modelu, nie gwarancja z kodu", pozycja 5 wyżej). Ta pozycja
+    jest jej drugą stroną: skoro gwarancji nie ma, brak wywołania powinien być
+    **widoczny**, a nie milczący. **Do zrobienia po katalogu modeli** — dopiero
+    wtedy będzie wiadomo, które modele zawodzą i jak często.
