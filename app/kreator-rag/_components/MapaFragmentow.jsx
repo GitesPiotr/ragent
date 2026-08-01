@@ -42,9 +42,9 @@ import {
 //  Wartości odpowiadają rampie Zinc używanej w reszcie AIDEAS — to samo #3f3f46
 //  na tekst i #a1a1aa na przygaszenie co w sections.module.css.
 // =============================================================================
+// Tlo mapy maluje CSS (.mapa-obudowa) — plotno zostaje przezroczyste,
+// dlatego nie ma tu pola `tlo`.
 const PALETA = {
-  // Tło mapy maluje CSS (.mapa-obudowa) — płótno zostaje przezroczyste.
-  tlo: 'transparent',
   siatka: 'rgba(24,24,27,.05)',
   podpis: '#3f3f46',
   // Obwódka punktu trafionego i podświetlenie świeżej krawędzi. Na ciemnym tle
@@ -471,7 +471,8 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
       );
       // Grubość dzielona przez skalę, bo transformacja rozciągnęłaby też linię.
       ctx.lineWidth = 0.7 / t.k;
-      ctx.globalAlpha = hover || zazn ? 0.07 : 0.16;
+      // 0,07/0,16 bylo dobrane pod ciemne tlo. Na bialym linia z alfa 0,07 nie istnieje.
+      ctx.globalAlpha = hover || zazn ? 0.18 : 0.32;
       for (const [kolor, sciezka] of sciezki2dRef.current) {
         ctx.strokeStyle = kolor;
         ctx.stroke(sciezka);
@@ -486,7 +487,7 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
     if (hover) {
       const lista = indeksRef.current.get(hover) || [];
       ctx.lineWidth = Math.max(1.1, 1.4 * Math.sqrt(t.zoom));
-      ctx.globalAlpha = 0.85;
+      ctx.globalAlpha = 0.9;
       for (const e of lista) {
         const a = pozycje.get(e.a);
         const b = pozycje.get(e.b);
@@ -508,7 +509,7 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
       ctx.lineWidth = 1.6;
       for (const cid of swieze) {
         const wiek = (teraz - swiezeRef.current.get(cid)) / CZAS_PODSWIETLENIA;
-        ctx.globalAlpha = Math.max(0, 1 - wiek) * 0.9;
+        ctx.globalAlpha = Math.max(0, 1 - wiek) * 0.95;
         for (const e of indeksRef.current.get(cid) || []) {
           const a = pozycje.get(e.a);
           const b = pozycje.get(e.b);
@@ -558,7 +559,11 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
       g.arc(sx, sy, r, 0, Math.PI * 2);
     }
 
-    const alfaPodstawowa = zazn || hover ? 0.12 : 0.85;
+    // PRZYGASZENIE, NIE KASOWANIE. 0,12 na bialym tle zbiegalo 107 punktow do bieli —
+    // po wyszukaniu widac bylo jedno trafienie i pusta plansze, czyli utrate danych,
+    // nie skupienie uwagi. 0,28 zostawia punkt widocznym jako punkt, a trafienie
+    // i tak jest trzykrotnie mocniejsze i ma obrys.
+    const alfaPodstawowa = zazn || hover ? 0.28 : 0.9;
     ctx.globalAlpha = alfaPodstawowa;
     for (const [kolor, sciezka] of grupy) {
       ctx.fillStyle = kolor;
@@ -580,10 +585,11 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
     for (const { c, sx, sy, wyrozniony } of widoczne) {
       if (!wyrozniony) continue;
       ctx.beginPath();
-      ctx.arc(sx, sy, r * 1.9, 0, Math.PI * 2);
+      ctx.arc(sx, sy, r * 2.2, 0, Math.PI * 2);
       ctx.fillStyle = kolory.get(c.documentId) || PALETA.fallback;
       ctx.fill();
-      ctx.lineWidth = Math.max(1, Math.sqrt(t.zoom));
+      // Przy 1x bylo to 1 px wokol kolka o promieniu ~2,2 px — obrys ginal.
+      ctx.lineWidth = Math.max(1.8, 1.8 * Math.sqrt(t.zoom));
       ctx.strokeStyle = PALETA.wyroznienie;
       ctx.stroke();
     }
@@ -657,7 +663,7 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
       const ekran = new Map(klatka.map((p) => [p.id, doEkranu(p)]));
       const grupy = grupujPoKolorze(trzy.krawedzie);
       ctx.lineWidth = 0.6;
-      ctx.globalAlpha = hover || zazn ? 0.05 : 0.12;
+      ctx.globalAlpha = hover || zazn ? 0.15 : 0.28;
       for (const [kolor, lista] of grupy) {
         const sciezka = new Path2D();
         for (const e of lista) {
@@ -679,7 +685,7 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
     if (hover && trzy) {
       const ekran = new Map(klatka.map((p) => [p.id, doEkranu(p)]));
       ctx.lineWidth = 1.5;
-      ctx.globalAlpha = 0.9;
+      ctx.globalAlpha = 0.95;
       for (const e of indeks3d.get(hover) || []) {
         const a = ekran.get(e.a);
         const b = ekran.get(e.b);
@@ -713,10 +719,12 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
       g.sciezka.arc(sx, sy, r, 0, Math.PI * 2);
     }
 
-    const przygaszenie = zazn || hover ? 0.18 : 1;
+    const przygaszenie = zazn || hover ? 0.32 : 1;
     const posortowane = [...kubelki.values()].sort((a, b) => a.bucket - b.bucket);
     for (const g of posortowane) {
-      ctx.globalAlpha = (0.28 + 0.62 * (g.bucket / (KUBELKI_GLEBI - 1))) * przygaszenie;
+      // Najdalszy kubelek mial 0,28 — na bialym tle znikal. Podnosimy dol zakresu,
+      // zachowujac rozpietosc, ktora robi glebie (12.8).
+      ctx.globalAlpha = (0.45 + 0.5 * (g.bucket / (KUBELKI_GLEBI - 1))) * przygaszenie;
       ctx.fillStyle = g.kolor;
       ctx.fill(g.sciezka);
     }

@@ -74,8 +74,15 @@
   background: #f4f4f5;
   border-color: #a1a1aa;
 }
+/* WYLACZONY PRZYCISK MA WLASNE TLO, NIE SAMA PRZEZROCZYSTOSC.
+   opacity: 0.5 dzialalo na tle #0f1115 — polprzezroczysty przycisk zostawal
+   ciemniejszy od tla i bylo go widac. Na bialym te same 50% daja ducha:
+   „Wgraj i potnij" i „Szukaj" przestawaly byc czytelne jako przyciski.
+   Wartosci jak w reszcie AIDEAS (workspace.module.css, sections.module.css). */
 .panel button:disabled {
-  opacity: 0.5;
+  background: #f4f4f5;
+  border-color: #e4e4e7;
+  color: #a1a1aa;
   cursor: default;
 }
 

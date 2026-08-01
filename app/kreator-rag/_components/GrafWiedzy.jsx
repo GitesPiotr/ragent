@@ -119,10 +119,9 @@ const ZWLOKA_SUWAKA = 250;
 //  — ten sam efekt czyta się jako rozmycie, czyli jakby węzeł był nieostry.
 //  Obrys niesie to samo („ten jest inny"), nie udając defektu rysunku.
 // =============================================================================
+// Tlo maluje CSS (.mapa-obudowa) — plotno zostaje przezroczyste, tak samo jak
+// mapa, ktora wlasnego tla nigdy nie malowala. Dlatego nie ma tu pola `tlo`.
 const PALETA = {
-  // Tło maluje CSS (.mapa-obudowa) — płótno zostaje przezroczyste. Tak samo jak
-  // mapa, która własnego tła nigdy nie malowała.
-  tlo: 'transparent',
   siatka: 'rgba(24,24,27,.05)',
   podpis: '#3f3f46',
   wyroznienie: '#18181b',
@@ -132,8 +131,11 @@ const PALETA = {
   fallback: '#71717a',
 };
 
-// Grubość obrysu mostu — następca shadowBlur: 18.
+// Grubosci obrysow — nastepcy poswiat (shadowBlur 18 przy moscie, 16 przy dokumencie,
+// 12/5/4 przy pojeciu i fragmencie). Most grubszy, bo jego wyroznienie jest trwale;
+// obrys wezla pojawia sie tylko pod kursorem albo na dokumencie z pojeciami.
 const OBRYS_MOSTU = 2.5;
+const OBRYS_WEZLA = 1.5;
 
 export default function GrafWiedzy({ collectionId }) {
   const [dane, setDane] = useState(null);
@@ -434,18 +436,16 @@ export default function GrafWiedzy({ collectionId }) {
       const b = wezly[e.b];
       if (!a || !b) continue;
       const podswietlona = sasiedzi.size ? sasiedzi.has(e.a) && sasiedzi.has(e.b) : true;
-      ctx.globalAlpha = sasiedzi.size ? (podswietlona ? 0.95 : 0.05) : 0.3;
+      // Wygaszona krawędź: 0,05 znikało na białym. Krawędź niewidoczna nie jest
+      // „przygaszona", tylko skasowana — a wygaszenie ma kierować uwagę, nie ukrywać graf.
+      ctx.globalAlpha = sasiedzi.size ? (podswietlona ? 0.95 : 0.18) : 0.45;
       ctx.strokeStyle = e.kolor;
-      ctx.lineWidth = e.w;
-      if (podswietlona && sasiedzi.size) {
-        ctx.shadowColor = e.kolor;
-        ctx.shadowBlur = 9;
-      }
+      // Poświata krawędzi zastąpiona pogrubieniem — patrz komentarz przy PALETA.
+      ctx.lineWidth = podswietlona && sasiedzi.size ? e.w * 1.8 : e.w;
       ctx.beginPath();
       ctx.moveTo(a.x, a.y);
       ctx.lineTo(b.x, b.y);
       ctx.stroke();
-      ctx.shadowBlur = 0;
     }
     ctx.globalAlpha = 1;
 
@@ -459,17 +459,25 @@ export default function GrafWiedzy({ collectionId }) {
     for (let i = 0; i < wezly.length; i++) {
       const w = wezly[i];
       const widoczny = sasiedzi.size ? sasiedzi.has(i) : true;
-      ctx.globalAlpha = widoczny ? (w.pusty ? 0.42 : 1) : 0.12;
+      // Wygaszenie sasiedztwa: 0,12 na bialym tle kasowalo wezel. 0,3 zostawia go
+      // widocznym jako ksztalt, a wyrozniona grupa i tak jest trzykrotnie mocniejsza.
+      ctx.globalAlpha = widoczny ? (w.pusty ? 0.5 : 1) : 0.3;
 
       if (w.typ === 'dokument') {
         const s = w.r;
-        ctx.shadowColor = w.kolor;
-        ctx.shadowBlur = w.pusty ? 0 : 16;
         ctx.fillStyle = w.pusty ? PALETA.przygaszony : w.kolor;
         ctx.beginPath();
         ctx.roundRect(w.x - s, w.y - s, s * 2, s * 2, 4);
         ctx.fill();
-        ctx.shadowBlur = 0;
+        // Obrys zamiast poswiaty (shadowBlur: 16). Na bialym tle poswiata nie
+        // rozjasniala tla, tylko rozmywala krawedz wezla — caly graf wygladal
+        // na nieostry. Obrys w kolorze wezla, ciemniejszy o krok, niesie to samo
+        // „ten wezel jest wazny", zostajac ostrym.
+        if (!w.pusty) {
+          ctx.strokeStyle = PALETA.wyroznienie;
+          ctx.lineWidth = OBRYS_WEZLA;
+          ctx.stroke();
+        }
         // Podpis zostaje POD węzłem. Przesuwanie go promieniście na zewnątrz pierścienia
         // wydawało się oczywistą poprawą („gwiazdy rosną do środka, zewnątrz jest pusto")
         // i ZOSTAŁO ZMIERZONE JAKO NEUTRALNE ALBO GORSZE: 79 → 83 kolizji przy progu 1,
@@ -490,25 +498,29 @@ export default function GrafWiedzy({ collectionId }) {
           // nieczytelne nad jasną chmurą rombów właśnie z tego powodu, nie z kolejności
           // rysowania. Wygaszenie z podświetlenia sąsiedztwa (0,12) zostaje — to jest
           // celowe skupienie uwagi, nie stan danych.
-          alfa: widoczny ? 1 : 0.12,
+          alfa: widoczny ? 1 : 0.3,
         });
       } else if (w.typ === 'pojecie') {
         ctx.save();
         ctx.translate(w.x, w.y);
         ctx.rotate(Math.PI / 4);
-        // MOST: obrys zamiast poświaty (uzasadnienie przy PALETA). Pozostałe pojęcia
-        // zachowują shadowBlur 5 — strojenie poświat to osobny krok.
-        ctx.shadowColor = w.kolor;
-        ctx.shadowBlur = w.most ? 0 : 5;
-        ctx.fillStyle = myszRef.current.nad === i ? PALETA.wyroznienie : w.kolor;
+        // ZADNYCH POSWIAT — obrys niesie te sama informacje, nie rozmywajac ksztaltu.
+        //
+        // OBRYS MOSTU JEST CIEMNY, NIE W KOLORZE MOSTU. Pierwsza wersja rysowala go
+        // w PALETA.most, czyli DOKLADNIE tym samym kolorem co wypelnienie — obrys
+        // istnial w kodzie i nie istnial na ekranie. Zlapane dopiero po wymuszeniu
+        // mostow na danych bez ani jednego mostu, bo wczesniej nie bylo czego ogladac.
+        // Rozroznienie mostu niesie WYPELNIENIE (#b45309 wobec kolorow dokumentow);
+        // obrys jest wzmocnieniem i musi kontrastowac z jednym i drugim.
+        const podKursorem = myszRef.current.nad === i;
+        ctx.fillStyle = w.kolor;
         ctx.fillRect(-w.r, -w.r, w.r * 2, w.r * 2);
-        if (w.most) {
-          ctx.strokeStyle = PALETA.most;
-          ctx.lineWidth = OBRYS_MOSTU;
+        if (w.most || podKursorem) {
+          ctx.strokeStyle = PALETA.wyroznienie;
+          ctx.lineWidth = w.most ? OBRYS_MOSTU : OBRYS_WEZLA;
           ctx.strokeRect(-w.r, -w.r, w.r * 2, w.r * 2);
         }
         ctx.restore();
-        ctx.shadowBlur = 0;
         // Most jest podpisany ZAWSZE — po to jest widok. Reszta dopiero pod kursorem
         // albo gdy jest rozwinięta, inaczej czterdzieści etykiet zachodzi na siebie.
         const podpisz = w.most || myszRef.current.nad === i || (wybrane && wybrane.conceptId === w.conceptId);
@@ -520,17 +532,21 @@ export default function GrafWiedzy({ collectionId }) {
             font: (w.most ? '700 ' : '600 ') + '10px system-ui, sans-serif',
             kolor: w.most ? PALETA.most : PALETA.podpis,
             waga: 1,
-            alfa: widoczny ? 1 : 0.12,
+            alfa: widoczny ? 1 : 0.3,
           });
         }
       } else {
-        ctx.shadowColor = w.kolor;
-        ctx.shadowBlur = myszRef.current.nad === i ? 12 : 4;
+        const podKursorem = myszRef.current.nad === i;
         ctx.fillStyle = w.kolor;
         ctx.beginPath();
-        ctx.arc(w.x, w.y, myszRef.current.nad === i ? w.r * 1.6 : w.r, 0, 6.3);
+        ctx.arc(w.x, w.y, podKursorem ? w.r * 1.6 : w.r, 0, 6.3);
         ctx.fill();
-        ctx.shadowBlur = 0;
+        // Fragment pod kursorem: obrys zamiast poswiaty (shadowBlur 12/4).
+        if (podKursorem) {
+          ctx.strokeStyle = PALETA.wyroznienie;
+          ctx.lineWidth = OBRYS_WEZLA;
+          ctx.stroke();
+        }
       }
     }
     ctx.globalAlpha = 1;
