@@ -27,6 +27,38 @@ import {
 //  • DOZWOLONE: przejście na nowe pozycje po przeliczeniu bazy (12.4).
 // W trybie 2D bez indeksowania strona nie rysuje NIC w tle — rysunek odpalają zdarzenia.
 
+// =============================================================================
+//  PALETA PŁÓTNA — DLACZEGO TUTAJ, A NIE W CSS
+//
+//  Canvas NIE CZYTA zmiennych CSS. Nie ma w nim kaskady ani dziedziczenia:
+//  `ctx.fillStyle` przyjmuje wyłącznie gotową wartość, więc `var(--tekst)`
+//  byłoby napisem bez znaczenia. Sprawdzone: w całym app/kreator-rag/ nie ma
+//  ani jednego `getComputedStyle`, czyli nic nie mostkuje CSS do płótna.
+//
+//  Konsekwencja, którą trzeba znać przy zmianie motywu: zmiana zmiennych
+//  w .panel (kreator-rag.module.css) przemaluje panele, przyciski i dymki,
+//  ale NIE RUSZY ani jednego piksela mapy. Te dwa zestawy trzeba zmieniać razem.
+//
+//  Wartości odpowiadają rampie Zinc używanej w reszcie AIDEAS — to samo #3f3f46
+//  na tekst i #a1a1aa na przygaszenie co w sections.module.css.
+// =============================================================================
+const PALETA = {
+  // Tło mapy maluje CSS (.mapa-obudowa) — płótno zostaje przezroczyste.
+  tlo: 'transparent',
+  siatka: 'rgba(24,24,27,.05)',
+  podpis: '#3f3f46',
+  // Obwódka punktu trafionego i podświetlenie świeżej krawędzi. Na ciemnym tle
+  // była to biel; na jasnym musi być najciemniejszym kolorem widoku, inaczej
+  // „wyróżnienie" znika w tle.
+  wyroznienie: '#18181b',
+  obrysPodpisu: 'rgba(255,255,255,.85)',
+  przygaszony: '#a1a1aa',
+  most: '#b45309',
+  // Fragment bez znanego dokumentu. Ta sama wartość co ZASTEPCZY w lib/mapview/edges.js
+  // — obie muszą się zgadzać, inaczej ten sam fragment ma dwa różne szare.
+  fallback: '#71717a',
+};
+
 const WYSOKOSC = 560;
 const WYSOKOSC_OSADZONA = 400;
 const MARGINES = 28;
@@ -373,7 +405,7 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
       const sasiedzi = computeNeighbors3d(punkty, 3);
       const kolorFragmentu = new Map();
       const kolory = new Map(dane.documents.map((d) => [d.id, d.color]));
-      for (const c of dane.chunks) kolorFragmentu.set(c.id, kolory.get(c.documentId) || '#8a93a6');
+      for (const c of dane.chunks) kolorFragmentu.set(c.id, kolory.get(c.documentId) || PALETA.fallback);
       const kraw = krawedzie3d(sasiedzi, kolorFragmentu, sredniKolor);
       dane3dRef.current = { dlaDanych: dane, sasiedzi, krawedzie: kraw, indeks: indeksKrawedzi(kraw) };
       setLicz3d(false);
@@ -483,7 +515,7 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
           if (!a || !b) continue;
           const [ax, ay] = t.doEkranu(a.x, a.y);
           const [bx, by] = t.doEkranu(b.x, b.y);
-          ctx.strokeStyle = '#ffffff';
+          ctx.strokeStyle = PALETA.wyroznienie;
           ctx.beginPath();
           ctx.moveTo(ax, ay);
           ctx.lineTo(bx, by);
@@ -519,7 +551,7 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
         continue;
       }
 
-      const kolor = kolory.get(c.documentId) || '#8a93a6';
+      const kolor = kolory.get(c.documentId) || PALETA.fallback;
       let g = grupy.get(kolor);
       if (!g) { g = new Path2D(); grupy.set(kolor, g); }
       g.moveTo(sx + r, sy);
@@ -538,7 +570,7 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
     // policzył PCA przed narysowaniem (12.9).
     for (const { c, sx, sy, alfa } of wchodzace) {
       ctx.globalAlpha = alfa * alfaPodstawowa;
-      ctx.fillStyle = kolory.get(c.documentId) || '#8a93a6';
+      ctx.fillStyle = kolory.get(c.documentId) || PALETA.fallback;
       ctx.beginPath();
       ctx.arc(sx, sy, r, 0, Math.PI * 2);
       ctx.fill();
@@ -549,10 +581,10 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
       if (!wyrozniony) continue;
       ctx.beginPath();
       ctx.arc(sx, sy, r * 1.9, 0, Math.PI * 2);
-      ctx.fillStyle = kolory.get(c.documentId) || '#8a93a6';
+      ctx.fillStyle = kolory.get(c.documentId) || PALETA.fallback;
       ctx.fill();
       ctx.lineWidth = Math.max(1, Math.sqrt(t.zoom));
-      ctx.strokeStyle = '#ffffff';
+      ctx.strokeStyle = PALETA.wyroznienie;
       ctx.stroke();
     }
 
@@ -562,7 +594,7 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
 
   function rysujPodpisy(ctx, d, widoczne, r) {
     ctx.font = '11px ui-monospace, Consolas, monospace';
-    ctx.fillStyle = '#9aa2b1';
+    ctx.fillStyle = PALETA.podpis;
     const zajete = new Set();
     const nazwy = new Map(d.documents.map((doc) => [doc.id, doc.name]));
     for (const { c, sx, sy } of widoczne) {
@@ -672,7 +704,7 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
       const wyrozniony = (zazn && zazn.has(p.id)) || (sasiedziHover && sasiedziHover.has(p.id));
       if (wyrozniony) { wyroznione.push({ p, sx, sy }); continue; }
       const b = kubelekGlebi(p.skalaGlebi, minK, maxK, KUBELKI_GLEBI);
-      const kolor = kolory.get(p.documentId) || '#8a93a6';
+      const kolor = kolory.get(p.documentId) || PALETA.fallback;
       const klucz = b + '|' + kolor;
       let g = kubelki.get(klucz);
       if (!g) { g = { bucket: b, kolor, sciezka: new Path2D() }; kubelki.set(klucz, g); }
@@ -694,10 +726,10 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
       const r = 3.4 * Math.sqrt(zoom);
       ctx.beginPath();
       ctx.arc(sx, sy, r, 0, Math.PI * 2);
-      ctx.fillStyle = kolory.get(p.documentId) || '#8a93a6';
+      ctx.fillStyle = kolory.get(p.documentId) || PALETA.fallback;
       ctx.fill();
       ctx.lineWidth = 1.2;
-      ctx.strokeStyle = '#ffffff';
+      ctx.strokeStyle = PALETA.wyroznienie;
       ctx.stroke();
     }
   }
@@ -892,7 +924,7 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
       x: Math.min(naj.sx + 14, naj.W - 350),
       y: Math.max(8, naj.sy - 10),
       nazwa: doc ? doc.name : '—',
-      kolor: doc ? doc.color : '#8a93a6',
+      kolor: doc ? doc.color : PALETA.fallback,
       heading: naj.c.headingPath,
       strona: naj.c.pageFrom,
       preview: naj.c.preview,

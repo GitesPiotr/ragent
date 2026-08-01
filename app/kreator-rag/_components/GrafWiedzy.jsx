@@ -94,17 +94,46 @@ const PROG_MAKS_SUWAKA = 10;
 // Suwak ma dawać wrażenie natychmiastowe, ale nie wołać serwera na każdy piksel.
 const ZWLOKA_SUWAKA = 250;
 
-// Most = pojęcie sięgające dwóch lub więcej dokumentów. Rysowane złotem z poświatą
-// i ZAWSZE z podpisem; pozostałe pojęcia biorą kolor swojego dokumentu i pokazują
-// podpis dopiero pod kursorem.
+// =============================================================================
+//  PALETA PŁÓTNA — DLACZEGO TUTAJ, A NIE W CSS
 //
-// DLACZEGO KOLOR, A NIE ROZMIAR: rozmiar koduje już `mentionCount`. Dołożenie do
-// niego stopnia węzła zrobiłoby z dwóch zmiennych jedną nieczytelną — nie dałoby
-// się odróżnić „pojęcie częste w jednym pliku" od „pojęcie rzadkie, ale wspólne",
-// a to drugie jest właśnie tym, po co ten widok istnieje.
-const ZLOTO = '#fbbf24';
-const ZLOTO_JASNE = '#fde68a';
-const PRZYGASZONY = '#5a6272';
+//  Canvas NIE CZYTA zmiennych CSS: `ctx.fillStyle` przyjmuje gotową wartość,
+//  a `var(--tekst)` byłoby dla niego napisem bez znaczenia. Nie ma tu kaskady
+//  ani dziedziczenia. Sprawdzone: w całym app/kreator-rag/ nie ma ani jednego
+//  `getComputedStyle`, czyli nic nie mostkuje CSS do płótna.
+//
+//  Konsekwencja przy zmianie motywu: przemalowanie .panel w kreator-rag.module.css
+//  nie ruszy ani jednego piksela grafu. Oba zestawy trzeba zmieniać razem.
+//
+//  Most = pojęcie sięgające dwóch lub więcej dokumentów. Rysowany wyróżnionym
+//  kolorem i ZAWSZE z podpisem; pozostałe pojęcia biorą kolor swojego dokumentu
+//  i pokazują podpis dopiero pod kursorem.
+//
+//  DLACZEGO KOLOR, A NIE ROZMIAR: rozmiar koduje już `mentionCount`. Dołożenie do
+//  niego stopnia węzła zrobiłoby z dwóch zmiennych jedną nieczytelną — nie dałoby
+//  się odróżnić „pojęcie częste w jednym pliku" od „pojęcie rzadkie, ale wspólne",
+//  a to drugie jest właśnie tym, po co ten widok istnieje.
+//
+//  DLACZEGO MOST STRACIŁ POŚWIATĘ NA RZECZ OBRYSU: poświata (shadowBlur 18)
+//  działała, bo rozjaśniała ciemne tło. Na jasnym tle rozjaśnić już nie ma czego
+//  — ten sam efekt czyta się jako rozmycie, czyli jakby węzeł był nieostry.
+//  Obrys niesie to samo („ten jest inny"), nie udając defektu rysunku.
+// =============================================================================
+const PALETA = {
+  // Tło maluje CSS (.mapa-obudowa) — płótno zostaje przezroczyste. Tak samo jak
+  // mapa, która własnego tła nigdy nie malowała.
+  tlo: 'transparent',
+  siatka: 'rgba(24,24,27,.05)',
+  podpis: '#3f3f46',
+  wyroznienie: '#18181b',
+  obrysPodpisu: 'rgba(255,255,255,.85)',
+  przygaszony: '#a1a1aa',
+  most: '#b45309',
+  fallback: '#71717a',
+};
+
+// Grubość obrysu mostu — następca shadowBlur: 18.
+const OBRYS_MOSTU = 2.5;
 
 export default function GrafWiedzy({ collectionId }) {
   const [dane, setDane] = useState(null);
@@ -289,7 +318,7 @@ export default function GrafWiedzy({ collectionId }) {
         conceptId: c.id,
         typ: 'pojecie',
         etykieta: c.label,
-        kolor: most ? ZLOTO : kolorDokumentu.get(wlasciciel) || PRZYGASZONY,
+        kolor: most ? PALETA.most : kolorDokumentu.get(wlasciciel) || PALETA.fallback,
         most,
         r: promien(c.mentionCount, maksWystapien, R_POJECIE[0], R_POJECIE[1]),
         opis: `${c.mentionCount} wystąpień · ${stopien} ${stopien === 1 ? 'dokument' : 'dokumenty'}`,
@@ -316,7 +345,7 @@ export default function GrafWiedzy({ collectionId }) {
           id: 'frg:' + f.chunkId,
           typ: 'fragment',
           etykieta: f.headingPath || f.fileName || '',
-          kolor: kolorDokumentu.get(f.documentId) || PRZYGASZONY,
+          kolor: kolorDokumentu.get(f.documentId) || PALETA.fallback,
           r: R_FRAGMENT,
           opis: (f.content || '').replace(/\s+/g, ' ').slice(0, 160),
           plik: f.fileName,
@@ -356,13 +385,15 @@ export default function GrafWiedzy({ collectionId }) {
     }
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
-    const tlo = ctx.createRadialGradient(szer / 2, wys * 0.45, 0, szer / 2, wys * 0.45, szer * 0.75);
-    tlo.addColorStop(0, '#151327');
-    tlo.addColorStop(1, '#0b0a10');
-    ctx.fillStyle = tlo;
-    ctx.fillRect(0, 0, szer, wys);
+    // PŁÓTNO ZOSTAJE PRZEZROCZYSTE — tło maluje .mapa-obudowa z arkusza.
+    // Wcześniej graf malował własny gradient (#151327 → #0b0a10), przez co był
+    // jedynym widokiem, którego tła NIE dało się zmienić z CSS; mapa nigdy tak
+    // nie robiła. `clearRect` zamiast `fillRect`, bo przy zmianie rozmiaru płótna
+    // przeglądarka czyści je sama, ale przy przerysowaniu w tym samym rozmiarze
+    // — już nie, i węzły zostawiałyby smugi.
+    ctx.clearRect(0, 0, szer, wys);
 
-    ctx.strokeStyle = 'rgba(255,255,255,.028)';
+    ctx.strokeStyle = PALETA.siatka;
     ctx.lineWidth = 1;
     for (let x = 0; x < szer; x += 38) {
       ctx.beginPath();
@@ -379,7 +410,7 @@ export default function GrafWiedzy({ collectionId }) {
 
     const { wezly, krawedzie } = symRef.current;
     if (!wezly.length) {
-      ctx.fillStyle = 'rgba(255,255,255,.24)';
+      ctx.fillStyle = PALETA.przygaszony;
       ctx.font = '600 14px system-ui, sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText('Brak pojęć w tej kolekcji — graf nie ma czego pokazać', szer / 2, wys / 2);
@@ -434,7 +465,7 @@ export default function GrafWiedzy({ collectionId }) {
         const s = w.r;
         ctx.shadowColor = w.kolor;
         ctx.shadowBlur = w.pusty ? 0 : 16;
-        ctx.fillStyle = w.pusty ? PRZYGASZONY : w.kolor;
+        ctx.fillStyle = w.pusty ? PALETA.przygaszony : w.kolor;
         ctx.beginPath();
         ctx.roundRect(w.x - s, w.y - s, s * 2, s * 2, 4);
         ctx.fill();
@@ -450,7 +481,7 @@ export default function GrafWiedzy({ collectionId }) {
           x: w.x,
           y: w.y + s + 14,
           font: '700 10.5px system-ui, sans-serif',
-          kolor: 'rgba(255,255,255,.92)',
+          kolor: PALETA.wyroznienie,
           waga: 2, // dokumenty na samej górze
           // PODPIS PEŁNĄ KRYCIA, nawet gdy węzeł jest przygaszony. Przygaszenie ma
           // mówić „ten dokument nie ma pojęć" — i mówi to KOLOREM WĘZŁA oraz legendą.
@@ -465,10 +496,17 @@ export default function GrafWiedzy({ collectionId }) {
         ctx.save();
         ctx.translate(w.x, w.y);
         ctx.rotate(Math.PI / 4);
-        ctx.shadowColor = w.most ? ZLOTO : w.kolor;
-        ctx.shadowBlur = w.most ? 18 : 5;
-        ctx.fillStyle = myszRef.current.nad === i ? ZLOTO_JASNE : w.kolor;
+        // MOST: obrys zamiast poświaty (uzasadnienie przy PALETA). Pozostałe pojęcia
+        // zachowują shadowBlur 5 — strojenie poświat to osobny krok.
+        ctx.shadowColor = w.kolor;
+        ctx.shadowBlur = w.most ? 0 : 5;
+        ctx.fillStyle = myszRef.current.nad === i ? PALETA.wyroznienie : w.kolor;
         ctx.fillRect(-w.r, -w.r, w.r * 2, w.r * 2);
+        if (w.most) {
+          ctx.strokeStyle = PALETA.most;
+          ctx.lineWidth = OBRYS_MOSTU;
+          ctx.strokeRect(-w.r, -w.r, w.r * 2, w.r * 2);
+        }
         ctx.restore();
         ctx.shadowBlur = 0;
         // Most jest podpisany ZAWSZE — po to jest widok. Reszta dopiero pod kursorem
@@ -480,7 +518,7 @@ export default function GrafWiedzy({ collectionId }) {
             x: w.x,
             y: w.y - w.r - 7,
             font: (w.most ? '700 ' : '600 ') + '10px system-ui, sans-serif',
-            kolor: w.most ? 'rgba(253,230,138,.95)' : 'rgba(230,232,236,.9)',
+            kolor: w.most ? PALETA.most : PALETA.podpis,
             waga: 1,
             alfa: widoczny ? 1 : 0.12,
           });
@@ -501,13 +539,14 @@ export default function GrafWiedzy({ collectionId }) {
     // Obwódka w kolorze tła zamiast prostokątnego tła: prostokąt zasłoniłby węzły
     // i krawędzie, czyli dane. Obrys zostawia je widoczne, a tekst czyta się
     // na każdym tle — to ta sama zasada co „przygasić, nie ukryć" przy dokumentach
-    // bez pojęć.
+    // bez pojęć. Po zmianie motywu obrys jest JASNY, bo jasne jest tło; reguła
+    // „obrys w kolorze tła" zostaje ta sama, zmienia się tylko wartość.
     ctx.textAlign = 'center';
     ctx.lineJoin = 'round';
     for (const p of podpisy.sort((a, b) => a.waga - b.waga)) {
       ctx.globalAlpha = p.alfa;
       ctx.font = p.font;
-      ctx.strokeStyle = 'rgba(8,8,12,.85)';
+      ctx.strokeStyle = PALETA.obrysPodpisu;
       ctx.lineWidth = 3;
       ctx.strokeText(p.tekst, p.x, p.y);
       ctx.fillStyle = p.kolor;
@@ -689,13 +728,13 @@ export default function GrafWiedzy({ collectionId }) {
           {/* LICZNIK 12.9 — ta sama zasada co „pokazano 30 z 312" przy fragmentach.
               Filtr ukrywa 408 z 565 pojęć i widok nie ma prawa tego przemilczeć. */}
           {totals ? (
-            <strong style={{ fontSize: 12, color: totals.shown < totals.concepts ? ZLOTO_JASNE : undefined }}>
+            <strong style={{ fontSize: 12, color: totals.shown < totals.concepts ? PALETA.most : undefined }}>
               {podpisPojec(totals.shown, totals.concepts)}
             </strong>
           ) : null}
 
           <span className={styles["legenda-wpis"]}>
-            <span className={styles.probka} style={{ background: ZLOTO, transform: 'rotate(45deg)' }} />
+            <span className={styles.probka} style={{ background: PALETA.most, transform: 'rotate(45deg)' }} />
             {mosty
               ? `${mosty} pojęć wspólnych (≥2 dokumenty)`
               : 'brak pojęć wspólnych — każde należy do jednego pliku'}
@@ -713,8 +752,8 @@ export default function GrafWiedzy({ collectionId }) {
               niescalonych duplikatach w bazie, bo krok scalania został pominięty,
               a nic tego nie sygnalizowało. */}
           {dane && dane.normalizacjaOczekuje ? (
-            <span className={styles["legenda-wpis"]} style={{ fontSize: 11, alignItems: 'flex-start', color: ZLOTO_JASNE }}>
-              <span className={styles.probka} style={{ background: ZLOTO_JASNE, marginTop: 3 }} />
+            <span className={styles["legenda-wpis"]} style={{ fontSize: 11, alignItems: 'flex-start', color: PALETA.most }}>
+              <span className={styles.probka} style={{ background: PALETA.most, marginTop: 3 }} />
               <span>
                 pojęcia policzone, scalanie duplikatów oczekuje —
                 <span style={{ display: 'block' }}>liczba pojęć i mostów może się jeszcze zmienić</span>
@@ -724,7 +763,7 @@ export default function GrafWiedzy({ collectionId }) {
 
           {przygaszone.length ? (
             <span className={styles["legenda-wpis"]} style={{ fontSize: 11, alignItems: 'flex-start' }}>
-              <span className={styles.probka} style={{ background: PRZYGASZONY, marginTop: 3 }} />
+              <span className={styles.probka} style={{ background: PALETA.przygaszony, marginTop: 3 }} />
               <span>
                 przygaszone dokumenty — nie usterka:
                 {przygaszone.map((p) => (
