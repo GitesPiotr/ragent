@@ -4,12 +4,14 @@ import { useEffect, useRef, useState } from "react";
 import { useSettings } from "@/lib/settings/SettingsContext";
 import { Avatar } from "./Avatar";
 import styles from "./chats.module.css";
+import { ZrodlaWiadomosci } from "@/components/chat/ZrodlaWiadomosci";
 
 const TOOL_LABELS = {
   calculator: "kalkulator",
   datetime: "data/czas",
   web_search: "wyszukiwanie",
   web_search_local: "wyszukiwanie",
+  rag_search: "dokumenty",
 };
 
 // Okno czatu (kompaktowe): lista wiadomosci bez baniek (ikona + boks),
@@ -173,22 +175,15 @@ export function ConversationChat({
                     {m.tools.map((t) => TOOL_LABELS[t] || t).join(", ")}
                   </span>
                 )}
-                {m.sources && m.sources.length > 0 && (
-                  <span className={styles.msgSources}>
-                    <span className={styles.msgSourcesTitle}>Źródła:</span>
-                    {m.sources.map((s, si) => (
-                      <a
-                        key={si}
-                        className={styles.msgSourceLink}
-                        href={s.url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        {s.title || s.url}
-                      </a>
-                    ))}
-                  </span>
-                )}
+                <ZrodlaWiadomosci
+                  zrodla={m.sources}
+                  klasy={{
+                    wrap: styles.msgSources,
+                    title: styles.msgSourcesTitle,
+                    link: styles.msgSourceLink,
+                    doc: styles.msgSourceDoc,
+                  }}
+                />
               </div>
             </div>
           ))

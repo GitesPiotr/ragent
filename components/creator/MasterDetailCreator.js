@@ -6,8 +6,10 @@ import { updateAgentField, setLastEvent } from "@/lib/state/actions";
 import {
   PARAMETERS,
   FIXED_PARAMETER_IDS,
+  RAG_TOOL_ID,
   getParameter,
   initialAddedParameters,
+  toolsWithoutRag,
 } from "@/lib/creator/parameters";
 import { ConceptBar } from "./ConceptBar";
 import { PersonaSection } from "./sections/PersonaSection";
@@ -18,6 +20,7 @@ import { ToolsSection } from "./sections/ToolsSection";
 import { QaSection } from "./sections/QaSection";
 import { IoSection } from "./sections/IoSection";
 import { KnowledgeBaseSection } from "./sections/KnowledgeBaseSection";
+import { RagSection } from "./sections/RagSection";
 import { TestSection } from "./sections/TestSection";
 import styles from "./MasterDetailCreator.module.css";
 
@@ -29,6 +32,7 @@ const SECTION_COMPONENTS = {
   rules: RulesSection,
   tools: ToolsSection,
   knowledgeBase: KnowledgeBaseSection,
+  rag: RagSection,
   qa: QaSection,
   io: IoSection,
   test: TestSection,
@@ -74,8 +78,25 @@ export function MasterDetailCreator({
     // Parametry z realnymi danymi czyscimy takze w stanie agenta,
     // zeby usuniecie karty bylo zgodne z tym, co pojdzie do bazy.
     if (id === "rules") dispatch(updateAgentField("rules", []));
-    if (id === "tools") dispatch(updateAgentField("tools", []));
     if (id === "qa") dispatch(updateAgentField("qas", []));
+
+    // Narzedzia i RAG dziela JEDNA kolumne (agents.tools), ale maja OSOBNE
+    // karty. Zdjecie jednej karty nie moze wiec czyscic calej kolumny —
+    // wylaczyloby po cichu ustawienie z drugiej sekcji.
+    if (id === "tools") {
+      dispatch(
+        updateAgentField(
+          "tools",
+          (agent.tools || []).filter((t) => t === RAG_TOOL_ID),
+        ),
+      );
+    }
+    if (id === "rag") {
+      dispatch(updateAgentField("tools", toolsWithoutRag(agent.tools)));
+      // Kolekcja bez wlaczonego wyszukiwania nie robi nic — zdejmujemy razem
+      // z karta, zeby stan agenta zgadzal sie z tym, co widac.
+      dispatch(updateAgentField("rag_collection_id", null));
+    }
     if (id === "knowledgeBase") {
       // Karta znika -> agent przestaje korzystac z wiedzy.
       // Same pliki zostaja w magazynie konta — agent ich nie posiadal,

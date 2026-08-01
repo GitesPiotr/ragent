@@ -1,0 +1,41 @@
+{
+  "kolekcja": "TEST",
+  "opis": "Dwa dokumenty medyczne czystego polskiego tekstu: ChPL trazodonu (56 fragm.) i EPAR Revlimidu/lenalidomidu (718 fragm.). GUS i Beko WYŁĄCZONE z pomiaru — pierwszy ma uszkodzoną warstwę tekstową, drugi jest obcojęzyczny.",
+  "utworzony": "2026-07-29",
+  "uruchamiaj": "node scripts/diag-margines.mjs scripts/zestawy/test-medyczny.json --dokumenty CHARAKTERYSTYKA,revlimid",
+  "uwaga": "PYTANIA PRZEPISUJ CO DO ZNAKU. Pisane jak przez użytkownika, nie parafrazowane ze zdań dokumentu — parafraza zdania z tekstu zawyża score o ~0,15 i unieważnia porównanie (11.1b).",
+  "poprawne": [
+    { "pytanie": "ile najwięcej leku można brać na dobę", "fraza": "Dawkę można zwiększyć do 300 mg" },
+    { "pytanie": "czy można brać ten lek w ciąży", "fraza": "Dane z badań na ograniczonej liczbie kobiet w ciąży" },
+    { "pytanie": "co lek robi z żołądkiem i jelitami", "fraza": "Nudności, wymioty, suchość błony śluzowej" },
+    { "pytanie": "co jeśli pacjent ma chore nerki", "fraza": "ciężką niewydolnością nerek" },
+    { "pytanie": "do jakiej grupy leków należy trazodon", "fraza": "przeciwdepresyjne" },
+    { "pytanie": "na co pomaga revlimid", "fraza": "chłoniakiem z komórek płaszcza" },
+    { "pytanie": "ile lenalidomidu jest w jednej kapsułce", "fraza": "Każda kapsułka zawiera 25 mg lenalidomidu" },
+    { "pytanie": "czy mężczyzna musi się zabezpieczać w trakcie leczenia", "fraza": "powinien używać prezerwatywy" },
+    { "pytanie": "czy kobieta w ciąży może przyjmować lenalidomid", "fraza": "przeciwwskazany u kobiet mogących zajść w ciążę" },
+    { "pytanie": "jak przechowywać lek", "fraza": "Jak przechowywać lek Revlimid" }
+  ],
+  "szumDaleki": [
+    "jak upiec sernik",
+    "jaka jest stolica Australii",
+    "ile kosztuje bilet lotniczy do Tokio",
+    "jak wymienić olej w silniku diesla",
+    "kiedy sadzić pomidory w gruncie",
+    "jaki procesor wybrać do gier",
+    "przepis na rosół z kury",
+    "jak nauczyć się gry na gitarze"
+  ],
+  "szumBliski": [
+    "jaka jest dawka metforminy w cukrzycy typu 2",
+    "jakie są przeciwwskazania do stosowania ibuprofenu",
+    "jak warfaryna wchodzi w interakcje z innymi lekami",
+    "ile paracetamolu można podać dziecku",
+    "jakie są działania niepożądane amoksycyliny",
+    "czy można stosować omeprazol w ciąży",
+    "jak przechowywać insulinę po otwarciu"
+  ],
+  "identyfikatory": [
+    { "pytanie": "Revlimid 25 mg", "fraza": "Revlimid 25 mg" }
+  ]
+}

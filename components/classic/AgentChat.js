@@ -5,6 +5,7 @@ import { useAppState } from "@/lib/state/StateContext";
 import { setActivity, setLastEvent } from "@/lib/state/actions";
 import { useSettings } from "@/lib/settings/SettingsContext";
 import styles from "./AgentChat.module.css";
+import { ZrodlaWiadomosci } from "@/components/chat/ZrodlaWiadomosci";
 
 // Czytelne, polskie etykiety narzedzi do adnotacji w czacie.
 // (Mapa po stronie klienta, zeby nie ciagnac serwerowego kodu narzedzi.)
@@ -13,6 +14,7 @@ const TOOL_LABELS = {
   datetime: "data/czas",
   web_search: "wyszukiwanie",
   web_search_local: "wyszukiwanie",
+  rag_search: "dokumenty",
 };
 
 function toolLabel(id) {
@@ -167,22 +169,15 @@ export function AgentChat() {
                   🔧 użyto: {m.tools.map(toolLabel).join(", ")}
                 </span>
               )}
-              {m.sources && m.sources.length > 0 && (
-                <span className={styles.sources}>
-                  <span className={styles.sourcesTitle}>Źródła:</span>
-                  {m.sources.map((s, si) => (
-                    <a
-                      key={si}
-                      className={styles.sourceLink}
-                      href={s.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                    >
-                      {s.title || s.url}
-                    </a>
-                  ))}
-                </span>
-              )}
+              <ZrodlaWiadomosci
+                zrodla={m.sources}
+                klasy={{
+                  wrap: styles.sources,
+                  title: styles.sourcesTitle,
+                  link: styles.sourceLink,
+                  doc: styles.sourceDoc,
+                }}
+              />
             </div>
           ))
         )}

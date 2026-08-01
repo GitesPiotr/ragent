@@ -10,6 +10,10 @@ import {
 import styles from "./sections.module.css";
 
 // Narzedzia obslugiwane przez warstwe providerow (lib/tools).
+//
+// CZEGO TU NIE MA: PRZESZUKIWANIA DOKUMENTOW (rag_search).
+// RAG ma wlasna karte kreatora, tuz przy Bazie wiedzy — bo to drugie zrodlo
+// wiedzy agenta, a nie narzedzie pokroju kalkulatora. Patrz RagSection.js.
 const AVAILABLE_TOOLS = [
   {
     id: "calculator",

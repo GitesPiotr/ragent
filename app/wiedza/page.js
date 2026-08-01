@@ -1,11 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import {
-  listKnowledgeFiles,
-  listKnowledgeUsage,
-  deleteKnowledgeFileAndUnpin,
-} from "@/lib/data/knowledge";
+import { listKnowledgeFiles, listKnowledgeUsage } from "@/lib/data/knowledge";
 import { ACCEPTED_EXTENSIONS } from "@/lib/knowledge/extractText";
 import { FormModal } from "@/components/workspace/FormModal";
 // Rama ekranu wspolna z Projektami i Agentami; specyfika magazynu w wiedza.module.
@@ -168,7 +164,17 @@ export default function KnowledgePage() {
     setBusy(true);
     setModalError(null);
     try {
-      await deleteKnowledgeFileAndUnpin(deleting);
+      // Kasowanie idzie TRASA, nie wprost z przegladarki. To jedyna rzecz,
+      // ktora z rundy 5b zostaje w tym pliku — przeniesienie trzech krokow
+      // (odpiecie od agentow, Storage, wiersz) na serwer jest poprawa samo
+      // w sobie, niezaleznie od RAG: kolejnosc i komunikaty sa teraz w jednym
+      // miejscu, a nie w kodzie wykonywanym w przegladarce.
+      const res = await fetch(`/api/knowledge/${deleting.id}`, {
+        method: "DELETE",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || "Nie udało się usunąć pliku.");
+
       setDeleting(null);
       // Przeladowujemy TAKZE uzywajacych — odpiecie zmienilo wskazania agentow.
       reload();

@@ -1,0 +1,44 @@
+{
+  "kolekcja": "Regulaminy",
+  "opis": "Polski korpus prawny: Kodeks pracy, RODO, regulamin pracy, umowa najmu, instrukcja BHP.",
+  "utworzony": "2026-07-29",
+  "uwaga": "PYTANIA PRZEPISUJ CO DO ZNAKU. Zmiana sformułowania unieważnia porównanie z historią: „gdzie znajduje się apteczka\" daje 0,4581, a „gdzie znajduje się apteczka pierwszej pomocy\" 0,6052 — osiemnaście razy więcej niż cały margines progu.",
+  "poprawne": [
+    { "pytanie": "gdzie znajduje się apteczka", "fraza": "Apteczka" },
+    { "pytanie": "ile wynosi okres wypowiedzenia umowy o pracę", "fraza": "Okres wypowiedzenia umowy o pracę zawartej na czas nieokre" },
+    { "pytanie": "kiedy mogę żądać usunięcia danych", "fraza": "ma prawo żądania od administratora" },
+    { "pytanie": "ile dni urlopu wypoczynkowego przysługuje pracownikowi", "fraza": "Art. 152." },
+    { "pytanie": "kto jest administratorem danych osobowych", "fraza": "administrator" },
+    { "pytanie": "jakie są zasady zmiany hasła", "fraza": "hasł" },
+    { "pytanie": "jaki jest czynsz za lokal", "fraza": "czynsz" },
+    { "pytanie": "co pracodawca musi zrobić w zakresie bezpieczeństwa i higieny pracy", "fraza": "bezpieczne i higieniczne warunki pracy" },
+    { "pytanie": "jak zgłosić naruszenie ochrony danych", "fraza": "naruszenia ochrony danych osobowych" },
+    { "pytanie": "ile trwa urlop macierzyński", "fraza": "urlop macierzyński" }
+  ],
+  "szumDaleki": [
+    "jak upiec sernik",
+    "jaka jest stolica Australii",
+    "ile kosztuje bilet lotniczy do Tokio",
+    "jak wymienić olej w silniku diesla",
+    "kiedy sadzić pomidory w gruncie",
+    "jaki procesor wybrać do gier",
+    "przepis na rosół z kury",
+    "jak nauczyć się gry na gitarze"
+  ],
+  "szumBliski": [
+    "jaka jest stawka podatku VAT na usługi budowlane",
+    "w jakim terminie należy złożyć zeznanie podatkowe PIT",
+    "jakie są przesłanki odpowiedzialności karnej za oszustwo",
+    "jak wygląda postępowanie o wydanie pozwolenia na budowę",
+    "jakie dokumenty są wymagane do rejestracji spółki z o.o.",
+    "jaki jest termin przedawnienia roszczeń z tytułu rękojmi",
+    "jakie są obowiązki informacyjne wobec konsumenta przy sprzedaży na odległość",
+    "kiedy przysługuje zasiłek pogrzebowy z ZUS"
+  ],
+  "identyfikatory": [
+    { "pytanie": "art. 154", "fraza": "Art. 154." },
+    { "pytanie": "art. 36", "fraza": "Art. 36." },
+    { "pytanie": "co mówi art. 36 kodeksu pracy", "fraza": "Art. 36." },
+    { "pytanie": "artykuł 17 RODO", "fraza": "usunięcia dotyczących jej danych osobowych" }
+  ]
+}
