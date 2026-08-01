@@ -13,15 +13,24 @@
    je wszyscy potomkowie, a poza zakladka nie istnieja.
    ============================================================================= */
 
+/* --- MOTYW JASNY, WSPÓLNY Z RESZTĄ AIDEAS ------------------------------------
+   Wartości pochodzą z rampy Zinc używanej w workspace.module.css i
+   sections.module.css — ten sam #e4e4e7 na obwód karty, #18181b na tekst,
+   #71717a na przygaszenie. Nazwy zostają polskie: to nadal osobny moduł,
+   zmienia się paleta, nie konwencja.
+
+   CZEGO TE ZMIENNE NIE OBEJMUJĄ: płótna mapy i grafu. Canvas nie czyta
+   zmiennych CSS, więc jego kolory żyją w stałej PALETA w MapaFragmentow.jsx
+   i GrafWiedzy.jsx. Zmiana motywu wymaga ruszenia OBU miejsc. */
 .panel {
-  --tlo: #0f1115;
-  --karta: #1a1d24;
-  --obwod: #2a2f3a;
-  --tekst: #e6e8ec;
-  --przygaszony: #9aa2b1;
-  --ok: #37b26b;
-  --blad: #e5484d;
-  --nieznane: #d1a53a;
+  --tlo: #ffffff;
+  --karta: #ffffff;
+  --obwod: #e4e4e7;
+  --tekst: #18181b;
+  --przygaszony: #71717a;
+  --ok: #15803d;
+  --blad: #b91c1c;
+  --nieznane: #b45309;
 
   /* Z reguly body oryginalu. Bez margin: 0 — to nalezy do dokumentu,
      a dokumentem zarzadza AIDEAS. */
@@ -47,35 +56,55 @@
   margin: 0 0 4px;
 }
 
+/* Przycisk drugorzędny — te same wartości co .ghostButton
+   w app/projekty/workspace.module.css, poza paddingiem i marginesem,
+   które są tu częścią układu modułu. */
 .panel button {
-  background: #2a2f3a;
-  color: var(--tekst);
-  border: 1px solid var(--obwod);
+  background: #ffffff;
+  color: #3f3f46;
+  border: 1px solid #d4d4d8;
   border-radius: 8px;
   padding: 8px 16px;
   font-size: 14px;
+  font-weight: 600;
   cursor: pointer;
   margin-bottom: 20px;
 }
-.panel button:hover {
-  background: #333a47;
+.panel button:hover:not(:disabled) {
+  background: #f4f4f5;
+  border-color: #a1a1aa;
 }
+/* WYLACZONY PRZYCISK MA WLASNE TLO, NIE SAMA PRZEZROCZYSTOSC.
+   opacity: 0.5 dzialalo na tle #0f1115 — polprzezroczysty przycisk zostawal
+   ciemniejszy od tla i bylo go widac. Na bialym te same 50% daja ducha:
+   „Wgraj i potnij" i „Szukaj" przestawaly byc czytelne jako przyciski.
+   Wartosci jak w reszcie AIDEAS (workspace.module.css, sections.module.css). */
 .panel button:disabled {
-  opacity: 0.5;
+  background: #f4f4f5;
+  border-color: #e4e4e7;
+  color: #a1a1aa;
   cursor: default;
 }
 
+/* Pole tekstowe — wartości z sections.module.css (padding 10px 12px,
+   obwód #d4d4d8, focus outline #c4b5fd). */
 .panel input[type='text'],
 .panel textarea {
   width: 100%;
-  background: #12151b;
+  background: #ffffff;
   color: var(--tekst);
-  border: 1px solid var(--obwod);
+  border: 1px solid #d4d4d8;
   border-radius: 8px;
-  padding: 8px 10px;
+  padding: 10px 12px;
   font-size: 14px;
   font-family: inherit;
   margin-bottom: 10px;
+}
+.panel input[type='text']:focus,
+.panel textarea:focus {
+  outline: 2px solid #c4b5fd;
+  outline-offset: -1px;
+  border-color: #a78bfa;
 }
 .panel textarea {
   min-height: 60px;
@@ -150,7 +179,7 @@
 }
 
 .modele li {
-  background: #232733;
+  background: #f4f4f5;
   border: 1px solid var(--obwod);
   border-radius: 6px;
   padding: 4px 10px;
@@ -261,7 +290,7 @@
 
 .pasek {
   height: 8px;
-  background: #12151b;
+  background: #f4f4f5;
   border: 1px solid var(--obwod);
   border-radius: 999px;
   overflow: hidden;
@@ -376,7 +405,7 @@
 
 .mapa-obudowa {
   position: relative;
-  background: #0b0d12;
+  background: #fafafa;
   border: 1px solid var(--obwod);
   border-radius: 10px;
   overflow: hidden;
@@ -398,13 +427,13 @@
   position: absolute;
   pointer-events: none;
   max-width: 340px;
-  background: rgba(16, 19, 26, 0.97);
+  background: rgba(255, 255, 255, 0.94);
   border: 1px solid var(--obwod);
   border-radius: 8px;
   padding: 8px 10px;
   font-size: 12px;
   line-height: 1.45;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 2px 8px rgba(24, 24, 27, 0.05);
   z-index: 3;
 }
 .mapa-dymek .zrodlo {
@@ -422,11 +451,14 @@
   display: flex;
   flex-direction: column;
   gap: 6px;
-  background: rgba(16, 19, 26, 0.9);
+  background: rgba(255, 255, 255, 0.94);
   border: 1px solid var(--obwod);
   border-radius: 8px;
   padding: 8px 10px;
   font-size: 12px;
+  /* Cień odsuwa panel od płótna. Na ciemnym motywie robiła to sama półprzezroczysta
+     czerń — na jasnym tle biały panel na białym tle zlewałby się bez niego. */
+  box-shadow: 0 2px 8px rgba(24, 24, 27, 0.05);
   z-index: 2;
   max-width: 260px;
 }
@@ -457,16 +489,18 @@
   margin-bottom: 0;
   padding: 5px 10px;
   font-size: 12px;
-  background: rgba(16, 19, 26, 0.9);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 2px 8px rgba(24, 24, 27, 0.05);
 }
 .mapa-skala {
   font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
   font-size: 12px;
   color: var(--przygaszony);
-  background: rgba(16, 19, 26, 0.9);
+  background: rgba(255, 255, 255, 0.94);
   border: 1px solid var(--obwod);
   border-radius: 6px;
   padding: 5px 8px;
+  box-shadow: 0 2px 8px rgba(24, 24, 27, 0.05);
 }
 
 /* Graf: legenda OBOK płótna, nie na nim (Sesja 9b).
@@ -499,12 +533,13 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  background: rgba(16, 19, 26, 0.9);
+  background: rgba(255, 255, 255, 0.94);
   border: 1px solid var(--obwod);
   border-radius: 6px;
   padding: 4px 9px;
   font-size: 12px;
   color: var(--przygaszony);
+  box-shadow: 0 2px 8px rgba(24, 24, 27, 0.05);
 }
 .graf-suwak span {
   font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
@@ -516,7 +551,7 @@
 .graf-suwak input[type='range'] {
   width: 96px;
   margin: 0;
-  accent-color: #fbbf24;
+  accent-color: #7c3aed;
   cursor: pointer;
 }
 
@@ -543,6 +578,7 @@
   border: 1px solid var(--obwod);
   border-radius: 6px;
   overflow: hidden;
+  box-shadow: 0 2px 8px rgba(24, 24, 27, 0.05);
 }
 .przelacznik button {
   margin-bottom: 0;
@@ -550,14 +586,18 @@
   border-radius: 0;
   padding: 5px 10px;
   font-size: 12px;
-  background: rgba(16, 19, 26, 0.9);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: none;
 }
 .przelacznik button + button {
   border-left: 1px solid var(--obwod);
 }
+/* Wybrany segment — ta sama para co .segmentActive w kreatorze agenta:
+   fioletowe tło z fioletowym tekstem. Na ciemnym motywie wystarczał
+   jaśniejszy grafit, na jasnym potrzebny jest kolor, nie stopień szarości. */
 .przelacznik button.wybrany {
-  background: #2f3a4d;
-  color: var(--tekst);
+  background: #ede9fe;
+  color: #6d28d9;
   font-weight: 600;
 }
 
@@ -636,12 +676,13 @@
   align-items: center;
   gap: 10px;
   min-width: 260px;
-  background: rgba(16, 19, 26, 0.92);
+  background: rgba(255, 255, 255, 0.94);
   border: 1px solid var(--obwod);
   border-radius: 6px;
   padding: 6px 12px;
   font-size: 12px;
   color: var(--nieznane);
+  box-shadow: 0 2px 8px rgba(24, 24, 27, 0.05);
 }
 .mapa-postep .pasek {
   flex: 1;
@@ -653,12 +694,13 @@
   bottom: 10px;
   left: 10px;
   z-index: 2;
-  background: rgba(16, 19, 26, 0.92);
+  background: rgba(255, 255, 255, 0.94);
   border: 1px solid var(--obwod);
   border-radius: 6px;
   padding: 5px 10px;
   font-size: 12px;
   color: var(--nieznane);
+  box-shadow: 0 2px 8px rgba(24, 24, 27, 0.05);
 }
 
 .zastrzezenie {

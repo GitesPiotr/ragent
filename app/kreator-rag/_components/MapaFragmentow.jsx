@@ -27,6 +27,38 @@ import {
 //  • DOZWOLONE: przejście na nowe pozycje po przeliczeniu bazy (12.4).
 // W trybie 2D bez indeksowania strona nie rysuje NIC w tle — rysunek odpalają zdarzenia.
 
+// =============================================================================
+//  PALETA PŁÓTNA — DLACZEGO TUTAJ, A NIE W CSS
+//
+//  Canvas NIE CZYTA zmiennych CSS. Nie ma w nim kaskady ani dziedziczenia:
+//  `ctx.fillStyle` przyjmuje wyłącznie gotową wartość, więc `var(--tekst)`
+//  byłoby napisem bez znaczenia. Sprawdzone: w całym app/kreator-rag/ nie ma
+//  ani jednego `getComputedStyle`, czyli nic nie mostkuje CSS do płótna.
+//
+//  Konsekwencja, którą trzeba znać przy zmianie motywu: zmiana zmiennych
+//  w .panel (kreator-rag.module.css) przemaluje panele, przyciski i dymki,
+//  ale NIE RUSZY ani jednego piksela mapy. Te dwa zestawy trzeba zmieniać razem.
+//
+//  Wartości odpowiadają rampie Zinc używanej w reszcie AIDEAS — to samo #3f3f46
+//  na tekst i #a1a1aa na przygaszenie co w sections.module.css.
+// =============================================================================
+// Tlo mapy maluje CSS (.mapa-obudowa) — plotno zostaje przezroczyste,
+// dlatego nie ma tu pola `tlo`.
+const PALETA = {
+  siatka: 'rgba(24,24,27,.05)',
+  podpis: '#3f3f46',
+  // Obwódka punktu trafionego i podświetlenie świeżej krawędzi. Na ciemnym tle
+  // była to biel; na jasnym musi być najciemniejszym kolorem widoku, inaczej
+  // „wyróżnienie" znika w tle.
+  wyroznienie: '#18181b',
+  obrysPodpisu: 'rgba(255,255,255,.85)',
+  przygaszony: '#a1a1aa',
+  most: '#b45309',
+  // Fragment bez znanego dokumentu. Ta sama wartość co ZASTEPCZY w lib/mapview/edges.js
+  // — obie muszą się zgadzać, inaczej ten sam fragment ma dwa różne szare.
+  fallback: '#71717a',
+};
+
 const WYSOKOSC = 560;
 const WYSOKOSC_OSADZONA = 400;
 const MARGINES = 28;
@@ -373,7 +405,7 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
       const sasiedzi = computeNeighbors3d(punkty, 3);
       const kolorFragmentu = new Map();
       const kolory = new Map(dane.documents.map((d) => [d.id, d.color]));
-      for (const c of dane.chunks) kolorFragmentu.set(c.id, kolory.get(c.documentId) || '#8a93a6');
+      for (const c of dane.chunks) kolorFragmentu.set(c.id, kolory.get(c.documentId) || PALETA.fallback);
       const kraw = krawedzie3d(sasiedzi, kolorFragmentu, sredniKolor);
       dane3dRef.current = { dlaDanych: dane, sasiedzi, krawedzie: kraw, indeks: indeksKrawedzi(kraw) };
       setLicz3d(false);
@@ -439,7 +471,8 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
       );
       // Grubość dzielona przez skalę, bo transformacja rozciągnęłaby też linię.
       ctx.lineWidth = 0.7 / t.k;
-      ctx.globalAlpha = hover || zazn ? 0.07 : 0.16;
+      // 0,07/0,16 bylo dobrane pod ciemne tlo. Na bialym linia z alfa 0,07 nie istnieje.
+      ctx.globalAlpha = hover || zazn ? 0.18 : 0.32;
       for (const [kolor, sciezka] of sciezki2dRef.current) {
         ctx.strokeStyle = kolor;
         ctx.stroke(sciezka);
@@ -454,7 +487,7 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
     if (hover) {
       const lista = indeksRef.current.get(hover) || [];
       ctx.lineWidth = Math.max(1.1, 1.4 * Math.sqrt(t.zoom));
-      ctx.globalAlpha = 0.85;
+      ctx.globalAlpha = 0.9;
       for (const e of lista) {
         const a = pozycje.get(e.a);
         const b = pozycje.get(e.b);
@@ -476,14 +509,14 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
       ctx.lineWidth = 1.6;
       for (const cid of swieze) {
         const wiek = (teraz - swiezeRef.current.get(cid)) / CZAS_PODSWIETLENIA;
-        ctx.globalAlpha = Math.max(0, 1 - wiek) * 0.9;
+        ctx.globalAlpha = Math.max(0, 1 - wiek) * 0.95;
         for (const e of indeksRef.current.get(cid) || []) {
           const a = pozycje.get(e.a);
           const b = pozycje.get(e.b);
           if (!a || !b) continue;
           const [ax, ay] = t.doEkranu(a.x, a.y);
           const [bx, by] = t.doEkranu(b.x, b.y);
-          ctx.strokeStyle = '#ffffff';
+          ctx.strokeStyle = PALETA.wyroznienie;
           ctx.beginPath();
           ctx.moveTo(ax, ay);
           ctx.lineTo(bx, by);
@@ -519,14 +552,18 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
         continue;
       }
 
-      const kolor = kolory.get(c.documentId) || '#8a93a6';
+      const kolor = kolory.get(c.documentId) || PALETA.fallback;
       let g = grupy.get(kolor);
       if (!g) { g = new Path2D(); grupy.set(kolor, g); }
       g.moveTo(sx + r, sy);
       g.arc(sx, sy, r, 0, Math.PI * 2);
     }
 
-    const alfaPodstawowa = zazn || hover ? 0.12 : 0.85;
+    // PRZYGASZENIE, NIE KASOWANIE. 0,12 na bialym tle zbiegalo 107 punktow do bieli —
+    // po wyszukaniu widac bylo jedno trafienie i pusta plansze, czyli utrate danych,
+    // nie skupienie uwagi. 0,28 zostawia punkt widocznym jako punkt, a trafienie
+    // i tak jest trzykrotnie mocniejsze i ma obrys.
+    const alfaPodstawowa = zazn || hover ? 0.28 : 0.9;
     ctx.globalAlpha = alfaPodstawowa;
     for (const [kolor, sciezka] of grupy) {
       ctx.fillStyle = kolor;
@@ -538,7 +575,7 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
     // policzył PCA przed narysowaniem (12.9).
     for (const { c, sx, sy, alfa } of wchodzace) {
       ctx.globalAlpha = alfa * alfaPodstawowa;
-      ctx.fillStyle = kolory.get(c.documentId) || '#8a93a6';
+      ctx.fillStyle = kolory.get(c.documentId) || PALETA.fallback;
       ctx.beginPath();
       ctx.arc(sx, sy, r, 0, Math.PI * 2);
       ctx.fill();
@@ -548,11 +585,12 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
     for (const { c, sx, sy, wyrozniony } of widoczne) {
       if (!wyrozniony) continue;
       ctx.beginPath();
-      ctx.arc(sx, sy, r * 1.9, 0, Math.PI * 2);
-      ctx.fillStyle = kolory.get(c.documentId) || '#8a93a6';
+      ctx.arc(sx, sy, r * 2.2, 0, Math.PI * 2);
+      ctx.fillStyle = kolory.get(c.documentId) || PALETA.fallback;
       ctx.fill();
-      ctx.lineWidth = Math.max(1, Math.sqrt(t.zoom));
-      ctx.strokeStyle = '#ffffff';
+      // Przy 1x bylo to 1 px wokol kolka o promieniu ~2,2 px — obrys ginal.
+      ctx.lineWidth = Math.max(1.8, 1.8 * Math.sqrt(t.zoom));
+      ctx.strokeStyle = PALETA.wyroznienie;
       ctx.stroke();
     }
 
@@ -562,7 +600,7 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
 
   function rysujPodpisy(ctx, d, widoczne, r) {
     ctx.font = '11px ui-monospace, Consolas, monospace';
-    ctx.fillStyle = '#9aa2b1';
+    ctx.fillStyle = PALETA.podpis;
     const zajete = new Set();
     const nazwy = new Map(d.documents.map((doc) => [doc.id, doc.name]));
     for (const { c, sx, sy } of widoczne) {
@@ -625,7 +663,7 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
       const ekran = new Map(klatka.map((p) => [p.id, doEkranu(p)]));
       const grupy = grupujPoKolorze(trzy.krawedzie);
       ctx.lineWidth = 0.6;
-      ctx.globalAlpha = hover || zazn ? 0.05 : 0.12;
+      ctx.globalAlpha = hover || zazn ? 0.15 : 0.28;
       for (const [kolor, lista] of grupy) {
         const sciezka = new Path2D();
         for (const e of lista) {
@@ -647,7 +685,7 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
     if (hover && trzy) {
       const ekran = new Map(klatka.map((p) => [p.id, doEkranu(p)]));
       ctx.lineWidth = 1.5;
-      ctx.globalAlpha = 0.9;
+      ctx.globalAlpha = 0.95;
       for (const e of indeks3d.get(hover) || []) {
         const a = ekran.get(e.a);
         const b = ekran.get(e.b);
@@ -672,7 +710,7 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
       const wyrozniony = (zazn && zazn.has(p.id)) || (sasiedziHover && sasiedziHover.has(p.id));
       if (wyrozniony) { wyroznione.push({ p, sx, sy }); continue; }
       const b = kubelekGlebi(p.skalaGlebi, minK, maxK, KUBELKI_GLEBI);
-      const kolor = kolory.get(p.documentId) || '#8a93a6';
+      const kolor = kolory.get(p.documentId) || PALETA.fallback;
       const klucz = b + '|' + kolor;
       let g = kubelki.get(klucz);
       if (!g) { g = { bucket: b, kolor, sciezka: new Path2D() }; kubelki.set(klucz, g); }
@@ -681,10 +719,12 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
       g.sciezka.arc(sx, sy, r, 0, Math.PI * 2);
     }
 
-    const przygaszenie = zazn || hover ? 0.18 : 1;
+    const przygaszenie = zazn || hover ? 0.32 : 1;
     const posortowane = [...kubelki.values()].sort((a, b) => a.bucket - b.bucket);
     for (const g of posortowane) {
-      ctx.globalAlpha = (0.28 + 0.62 * (g.bucket / (KUBELKI_GLEBI - 1))) * przygaszenie;
+      // Najdalszy kubelek mial 0,28 — na bialym tle znikal. Podnosimy dol zakresu,
+      // zachowujac rozpietosc, ktora robi glebie (12.8).
+      ctx.globalAlpha = (0.45 + 0.5 * (g.bucket / (KUBELKI_GLEBI - 1))) * przygaszenie;
       ctx.fillStyle = g.kolor;
       ctx.fill(g.sciezka);
     }
@@ -694,10 +734,10 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
       const r = 3.4 * Math.sqrt(zoom);
       ctx.beginPath();
       ctx.arc(sx, sy, r, 0, Math.PI * 2);
-      ctx.fillStyle = kolory.get(p.documentId) || '#8a93a6';
+      ctx.fillStyle = kolory.get(p.documentId) || PALETA.fallback;
       ctx.fill();
       ctx.lineWidth = 1.2;
-      ctx.strokeStyle = '#ffffff';
+      ctx.strokeStyle = PALETA.wyroznienie;
       ctx.stroke();
     }
   }
@@ -892,7 +932,7 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
       x: Math.min(naj.sx + 14, naj.W - 350),
       y: Math.max(8, naj.sy - 10),
       nazwa: doc ? doc.name : '—',
-      kolor: doc ? doc.color : '#8a93a6',
+      kolor: doc ? doc.color : PALETA.fallback,
       heading: naj.c.headingPath,
       strona: naj.c.pageFrom,
       preview: naj.c.preview,

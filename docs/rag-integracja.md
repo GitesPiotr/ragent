@@ -272,6 +272,162 @@ skrypt jako użytkownika.
 
 ---
 
+## Motyw jasny Kreatora RAG
+
+Kreator RAG był jedyną zakładką w motywie ciemnym — moduł powstał jako osobna
+aplikacja. Przestylowanie na jasny (gałąź `feature/rag-jasny-motyw`, dwie rundy)
+nie zmieniło ani jednej linii rachunku; zmieniło wyłącznie warstwę wyglądu.
+
+### Gdzie siedzą kolory — cztery miejsca, nie jedno
+
+**Canvas nie czyta zmiennych CSS.** `ctx.fillStyle` przyjmuje gotową wartość,
+a `var(--tekst)` jest dla niego napisem bez znaczenia; nie ma tam kaskady ani
+dziedziczenia. Sprawdzone: w całym `app/kreator-rag/` **nie ma ani jednego
+`getComputedStyle`**, więc nic nie mostkuje CSS do płótna.
+
+Konsekwencja, od której zaczyna każdy, kto będzie ruszał motyw: **przemalowanie
+`.panel` w `kreator-rag.module.css` nie zmieni ani jednego piksela mapy i grafu.**
+
+| co | gdzie | uwaga |
+|---|---|---|
+| kolory płótna mapy | `MapaFragmentow.jsx`, stała `PALETA` na górze pliku | 8 pól: `siatka`, `podpis`, `wyroznienie`, `obrysPodpisu`, `przygaszony`, `most`, `fallback` |
+| kolory płótna grafu | `GrafWiedzy.jsx`, stała `PALETA` | ten sam zestaw pól i te same wartości |
+| kolory interfejsu (panele, karty, przyciski) | `kreator-rag.module.css`, zmienne w `.panel` | `--tlo`, `--karta`, `--obwod`, `--tekst`, `--przygaszony`, `--ok`, `--blad`, `--nieznane` |
+| **paleta dokumentów** | `lib/rag/map.js:33-36` | eksportowana przez `kolorDokumentu()`, wspólna dla mapy i grafu (`graph.js:140`) |
+| kolor zastępczy fragmentu | `lib/mapview/edges.js`, stała `ZASTEPCZY` | `#71717a`, musi się zgadzać z `PALETA.fallback` w obu komponentach |
+
+Ani `PALETA`, ani zmienne `.panel` nie mają pola na tło płótna: płótna są
+**przezroczyste**, tło daje `.mapa-obudowa`. Graf malował kiedyś własny gradient
+i był przez to jedynym widokiem, którego tła nie dało się zmienić z CSS —
+zastąpione przez `ctx.clearRect` (samo usunięcie `fillRect` nie wystarczy: przy
+przerysowaniu w tym samym rozmiarze przeglądarka nie czyści płótna sama i węzły
+zostawiają smugi).
+
+### Kryteria doboru palety dokumentów
+
+Poprzedni zestaw powstał pod tło `#0f1115` i na białym przestał działać: **osiem
+z dziesięciu kolorów schodziło poniżej kontrastu 3:1** (najgorszy `#8fce00` = 1,83;
+`#d1a53a` = 2,20; `#ff8b4c` = 2,22). Punkt o kontraście 2:1 wobec tła nie jest
+„nieco bledszy" — po nałożeniu krycia przygaszenia znika.
+
+Nowy zestaw spełnia trzy warunki, każdy policzony (kontrast WCAG + CIE76):
+
+1. **kontrast wobec `#fafafa` ≥ 3:1** — minimum 3,53 (`#0891b2`), maksimum 8,61,
+2. **odległość od koloru mostu `#b45309` ≥ 25 dE** — minimum 31,9 (`#dc2626`);
+   most musi zostać rozpoznawalny obok każdego dokumentu,
+3. **wzajemna rozróżnialność ≥ 25 dE** — minimum 27,8 dla całego zestawu.
+
+Do tego dwie reguły jakościowe:
+
+- **jedna rodzina barw na pozycję** — bez dwóch odcieni tej samej fuksji, bo
+  „ten sam kolor, ciemniejszy" nie jest kategorią czytelną z mapy,
+- **kolejność jest wynikiem, nie alfabetem** — dokumenty dostają kolory po
+  indeksie, więc najczęściej sąsiadują pozycje 1-2 i 2-3; ułożone tak, żeby
+  najmniejsza odległość między **sąsiadami** była największa (wyszło 91 dE).
+
+Dodając kolor do palety: sprawdź wszystkie trzy warunki, nie tylko kontrast.
+
+### REGUŁA: krycia podnosi się, nie obniża
+
+Wszystkie `globalAlpha` w obu komponentach były strojone pod tło `#0f1115`.
+Na ciemnym tle kolor z kryciem 0,12 daje punkt słaby, ale obecny — kolor jest
+jaśniejszy od tła, więc zostaje widoczny. **Na jasnym tle to samo krycie zbiega
+do bieli.** Przygaszenie zamienia się w kasowanie.
+
+Najgorszy przypadek: `alfaPodstawowa` na mapie. Po wyszukaniu 107 punktów
+znikało i zostawało jedno trafienie na pustej planszy — czyli wyszukiwanie
+kasowało kontekst, zamiast go przygaszać.
+
+| miejsce | ciemne tło | jasne tło |
+|---|---|---|
+| mapa, `alfaPodstawowa` (punkty) | `0,12 / 0,85` | **`0,28 / 0,9`** |
+| mapa, krawędzie 2D | `0,07 / 0,16` | `0,18 / 0,32` |
+| mapa, sąsiedzi pod kursorem 2D | `0,85` | `0,9` |
+| mapa, gasnące podświetlenie świeżej krawędzi | `× 0,9` | `× 0,95` |
+| mapa, krawędzie 3D | `0,05 / 0,12` | `0,15 / 0,28` |
+| mapa, sąsiedzi pod kursorem 3D | `0,9` | `0,95` |
+| mapa, przygaszenie 3D | `0,18` | `0,32` |
+| mapa, kubełki głębi | `0,28 + 0,62 k` | `0,45 + 0,5 k` |
+| graf, wygaszona krawędź | `0,05 / 0,3` | `0,18 / 0,45` |
+| graf, wygaszony węzeł (pusty) | `0,12` (`0,42`) | `0,3` (`0,5`) |
+| graf, wygaszony podpis | `0,12` | `0,3` |
+
+Kryterium, według którego dobrane: **przygaszony element ma być widoczny jako
+element, tylko wyraźnie słabszy od wyróżnionego.** Nie „ledwo widoczny".
+
+Ta sama zasada dotyczy obwódek. Obrys trafienia na mapie miał `max(1, √zoom)` —
+przy zoomie 1× to 1 px wokół kółka o promieniu ~2,2 px, czyli obrys ginął.
+Po zmianie: `max(1,8, 1,8 × √zoom)`, promień wyróżnienia `r × 2,2` zamiast `r × 1,9`.
+
+I przycisków: `opacity: 0.5` działało na ciemnym tle (półprzezroczysty przycisk
+zostawał ciemniejszy od tła), na białym dawało ducha. Wyłączony przycisk ma
+teraz własne tło `#f4f4f5`, obwód `#e4e4e7` i tekst `#a1a1aa`.
+
+### Poświata niesie informację tylko w dwóch miejscach
+
+Na ciemnym tle `shadowBlur` rozjaśniał tło i czytał się jako świecenie. Na jasnym
+rozjaśnić nie ma czego — ten sam efekt czyta się jako **rozmycie**, czyli jakby
+węzeł był nieostry. Cały graf wyglądał na rozmazany.
+
+**W obu komponentach nie ma już ani jednego `shadowBlur` i `shadowColor`.**
+Zastąpione obrysami tam, gdzie poświata coś znaczyła:
+
+| element | było | jest |
+|---|---|---|
+| most | `shadowBlur: 18` | obrys `#18181b`, grubość 2,5 |
+| dokument z pojęciami | `shadowBlur: 16` | obrys `#18181b`, grubość 1,5 |
+| pojęcie pod kursorem | `shadowBlur: 5` | obrys `#18181b`, grubość 1,5 |
+| fragment pod kursorem | `shadowBlur: 12` | obrys `#18181b`, grubość 1,5 |
+| krawędź podświetlona | `shadowBlur: 9` | `lineWidth × 1,8` |
+| **zwykłe pojęcie** | `shadowBlur: 5` | **nic — bez zamiennika** |
+
+Ostatni wiersz jest celowy i warto go rozumieć: **wszystkie** zwykłe pojęcia
+miały tę samą poświatę, więc nie odróżniała niczego od niczego. Była ozdobą
+i znika bez zamiennika. Obrys dostaje wyłącznie to, co ma być wyróżnione.
+
+> **Pułapka, na którą warto uważać.** W rundzie 1 obrys mostu został wpisany
+> w `PALETA.most` — czyli dokładnie tym samym kolorem co wypełnienie węzła.
+> Obrys istniał w kodzie i nie istniał na ekranie. Nie dało się tego złapać
+> wcześniej, bo kolekcja testowa nie ma ani jednego mostu; wyszło dopiero po
+> tymczasowym wymuszeniu flagi `most`. Rozróżnienie mostu niesie **wypełnienie**
+> `#b45309`; obrys je wzmacnia i musi kontrastować z jednym i z drugim.
+
+### Pomiar 12.9 na żywej pętli indeksowania
+
+Reguły „punkty na mapie nie mogą się ruszać" pilnował dotąd tylko przegląd diffu.
+Zmierzone po przestylowaniu: `reindex` dokumentu na 5 fragmentów zdjął mapę
+ze 120 na 115 punktów, zapisane współrzędne wszystkich 115, ponowne zaindeksowanie
+z przycisku „Indeksuj" i porównanie.
+
+```
+punktów przed 115, po 120, nowych 5, wspólnych 115
+RUSZONE 0, największa zmiana 0
+baza PCA nieprzeliczona (builtAt bez zmian)
+```
+
+5 z 120 to ~4%, poniżej progu 30% z 12.4, więc nie zadziałał nawet **dozwolony**
+wyjątek (przejście na nowe pozycje po przeliczeniu bazy). Punkty po prostu stały,
+a nowe pięć pojawiło się na swoich współrzędnych.
+
+### Otwarte po przestylowaniu
+
+1. **Fuksja `#c026d3` i róż `#db2777`** stoją w palecie na pozycjach 3 i 5,
+   a ich wzajemne dE to 27,8 — najniższa para w zestawie, dokładnie na progu.
+   **Wymaga kolekcji z pięcioma dokumentami**, żeby zobaczyć je obok siebie.
+2. **Podpis dokumentu bez pojęć jest pełnokryty, a węzeł przygaszony do 0,5.**
+   Reguła „przygasić węzeł, nie podpis" jest udokumentowana i celowa, ale na
+   jasnym tle kontrast między nimi urósł i szara kostka z czarnym podpisem czyta
+   się jak błąd renderowania. Do decyzji produktowej, nie do naprawy w ciemno.
+3. **Siatka grafu `rgba(24,24,27,.05)`** jest na granicy widoczności — widać ją
+   na zrzutach, ale przy jaśniejszym monitorze może zniknąć.
+4. **Most nie został sprawdzony na prawdziwych danych** — tylko na wymuszonych.
+   **Wymaga kolekcji, w której dokumenty dzielą pojęcia** (pięć dokumentów
+   z policzonymi pojęciami i uruchomioną normalizacją).
+5. **Poświaty dokumentów i układanie wielu węzłów** oglądane były na trzech
+   dokumentach, z czego jeden bez pojęć. **Wymaga kolekcji z pięcioma dokumentami.**
+
+---
+
 ## Co zostaje otwarte
 
 1. **Próg `RAG_MIN_SCORE = 0,45` nie ma na tym korpusie pustego pasa.** Szum
@@ -287,3 +443,43 @@ skrypt jako użytkownika.
    **Przy zmianie modelu pomiar trzeba powtórzyć.**
 6. **N+1 przy odczycie stanu** — nie dotyczy już Bazy wiedzy (wycofane), ale wzorzec
    „jedno żądanie na pozycję" wróci, gdy panel zacznie pokazywać stan wielu kolekcji.
+
+### Znalezione po drodze, nienaprawione
+
+Cztery rzeczy zauważone przy integracji i przestylowaniu, których nie było
+w żadnym spisie. Przy każdej pochodzenie, bo od niego zależy, czyj to dług.
+
+7. **Graf nie odświeża się w trakcie wyciągania pojęć.**
+   *Luka modułu RAG* — nie zastana usterka AIDEAS i nie skutek wpięcia w AIDEAS;
+   oba pliki przyszły razem z modułem.
+   `GrafWiedzy.jsx` nie ma żadnego odpytywania, a jego `wczytaj` zależy wyłącznie
+   od `[collectionId, progDanych, tylkoMosty]` — zmiana danych w bazie nie jest
+   żadnym z tych trzech. Do tego graf mieszka na `/kolekcje/[id]/graf`, a pętla
+   ekstrakcji (`usePojecia`) na stronie kolekcji, która grafu nie renderuje.
+   `usePojecia` zwraca `{ postep, wyciagaj, przerwij, wczytajPostep }` — **nie ma
+   odpowiednika `onPartia`**, którym `useIndeksowanie` karmi mapę. Żeby zobaczyć
+   nowe pojęcia, trzeba wejść na `/graf` ponownie albo ruszyć suwakiem progu.
+   Naprawa wymagałaby kanału zwrotnego w `usePojecia` **i** wspólnej strony dla
+   obu widoków — czyli decyzji układu, nie poprawki.
+
+8. **`app/ustawienia/page.js:389` używa `styles.content`, którego nie ma w arkuszu.**
+   *Zastana usterka AIDEAS* — potwierdzone na `master`: ta sama linia, a
+   `ustawienia.module.css` nie ma reguły `.content`.
+   Do HTML-a trafia `className="undefined"`. Działa **przypadkiem**: `.layout` jest
+   gridem `210px 1fr`, więc drugie dziecko ląduje w drugiej kolumnie bez własnych
+   stylów. Zadziała inaczej, gdy ktoś ruszy układ.
+
+9. **`app/logowanie/auth.module.css` nie ma ani jednej reguły motywu ciemnego.**
+   *Zastana usterka AIDEAS* — arkusz jest sprzed integracji, RAG go nie dotyka.
+   Przy `data-theme="dark"` `body` dostaje `#0a0a0a`, ale `.screen` maluje na nim
+   `#fafafa`, a karta `#fff`. Logowanie i rejestracja zostają jasne w ciemnym
+   motywie. To jedyne dwa ekrany aplikacji bez wariantu ciemnego.
+
+10. **`sections.module.css` ma dwie sprzeczne reguły ciemne na `.dropZone`.**
+    *Zastana usterka AIDEAS* — potwierdzone na `master`: te same numery linii,
+    sprzeczność jest starsza niż sekcja RAG w kreatorze agenta.
+    Linia 757 ustawia tło `#17132e` (fioletowe), linia 807 — w regule zbiorczej
+    `.segmented, .dropZone` — nadpisuje je na `#131318` (szare). Wygrywa druga,
+    bo stoi później. Efekt: strefa uploadu w kreatorze agenta jest w ciemnym
+    motywie **szara zamiast fioletowej**, wbrew intencji obu reguł. To realna
+    usterka wizualna, nie tylko nieporządek.
