@@ -16,8 +16,33 @@
 import { ok, fail } from '../../../../_lib/http.js';
 import { klientSesji } from '../../../../_lib/klientSesji.js';
 import { extractConceptsForDocument } from '@/lib/rag/concepts.js';
+import { wczytajModeleKonta } from '@/lib/settings/dopuszczoneServer';
+import { rozstrzygnij, zPrzypisania, ZRODLO } from '@/lib/settings/przypisaniaModeli';
 
 export const dynamic = 'force-dynamic';
+
+// =============================================================================
+//  MODEL POJĘĆ Z PRZYPISAŃ KONTA — WSTRZYKIWANY PRZEZ WARSTWĘ HTTP
+//
+//  Granica z sekcji 3 SPEC: `lib/rag/` nie wie nic o AIDEAS i ma tak zostać.
+//  Przypisania są pojęciem AIDEAS (tabela `model_assignments`, migracja 020),
+//  więc rdzeń nie ma prawa po nie sięgać. Tę wartość musi wnieść TA trasa —
+//  jedyne miejsce, które zna oba światy.
+//
+//  Przekazujemy SAMĄ KONFIGURACJĘ, nie gotowego dostawcę. Pełne uzasadnienie
+//  stoi przy `deps.conceptOverride` w lib/rag/concepts.js; w skrócie: AIDEAS
+//  mówi CO, rdzeń wie JAK.
+//
+//  BRAK PRZYPISANIA ZWRACA `undefined`, NIE PUSTY OBIEKT. Rdzeń pomija
+//  nadpisanie tylko wtedy, gdy para jest niekompletna — a `undefined` jest
+//  jednoznaczne i nie każe mu tego sprawdzać drugi raz.
+// =============================================================================
+async function modelPojecZKonta() {
+  const { przypisania } = await wczytajModeleKonta();
+  const w = rozstrzygnij([zPrzypisania(przypisania, 'rag_pojecia')]);
+  if (w.zrodlo !== ZRODLO.PRZYPISANIE) return undefined;
+  return { provider: w.provider, model: w.model };
+}
 
 export async function GET(request, { params }) {
   try {
@@ -56,6 +81,7 @@ export async function POST(request, { params }) {
       await extractConceptsForDocument(documentId, {
         client: await klientSesji(),
         collectionId: id,
+        conceptOverride: await modelPojecZKonta(),
       })
     );
   } catch (err) {

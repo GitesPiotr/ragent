@@ -212,8 +212,32 @@ function AppearanceSection({ settings, updateSettings }) {
   );
 }
 
+// =============================================================================
+//  „PRZESŁONIĘTE PRZEZ PRZYPISANIE" — WSPÓLNA NOTKA DLA DWÓCH SEKCJI
+//
+//  Runda 8 podpięła przypisania i tym samym stworzyła nowy sposób, żeby pole
+//  w Ustawieniach niczego nie robiło: gdy rola ma przypisanie, wartość z tej
+//  sekcji (localStorage) przegrywa. Bez tej notki wyleczylibyśmy chorobę
+//  z rundy 6 („ustawiasz i nic się nie dzieje") przenosząc ją o jedno pole
+//  dalej — tyle że w drugą stronę i trudniej zauważalnie.
+//
+//  Notka mówi TRZY rzeczy, bo bez każdej z nich jest bezużyteczna: że pole
+//  jest przesłonięte, CO wygrywa, i GDZIE to zmienić.
+// =============================================================================
+function Przeslonieto({ przypisanie, coRobi }) {
+  if (!przypisanie?.model_id) return null;
+  return (
+    <p className={styles.rowDesc} style={{ margin: "0 0 10px", color: "#92400e" }}>
+      ⚠️ To ustawienie jest teraz <strong>przesłonięte przez przypisanie</strong>:{" "}
+      {coRobi} używa <code>{przypisanie.model_id}</code> ({przypisanie.provider}).
+      Zmienisz to w sekcji „Modele językowe”, karta „Przypisania” — albo
+      wyczyść tam przypisanie, żeby wróciła wartość ustawiona tutaj.
+    </p>
+  );
+}
+
 function MentorSection({ settings, updateSettings }) {
-  const { dopuszczone } = useDopuszczone();
+  const { dopuszczone, przypisania } = useDopuszczone();
   // Modele Anthropic WLACZONE PRZEZ KONTO. Konto bez wlasnej listy dostaje
   // statyczna liste Anthropic — patrz regula fallbacku w dopuszczoneModele.js.
   const { modele, zrodlo } = modeleMentora(dopuszczone);
@@ -223,6 +247,8 @@ function MentorSection({ settings, updateSettings }) {
       <div className={styles.cardHead}>
         <h2 className={styles.cardTitle}>Mentor</h2>
       </div>
+
+      <Przeslonieto przypisanie={przypisania?.mentor} coRobi="mentor" />
 
       <Row
         label="Model mentora"
@@ -289,7 +315,7 @@ function MentorSection({ settings, updateSettings }) {
 }
 
 function DefaultsSection({ settings, updateSettings }) {
-  const { dopuszczone } = useDopuszczone();
+  const { dopuszczone, przypisania } = useDopuszczone();
   // Modele domyślnego dostawcy WŁĄCZONE PRZEZ KONTO (fallback jak wyżej).
   const { modele: providerModels } = listaModeli(
     dopuszczone,
@@ -303,6 +329,13 @@ function DefaultsSection({ settings, updateSettings }) {
       <div className={styles.cardHead}>
         <h2 className={styles.cardTitle}>Domyślne nowego agenta</h2>
       </div>
+
+      {/* Dotyczy WYŁĄCZNIE dostawcy i modelu — temperatura i limit znaków
+          nie mają przypisań i działają dalej z tej sekcji. */}
+      <Przeslonieto
+        przypisanie={przypisania?.agent_domyslny}
+        coRobi="nowo tworzony agent"
+      />
 
       <Row
         label="Domyślny dostawca"

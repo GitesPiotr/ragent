@@ -629,3 +629,48 @@ w żadnym spisie. Przy każdej pochodzenie, bo od niego zależy, czyj to dług.
     zapisane potwierdzenie i **nic się nie zmienia**. To gorsze niż brak pola.
     Do rozstrzygnięcia: albo podpiąć przypisania, albo oznaczyć je w karcie jako
     nieaktywne do czasu podpięcia.
+
+    > **ZAMKNIĘTE w rundzie 8 (2026-08-03).** Wybrano pierwsze wyjście:
+    > przypisania podpięte do wszystkich trzech ról. Kolejność rozstrzygania —
+    > przypisanie → localStorage/env → stała w kodzie — siedzi w jednej czystej
+    > funkcji (`lib/settings/przypisaniaModeli.js`). Model pojęć wchodzi do
+    > rdzenia RAG przez `deps.conceptOverride`, czyli samą konfigurację, żeby
+    > granica z sekcji 3 SPEC została nietknięta w obie strony. Obie sekcje
+    > Ustawień, które te same wartości trzymały wcześniej, dostały notkę
+    > mówiącą, że są przesłonięte, co wygrywa i gdzie to zmienić — bez tego
+    > choroba przeniosłaby się o jedno pole dalej.
+
+16. **Zmiana modelu pojęć w trakcie liczenia rozdziela dokument między dwa
+    modele bez śladu w bazie.** *Mechanizm sprzed rundy 8 — ale próg wyzwolenia
+    właśnie się obniżył.*
+
+    `rag_concepts` zapisuje etykietę i wektor, nie zapisuje **czym została
+    wyprodukowana**. Dostawca pojęć jest rozstrzygany raz na PARTIĘ
+    (`extractConceptsForDocument` liczy jedną partię i kończy), więc zmiana
+    między partiami przechodzi bez śladu w środku dokumentu.
+
+    **Co zmieniła runda 8.** Sam mechanizm jest starszy i został nietknięty:
+    rozstrzyganie dalej dzieje się raz na partię, nie doszedł żaden nowy
+    przeplot. Zmieniło się to, jak łatwo w to wejść. Przedtem zmiana modelu
+    wymagała edycji `.env.local` i restartu serwera — a restart i tak przerywał
+    trwającą ekstrakcję, więc rozjazd wewnątrz jednego dokumentu był mało
+    prawdopodobny. Teraz to **przełącznik w interfejsie**, działający od
+    następnej partii przy biegnącym liczeniu.
+
+    **Reprodukowane, nie teoretyczne.** Przy weryfikacji punktu (d) rundy 8
+    `regulamin-pracy-nordwind.pdf` dostał fragmenty 1–4 z pojęciami od
+    `anthropic/claude-haiku-4.5` przez OpenRoutera, a 5–8 od lokalnego
+    `mistral-nemo` — po wyczyszczeniu przypisania w trakcie. Różnica jest
+    widoczna gołym okiem i idzie dokładnie wzdłuż linii, którą instrukcja
+    systemowa nazywa błędem: Haiku dał „siedziba główna przy ulicy Bukowskiej
+    187 w Poznaniu", mistral-nemo „zatrudnianie", „obowiązki", „pracodawca" —
+    czyli ogólniki z listy **ŹLE** w `zbudujInstrukcje`. Dokument ma więc dziś
+    pojęcia dwóch różnych klas jakości i **nic w bazie tego nie odróżnia**.
+
+    **Naturalna naprawa: kolumna z modelem przy `rag_concepts`**, wzorem
+    `embed_model` w `rag_collections`. Tam ten sam problem został rozwiązany
+    dokładnie tak i z tego samego powodu — wektory policzone różnymi modelami
+    nie są porównywalne, więc model jest częścią danych, a nie konfiguracji.
+    Przy pojęciach stawka jest niższa (nie unieważnia to korpusu), ale pytanie
+    „czy ten graf pojęć powstał jednym modelem" powinno mieć odpowiedź
+    w bazie, a nie w pamięci osoby, która klikała.
