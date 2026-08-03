@@ -7,14 +7,24 @@ import {
   setActivity,
   setLastEvent,
 } from "@/lib/state/actions";
-import { PROVIDERS, getModelsForProvider } from "@/lib/config/models";
+import {
+  PROVIDERS,
+  getModelsForProvider,
+  modelSupportsTemperature,
+} from "@/lib/config/models";
 import { useSettings } from "@/lib/settings/SettingsContext";
+import { useDopuszczone } from "@/lib/settings/DopuszczoneContext";
+import { listaModeli, modeleOllamy, ZRODLO } from "@/lib/settings/dopuszczoneModele";
 import styles from "./sections.module.css";
 
 export function ModelSection() {
   const { state, dispatch } = useAppState();
   const agent = state.agent;
   const { settings } = useSettings();
+  // Lista modeli WLACZONYCH PRZEZ KONTO (Ustawienia -> Modele jezykowe).
+  // Pusta przy koncie, ktore nic nie wybralo, albo gdy trasa nie odpowiedziala
+  // — w obu wypadkach listaModeli() cofa sie na MODELS_BY_PROVIDER.
+  const { dopuszczone } = useDopuszczone();
 
   // Dynamiczna lista modeli Ollamy (status: idle|loading|ready|empty|error).
   const [ollama, setOllama] = useState({
@@ -72,8 +82,15 @@ export function ModelSection() {
       setOllama({ status: "ready", models: list, error: null });
 
       // Jesli obecny model nie nalezy do listy — ustaw pierwszy z niej.
-      if (!list.some((m) => m.id === agent.model)) {
-        changeField("model", list[0].id);
+      //
+      // Z LISTY PO PRZECIECIU Z DOPUSZCZONYMI, nie z surowej odpowiedzi demona.
+      // Inaczej kreator sam ustawialby model, ktorego nie ma na liscie konta,
+      // czyli takiego, ktorego uzytkownik nie moze wybrac recznie.
+      const doWyboru = modeleOllamy(dopuszczone, list).modele;
+      if (!doWyboru.some((m) => m.id === agent.model)) {
+        // Pusto = nie ma czym podmienic. Zerowanie pola skasowaloby model
+        // dzialajacego agenta tylko dlatego, ze demon chwilowo go nie widzi.
+        if (doWyboru.length > 0) changeField("model", doWyboru[0].id);
       }
     } catch {
       setOllama({
@@ -94,24 +111,68 @@ export function ModelSection() {
       return;
     }
 
-    const first = getModelsForProvider(nextProvider)[0]?.id ?? "";
+    // Pierwszy model Z LISTY KONTA dla nowego dostawcy (a nie z zaszytej).
+    // Pusto — zostawiamy puste pole; nizej stoi notka, co z tym zrobic.
+    const first = listaModeli(dopuszczone, nextProvider).modele[0]?.id ?? "";
     dispatch(updateAgentField("model", first));
   }
 
-  const staticModels = getModelsForProvider(agent.provider);
   const isOllama = agent.provider === "ollama";
-  // OpenRouter ma katalog DYNAMICZNY, ale — inaczej niz Ollama — nie mamy go
-  // jeszcze skad wziac (przyjdzie z API w rundzie 3). Do tego czasu model
-  // wpisuje sie recznie, jak identyfikator w OpenRouterze
-  // (np. "anthropic/claude-haiku-4.5"). Lista radiobuttonow byla by tu pusta,
-  // czyli agenta na tym dostawcy nie dalo by sie w ogole skonfigurowac.
+
+  // ZASZYTA LISTA DOSTAWCY zostaje, ale TYLKO do faktow o DOSTAWCY, nie do
+  // wyboru modelu: `verified` i `requiresKey` opisuja integracje w tej
+  // aplikacji, a nie to, co konto wlaczylo. Lista do wyboru jest nizej.
+  const staticModels = getModelsForProvider(agent.provider);
+
+  // LISTA DO WYBORU — z modeli dopuszczonych przez konto.
+  // Ollama ma wlasna droge: przeciecie listy konta z tym, co naprawde chodzi
+  // w demonie (model bywa dopuszczony, a potem usuniety przez `ollama rm`).
+  const wybor = isOllama
+    ? modeleOllamy(dopuszczone, ollama.models)
+    : listaModeli(dopuszczone, agent.provider);
+
+  // =========================================================================
+  //  MODEL AGENTA SPOZA LISTY — DOPISYWANY DO NIEJ, NIE UKRYWANY.
+  //
+  //  Agent trzyma swoj model przy sobie i dziala na nim dalej, nawet gdy
+  //  model zostal potem wylaczony w Ustawieniach (rozmowa nie sprawdza listy
+  //  dopuszczonych — patrz raport rundy 6, punkt f). Bez tej galezi kreator
+  //  pokazywalby wtedy liste BEZ ANI JEDNEGO ZAZNACZONEGO POLA: ekran mowi
+  //  „agent nie ma modelu", a agent go ma i wlasnie z niego korzysta.
+  //
+  //  To ta sama pulapka, ktora runda 5 zamknela w katalogu Ustawien
+  //  („wlaczone, ale niedostepne"): stan bez reprezentacji w interfejsie.
+  //  Tu jest grozniejsza, bo dotyczy dzialajacej konfiguracji — a nie tylko
+  //  wpisu na liscie.
+  // =========================================================================
+  const modelSpozaListy =
+    agent.model && !wybor.modele.some((m) => m.id === agent.model);
+  const visibleModels = modelSpozaListy
+    ? [{ id: agent.model, label: agent.model, spozaListy: true }, ...wybor.modele]
+    : wybor.modele;
+  // „domyslne" = konto nie ma jeszcze wlasnej listy i patrzy na MODELS_BY_PROVIDER.
+  const zDomyslnych = wybor.zrodlo === ZRODLO.DOMYSLNE;
+
+  // OpenRouter: POLE TEKSTOWE TYLKO WTEDY, GDY NIE MA Z CZEGO WYBIERAC.
+  // Do rundy 5 katalogu nie bylo i wpisanie identyfikatora recznie bylo
+  // jedyna droga. Teraz konto moze miec dopuszczone modele OpenRoutera —
+  // wtedy lista je pokazuje, a pole tekstowe bylo by drugim sposobem
+  // ustawienia tego samego pola. Zostaje jako wyjscie awaryjne dla konta,
+  // ktore jeszcze niczego z OpenRoutera nie wlaczylo.
   const isOpenRouter = agent.provider === "openrouter";
-  const visibleModels = isOllama ? ollama.models : staticModels;
+  const openRouterRecznie = isOpenRouter && visibleModels.length === 0;
 
   // Czy WSZYSTKIE modele tego dostawcy sa niesprawdzone (verified === false).
   // Wtedy nad lista pokazujemy jedna notke zamiast powtarzac ja przy kazdym.
+  //
+  // `visibleModels.length > 0` doszlo w rundzie 6 i jest konieczne: notka mowi
+  // „TE MODELE nie zostaly przetestowane", a od tej rundy lista potrafi byc
+  // pusta (konto nie wlaczylo nic u tego dostawcy). Zdanie o modelach stojace
+  // nad brakiem modeli mowi o niczym — i zaslania wlasciwy komunikat, ktory
+  // tlumaczy, czemu nie ma z czego wybierac.
   const providerUnverified =
     !isOllama &&
+    visibleModels.length > 0 &&
     staticModels.length > 0 &&
     staticModels.every((m) => m.verified === false);
   // Nazwa zmiennej z kluczem + czy klucz jest ustawiony na serwerze.
@@ -164,6 +225,54 @@ export function ModelSection() {
           </div>
         )}
 
+        {/* DEMON MA MODELE, ALE ZADEN NIE JEST WLACZONY NA KONCIE.
+            To CO INNEGO niz stan „empty" maszyny stanow i musi mowic co
+            innego: „ollama pull" tu nie pomoze, bo modele sa — brakuje
+            wlaczenia ich w Ustawieniach. */}
+        {isOllama && ollama.status === "ready" && visibleModels.length === 0 && (
+          <div className={styles.note}>
+            Ollama ma {ollama.models.length}{" "}
+            {ollama.models.length === 1 ? "model" : "modeli"}, ale żaden nie jest
+            włączony na Twoim koncie. Włącz je w{" "}
+            <a href="/ustawienia">Ustawieniach → Modele językowe</a> (karta
+            „Katalog”, zakładka „Lokalne”).
+          </div>
+        )}
+
+        {/* ODFILTROWANE PO CICHU — uzytkownik widzi krotsza liste, niz ma
+            w Ollamie, i bez tego zdania nie ma jak sie dowiedziec dlaczego. */}
+        {isOllama && wybor.odfiltrowane > 0 && visibleModels.length > 0 && (
+          <span className={styles.hint}>
+            Ukryto {wybor.odfiltrowane}{" "}
+            {wybor.odfiltrowane === 1 ? "model" : "modeli"} Ollamy spoza Twojej
+            listy w Ustawieniach.
+          </span>
+        )}
+
+        {/* KONTO BEZ ANI JEDNEGO MODELU TEGO DOSTAWCY.
+            NIE pusta lista bez slowa wyjasnienia — pusty ekran w kreatorze
+            wyglada identycznie jak awaria wczytywania. */}
+        {!isOllama && !openRouterRecznie && visibleModels.length === 0 && (
+          <div className={styles.note}>
+            Nie masz włączonego żadnego modelu dostawcy{" "}
+            {PROVIDERS.find((p) => p.id === agent.provider)?.label ||
+              agent.provider}
+            . Wybierz modele w{" "}
+            <a href="/ustawienia">Ustawieniach → Modele językowe</a> albo zmień
+            dostawcę powyżej.
+          </div>
+        )}
+
+        {/* LISTA DOMYSLNA — konto nigdy nie bylo w Ustawieniach. Notka jest
+            cicha (hint, nie note): to jest stan KAZDEGO istniejacego konta,
+            wszystko dziala, a nie awaria do zgloszenia. */}
+        {zDomyslnych && visibleModels.length > 0 && (
+          <span className={styles.hint}>
+            To są modele domyślne. Swoją listę wybierzesz w{" "}
+            <a href="/ustawienia">Ustawieniach → Modele językowe</a>.
+          </span>
+        )}
+
         {isOllama && ollama.status === "idle" && (
           <div className={styles.note}>
             Kliknij „Odśwież listę modeli”, aby pobrać modele z lokalnej Ollamy.
@@ -189,12 +298,13 @@ export function ModelSection() {
             częściej niż ta aplikacja, więc lista dozwolonych wartości zaszyta
             tutaj i tak byłaby nieaktualna. Zły identyfikator wraca z API jako
             czytelny błąd „model nie istnieje", a nie jako cisza. */}
-        {isOpenRouter && (
+        {openRouterRecznie && (
           <>
             <span className={styles.hint}>
-              Wpisz identyfikator modelu z OpenRoutera, np.{" "}
-              <code>anthropic/claude-haiku-4.5</code>. Katalog do wyboru z listy
-              pojawi się w kolejnym kroku.
+              Nie masz włączonego żadnego modelu OpenRoutera — wybierz je w{" "}
+              <a href="/ustawienia">Ustawieniach → Modele językowe</a>, albo
+              wpisz identyfikator ręcznie, np.{" "}
+              <code>anthropic/claude-haiku-4.5</code>.
             </span>
             <input
               className={styles.input}
@@ -215,9 +325,15 @@ export function ModelSection() {
         <div className={styles.modelList}>
           {visibleModels.map((m) => {
             const selected = agent.model === m.id;
+            // Z FUNKCJI, NIE Z POLA REKORDU. Rekord z listy konta ma tylko
+            // { id, label } — pole `supportsTemperature` istnieje wylacznie
+            // w MODELS_BY_PROVIDER, wiec czytane wprost bylo by `undefined`
+            // dla kazdego modelu konta i kazdy dostawalby „model dobiera sam".
+            // modelSupportsTemperature() zna odpowiedz takze dla Ollamy
+            // i OpenRoutera — i tej funkcji ta runda nie zmienia.
             const tempInfo = isOllama
               ? "lokalny · temperatura: tak"
-              : m.supportsTemperature
+              : modelSupportsTemperature(agent.provider, m.id)
                 ? "temperatura: tak"
                 : "temperatura: model dobiera sam";
 
@@ -240,6 +356,9 @@ export function ModelSection() {
                   <span className={styles.modelMeta}>
                     {m.id} · {tempInfo}
                     {m.verified === false ? " · ⚠️ niesprawdzone" : ""}
+                    {m.spozaListy
+                      ? " · ⚠️ nie ma go na Twojej liście w Ustawieniach — agent nadal go używa"
+                      : ""}
                   </span>
                 </span>
               </label>
