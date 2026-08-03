@@ -528,3 +528,104 @@ w żadnym spisie. Przy każdej pochodzenie, bo od niego zależy, czyj to dług.
     jest jej drugą stroną: skoro gwarancji nie ma, brak wywołania powinien być
     **widoczny**, a nie milczący. **Do zrobienia po katalogu modeli** — dopiero
     wtedy będzie wiadomo, które modele zawodzą i jak często.
+
+    **Zmierzone w rundzie 7 OpenRoutera (2026-08-03).** Dane, na które ta pozycja
+    czekała, już są: przy pytaniach odpowiadalnych `claude-haiku-4.5` i
+    `qwen3.7-flash` mają **0 niewywołań na 14**, a `mistral-nemo` **14 na 14**.
+    Rozpiętość jest więc zero-jedynkowa, nie stopniowa — model albo woła
+    narzędzie zawsze, albo nigdy. To upraszcza wykrywanie: nie trzeba progu ani
+    statystyki, wystarczy jeden przypadek. Zestaw kontrolny ma od tej rundy
+    kryterium odrzucające oparte właśnie na tym (`nordwind.json`, klucz
+    `KRYTERIUM ODRZUCAJACE — NIEWYWOLANIE NARZEDZIA`).
+
+13. **`MAX_TOOL_ITERATIONS = 5` kończy się PUSTĄ odpowiedzią, nie komunikatem.**
+    *Luka mechanizmu — we wszystkich czterech dostawcach naraz.*
+    Zmierzone w rundzie 7: `qwen/qwen3.7-flash` przy pytaniu „jakie są zasady
+    odpowiedzialności materialnej za powierzone mienie" wykonał 5 wywołań
+    `rag_search`, wyczerpał limit i zwrócił **pusty tekst**. Dla użytkownika to
+    puste okno bez słowa wyjaśnienia — objaw nie do odróżnienia od zawieszenia.
+
+    **Bezpiecznik istnieje i ZADZIAŁAŁ — ma tylko o jedno piętro za mało.**
+    Po pętli każdy dostawca robi jedno dodatkowe wywołanie bez narzędzi, żeby
+    użytkownik cokolwiek dostał (`openrouter.js:287`, `anthropic.js:195`,
+    `openai.js:275`, `ollama.js:182`). To wywołanie poszło i **też wróciło
+    puste**, a wtedy kończy je wszędzie ten sam wzorzec:
+
+    ```js
+    finalText = data?.choices?.[0]?.message?.content ?? "";
+    ```
+
+    `?? ""` zamienia brak treści w pusty napis, po czym funkcja zwraca
+    `{ text: "" }` bez żadnego dalszego sprawdzenia. **Nie ma drugiego piętra:**
+    nikt nie pyta, czy ratunkowe wywołanie samo czegoś nie zwróciło. Nie jest to
+    zatem „bezpiecznik nie zadziałał", tylko „bezpiecznik nie ma warunku na
+    własną porażkę" — i to w czterech plikach niezależnie, bo wzorzec był
+    kopiowany.
+
+    Dlaczego akurat to pytanie: model wpadł w pętlę przeformułowań (pięć różnych
+    zapytań o to samo — „zasady odpowiedzialności materialnej", „odpowiedzialność
+    materialna pracownika", „powierzone mienie pracownikowi"…), bo w korpusie nie
+    ma odpowiedzi, a jest dużo materiału sąsiedniego. Czyli limit wyczerpuje się
+    najłatwiej dokładnie tam, gdzie poprawną odpowiedzią jest **odmowa** —
+    i zamiast odmowy użytkownik dostaje pustkę.
+
+    **Opisane, nienaprawione.** Naprawa to jedno zdanie zastępcze przy pustym
+    wyniku, ale w czterech plikach naraz — czyli albo cztery kopie, albo
+    wspólne miejsce, którego dziś nie ma. To decyzja układu, nie poprawka.
+
+14. **Model może wyemitować wywołanie narzędzia jako TEKST, nie jako `tool_calls`.**
+    *Właściwość modelu, nie usterka naszego kodu — ale objaw myli.*
+    Zmierzone w rundzie 7 na `mistralai/mistral-nemo` przez OpenRoutera. Model
+    zamiast pola `tool_calls` wpisuje do `content`:
+
+    ```
+    [{"name": "rag_search", "arguments": {"pytanie": "gdzie znajduje się apteczka…"}}]
+    ```
+
+    Klient tego **nie rozpoznaje i nie powinien** — to niezgodne z kontraktem
+    OpenAI-compatible, a parsowanie treści w poszukiwaniu wywołań byłoby
+    zgadywaniem, które przy pierwszej odpowiedzi cytującej JSON zacznie wywoływać
+    narzędzia bez powodu. Narzędzie więc nie rusza, model „wierzy", że wyszukał,
+    i dopowiada wynik z głowy — ze zmyśloną nazwą pliku, numerem strony i cytatem.
+
+    **To NIE jest brak umiejętności modelu:** ten sam Nemo wywołuje `calculator`
+    poprawnie (3847 × 291 = 1119477, jedno wywołanie, pole `tool_calls`).
+    Sprawdzona i **odrzucona** hipoteza, że winna jest długość `description`
+    narzędzia `rag_search` (2321 znaków): opis 2321 zn. zawiódł, opis 58 zn.
+    **też** zawiódł, opis 175 zn. zadziałał. Nie ma tu progu do wyregulowania.
+
+    **Dlaczego to trzeba odróżnić w diagnostyce.** Objaw jest identyczny jak
+    pozycja 12 — zero `toolCalls`, brak plakietki, odpowiedź brzmiąca jak wynik
+    wyszukiwania — ale przyczyna i wniosek są inne:
+
+    | | model nie chce wołać (poz. 12) | model woła tekstem (ta pozycja) |
+    |---|---|---|
+    | `toolCalls` | puste | puste |
+    | `content` | zwykła proza | **zawiera JSON z `"name"` i `"arguments"`** |
+    | co z tym zrobić | wzmocnić `description`, zmierzyć ponownie | **odrzucić model** — nie da się tego naprawić promptem |
+
+    Rozróżnienie jest tanie: `content` pasujący do `/"name"\s*:\s*"(rag_search|calculator|datetime)"/`
+    przy zerowym `toolCalls` to ten drugi przypadek i tylko ten. Warto, żeby
+    diagnostyka to wypisywała, zanim ktoś spędzi rundę na strojeniu opisu
+    narzędzia dla modelu, który nigdy go nie wywoła.
+
+15. **Tabela `model_assignments` nadal niczego nie napędza.**
+    *Dług z rundy 4, niezamknięty przez rundę 6.*
+    Migracja 020 utworzyła `model_assignments` z trzema rolami
+    (`agent_domyslny`, `rag_pojecia`, `mentor`), karta „Modele językowe"
+    je zapisuje i pokazuje, a `znormalizujPrzypisania` waliduje względem listy
+    dopuszczonych. **Żaden czytelnik ich nie używa.** Model mentora dalej
+    pochodzi z `settings.mentorModel` (localStorage przeglądarki), model do pojęć
+    RAG z `lib/rag/config.js`, a domyślny model agenta z `lib/settings/defaults.js`.
+
+    Runda 6 podpięła **listę dopuszczonych** (`allowed_models`) do wszystkich
+    siedmiu czytelników i na tym świadomie się zatrzymała: przypisania dotykają
+    domyślek w trzech miejscach naraz, a każde z nich bywa nadpisane zmienną
+    środowiskową — zapisanie w bazie ich AKTUALNEJ wartości zamroziłoby ją tam
+    (to samo uzasadnienie, dla którego `znormalizujPrzypisania` zwraca `null`,
+    a nie podstawia konkretny model).
+
+    Stan jest więc spójny, ale mylący: użytkownik ustawia przypisanie, widzi
+    zapisane potwierdzenie i **nic się nie zmienia**. To gorsze niż brak pola.
+    Do rozstrzygnięcia: albo podpiąć przypisania, albo oznaczyć je w karcie jako
+    nieaktywne do czasu podpięcia.

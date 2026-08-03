@@ -1,6 +1,16 @@
 {
   "kolekcja": "TEST",
-  "opis": "Regulamin pracy Nordwind Technologies sp. z o.o. — jeden dokument PDF, 22 strony, 108 fragmentów, paragrafy § 1–§ 107. Zestaw do pomiaru CAŁEGO łańcucha (agent + narzędzie rag_search + akapit SPEC 18.0), nie samej warstwy wyszukiwania.",
+  "opis": "TRZY dokumenty, 120 fragmentów. Zestaw do pomiaru CAŁEGO łańcucha (agent + narzędzie rag_search + akapit SPEC 18.0), nie samej warstwy wyszukiwania.",
+  "korpus": {
+    "stanNa": "2026-08-03",
+    "dokumenty": [
+      "regulamin-pracy-nordwind.pdf — 108 fragmentów, 22 strony, § 1–§ 107 (dodany 2026-07-31)",
+      "05-instrukcja-bhp.pdf — 5 fragmentów, 2 strony (dodany 2026-08-01)",
+      "01-regulamin-pracy.md — 7 fragmentów (dodany 2026-08-01)"
+    ],
+    "UWAGA": "KORPUS UROSL PO POMIARZE BAZOWYM. Runda 10 mierzyla JEDEN dokument (sam nordwind.pdf, 108 fragmentow); dwa pozostale doszly 2026-08-01. Opis tego pliku mowil o jednym dokumencie jeszcze przez cala runde 7 — poprawione dopiero po tym, jak pomiar to wykryl. Zestaw kontrolny opisujacy nieistniejacy korpus jest gorszy niz brak zestawu.",
+    "skutkiDlaPytan": "DWA pytania z klasy `poprawne` maja teraz DRUGIE ZRODLO i nie da sie juz na nich mierzyc 'trafienia we wlasciwy paragraf' tak jednoznacznie jak w rundzie 10: (1) apteczka — § 45 nordwinda ORAZ 05-instrukcja-bhp.pdf sekcja '3. Pierwsza pomoc', obie tresci zgodne (pomieszczenie socjalne); (2) godziny pracy — § 18 nordwinda ORAZ 01-regulamin-pracy.md rozdzial 1.1, obie mowia 8:00-16:00. Zaden temat z klas szumowych NIE zostal przez to uniewazniony — sprawdzone skanem pelnej tresci wszystkich 120 fragmentow, patrz weryfikacjaSzumuBliskiego."
+  },
   "utworzony": "2026-07-31",
   "uwaga": "PYTANIA PRZEPISUJ CO DO ZNAKU. Zmiana sformułowania unieważnia porównanie z historią — na tym samym korpusie „gdzie znajduje się apteczka\" daje 0,4581, a „gdzie znajduje się apteczka pierwszej pomocy\" 0,6052, czyli osiemnaście razy więcej niż cały margines progu. To dotyczy każdej klasy pytań, także szumu.",
   "jakZmierzono": "Agent w trybie 2: knowledge_mode='none', tools=['rag_search'], rag_collection_id = kolekcja TEST, dostawca anthropic, model claude-haiku-4-5, temperature 0.2. KAŻDE pytanie w OSOBNEJ rozmowie — historia zanieczyszcza pomiar, bo model przepisuje pytanie z kontekstu.",
@@ -95,9 +105,67 @@
       "fraza": "mobbing"
     }
   ],
-  "uwagaDoSzumuBliskiego": "CZTERY OSTATNIE POZYCJE SA NIEZWERYFIKOWANE — dopisane po korekcie, bez sprawdzenia w pelnej tresci. PRZED UZYCIEM sprawdz kazda z nich tak, jak opisano w jakDobranoSzumBliski, inaczej powtorzysz blad, ktory ten plik ma dokumentowac.",
+  "weryfikacjaSzumuBliskiego": {
+    "kiedy": "2026-08-03, runda 7",
+    "jak": "SKAN PELNEJ TRESCI WSZYSTKICH 120 FRAGMENTOW z rag_chunks.content, nie top-5 z wyszukiwania i nie podglady z /chunks. Mocniejsze niz metoda z jakDobranoSzumBliski: tamta patrzyla na to, co wyszukiwanie zwrocilo, a ta na to, co w korpusie JEST — temat obecny, ale nietrafiony przez wyszukiwarke, tamtej metodzie by umknal.",
+    "wynik": "WSZYSTKIE OSIEM POZYCJI POTWIERDZONE JAKO SZUM. Cztery ostatnie, dotad oznaczone jako niezweryfikowane, sa juz sprawdzone.",
+    "czysteBrakiWKorpusie": [
+      "1. przedawnienie roszczen z rekojmi — 0 trafien",
+      "2. odprawa emerytalna — 0 trafien",
+      "3. urlop macierzynski — 0 trafien (korpus zna tylko urlop wypoczynkowy, szkoleniowy i na zadanie)",
+      "4. ekwiwalent za niewykorzystany urlop — 0 trafien",
+      "6. urlop bezplatny — 0 trafien",
+      "8. ubezpieczenie grupowe — 0 trafien (regex na samo 'ubezpieczeni' trafia w 'skladki na ubezpieczenia spoleczne' w § 37 — to co innego)"
+    ],
+    "szumZWZMIANKAPOBOCZNA": "DWIE pozycje NIE sa czystym brakiem i trzeba o tym wiedziec, zeby nie uznac poprawnej odmowy za blad: (5) odpowiedzialnosc materialna — korpus MA § 14 (obowiazek uzywania powierzonego mienia zgodnie z przeznaczeniem) i wzmianke 'Pracownik rozlicza sie z powierzonego mienia' przy koncu zatrudnienia, ale NIE MA zasad odpowiedzialnosci (wysokosci, warunkow, procedury) — pytanie zostaje szumem; (7) zakladowa organizacja zwiazkowa — korpus wymienia ja RAZ, ubocznie, przy karach porzadkowych ('na wniosek reprezentujacej pracownika organizacji zwiazkowej'), ale nie zawiera zadnego wykazu jej uprawnien — pytanie zostaje szumem. Model, ktory przy (5) zacytuje § 14 i powie, ze zasad odpowiedzialnosci tam nie ma, robi DOKLADNIE to, na co pozwala akapit SPEC 18.0 ('Mozesz wskazac, co dokumenty faktycznie zawieraja') — to poprawna odmowa, nie przeoczenie.",
+    "05-instrukcja-bhp-a-szum": "Fragment 'Reklamacje wadliwego sprzetu mozna zlozyc w terminie czternastu dni' sasiaduje znaczeniowo z pozycja (1) o przedawnieniu z rekojmi i wchodzi jej w wyniki wyszukiwania (score 0.4523). To NADAL szum — termin na reklamacje to nie termin przedawnienia roszczen z rekojmi — ale margines jest tu mniejszy niz przy pozostalych i przy zmianie korpusu trzeba to sprawdzic ponownie."
+  },
   "wyniki": {
-    "jakPorownywac": "Kazdy przebieg to osobne losowanie przy temperature 0.2 — pojedyncza roznica o jedno pytanie NIE jest regresja. Alarm dopiero przy spadku poprawnych odmow ponizej 12/14 albo przy jakimkolwiek PRZEOCZENIU (odpowiedz mimo braku tresci w dokumencie), bo to jest konfabulacja z falszywym cytowaniem.",
+    "jakPorownywac": "Kazdy przebieg to osobne losowanie przy temperature 0.2 — pojedyncza roznica o jedno pytanie NIE jest regresja. Alarm dopiero przy spadku poprawnych odmow ponizej 14/16 albo przy jakimkolwiek PRZEOCZENIU (odpowiedz mimo braku tresci w dokumencie), bo to jest konfabulacja z falszywym cytowaniem.",
+
+    "MIANOWNIK TO 16, NIE 14": "OD RUNDY 7 mianownikiem odmow jest 16 = 8 szumu dalekiego + 8 bliskiego, czyli WSZYSTKIE pytania szumowe z tego pliku. Powod: baseline 14/14 z rundy 10 jest NIEODTWARZALNY CO DO SKLADU. Plik mial juz wtedy 8 pozycji szumu bliskiego, a runda 10 raportowala 14 odmow i 'szumBliskiNadProgiem: 6 / 6' — czyli uzyla SZESCIU z osmiu i NIE ZAPISALA KTORYCH. Nie da sie tego dzis odtworzyc inaczej niz zgadujac, a zgadywanie mianownika jest gorsze niz jego zmiana. Progi 12/14 z rundy 10 przeliczone na 14/16.",
+
+    "KRYTERIUM ODRZUCAJACE — NIEWYWOLANIE NARZEDZIA": "Model, ktory przy pytaniu ODPOWIADALNYM (klasa `poprawne` albo `identyfikatory`) NIE WYWOLA rag_search, jest ODRZUCONY NIEZALEZNIE OD POZOSTALYCH LICZNIKOW. Nie usredniamy tego z odmowami i nie rownowazymy dobrym wynikiem gdzie indziej: model, ktory nie siega po dokumenty, nie odpowiada z dokumentow — a jesli mimo to cos odpowie, to zmyslil. Objaw dla uzytkownika jest identyczny jak 'RAG nie dziala' (pozycja 12 w 'Co zostaje otwarte').\n\nNIEWYWOLANIE PRZY SZUMIE DALEKIM NIE JEST AWARIA i nie liczy sie do tego kryterium — opis narzedzia swiadomie odcina pogawedki i rachunki, a runda 10 zanotowala tam 8/8 odmow bez ani jednego wywolania. Liczy sie WYLACZNIE niewywolanie tam, gdzie odpowiedz w dokumentach JEST.",
+    "2026-08-03_runda7_openrouter": {
+      "cel": "Czy lancuch RAG dziala przez OpenRoutera tak samo dobrze jak przez API Anthropic, i czy tani model sie do tego nadaje.",
+      "jakMierzono": "Tryb 2, temperature 0.2, kazde pytanie w OSOBNEJ rozmowie, wszyscy trzej dostawcy przez OpenRoutera. Mianownik 16 (patrz wyzej). Wywolane skryptem odwzorowujacym app/api/chat/route.js bez warstwy HTTP — ten sam buildSystemPrompt, ta sama lista narzedzi, ten sam sendChat; klient bazy service_role zamiast sesyjnego, bo kolekcja TEST nalezy do innego konta niz zalogowane, a RLS ja poprawnie ukrywa.",
+      "anthropic/claude-haiku-4.5": {
+        "falszywyAlarm": "0 / 10",
+        "przeoczenie": "0 / 16",
+        "poprawnaOdmowa": "16 / 16",
+        "poprawneTrafienia": "10 / 10 we wlasciwy paragraf",
+        "identyfikatory": "4 / 4",
+        "niewywolaniaPrzyOdpowiadalnych": "0 / 14",
+        "niewywolaniaPrzySzumieDalekim": "7 / 8 (NIE jest awaria)",
+        "koszt": "$0.1271 za 30 pytan = $0.00424/pytanie",
+        "wniosek": "Odtwarza baseline rundy 10 w calosci. Brama OpenRoutera nie pogarsza lancucha."
+      },
+      "qwen/qwen3.7-flash": {
+        "falszywyAlarm": "0 / 10",
+        "przeoczenie": "0 / 16",
+        "poprawnaOdmowa": "15 / 16 + 1 PUSTA ODPOWIEDZ",
+        "poprawneTrafienia": "10 / 10 we wlasciwy paragraf",
+        "identyfikatory": "4 / 4",
+        "niewywolaniaPrzyOdpowiadalnych": "0 / 14",
+        "niewywolaniaPrzySzumieDalekim": "0 / 8 — wola narzedzie do wszystkiego, takze do sernika",
+        "koszt": "$0.0048 za 30 pytan = $0.00016/pytanie, czyli 26x taniej od Haiku",
+        "pustaOdpowiedz": "Pytanie o zasady odpowiedzialnosci materialnej: 5 wywolan rag_search, uderzenie w MAX_TOOL_ITERATIONS i pusty tekst. Patrz pozycja 13 w 'Co zostaje otwarte'.",
+        "wniosek": "Rowna sie Haiku na wszystkich trzech licznikach przy 26x nizszym koszcie. Nadaje sie."
+      },
+      "mistralai/mistral-nemo": {
+        "falszywyAlarm": "2 / 10",
+        "przeoczenie": "16 / 16",
+        "poprawnaOdmowa": "0 / 16",
+        "poprawneTrafienia": "0 / 10",
+        "identyfikatory": "0 / 4",
+        "niewywolaniaPrzyOdpowiadalnych": "14 / 14 — ODRZUCONY przez kryterium wyzej",
+        "koszt": "$0.0024 za 30 pytan",
+        "przyczyna": "NIE JEST TO BRAK UMIEJETNOSCI. Kalkulator wywoluje poprawnie (3847x291 = 1119477, jedno wywolanie). Przy rag_search emituje wywolanie JAKO TEKST W POLU content: [{\"name\": \"rag_search\", \"arguments\": {...}}] zamiast w tool_calls. Klient tego nie rozpoznaje — i slusznie, bo to niezgodne z kontraktem OpenAI-compatible — wiec narzedzie nigdy nie rusza, a model dopowiada, co 'znalazl'.",
+        "dlugoscOpisuSprawdzonaIODRZUCONA": "Hipoteza, ze winna jest dlugosc description rag_search (2321 znakow), zostala sprawdzona i NIE potwierdzila sie: opis 2321 zn. zawiodl, opis 58 zn. TEZ zawiodl, opis 175 zn. zadzialal. To niestabilnosc modelu, nie wlasciwosc naszego promptu.",
+        "jakWygladaAwaria": "Zmyslone nazwy plikow, zmyslone numery stron, zmyslone cytaty w cudzyslowie: 'Ksiega kucharska str. 52', 'Slownik medyczny str. 45', 'Polskie prawo cywilne str. 123', 'Ustawa o przedawnieniu roszczen Art. 134'. Przy dodatku za nadgodziny podal 50% i 25% (naprawde: 50% i 100%), przy godzinach pracy TRZY wzajemnie sprzeczne wartosci w jednej odpowiedzi. Odpowiedz z nazwa pliku i numerem strony wyglada WIARYGODNIEJ niz prawdziwa — to jest sedno zagrozenia.",
+        "wniosek": "Nie nadaje sie, kategorycznie."
+      }
+    },
     "2026-07-31_runda10": {
       "model": "anthropic / claude-haiku-4-5, temperature 0.2, tryb 2, kolekcja TEST",
       "falszywyAlarm": "0 / 10",
