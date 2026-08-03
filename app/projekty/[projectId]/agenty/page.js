@@ -13,6 +13,8 @@ import {
 } from "@/lib/data/agents";
 import { getProject } from "@/lib/data/projects";
 import { useSettings } from "@/lib/settings/SettingsContext";
+import { useDopuszczone } from "@/lib/settings/DopuszczoneContext";
+import { rozstrzygnij, zPrzypisania, ZRODLO } from "@/lib/settings/przypisaniaModeli";
 import { FormModal } from "@/components/workspace/FormModal";
 import { BackButton } from "@/components/workspace/BackButton";
 import styles from "../../workspace.module.css";
@@ -106,6 +108,7 @@ export default function AgentsPage() {
 
   const [project, setProject] = useState(null);
   const { settings } = useSettings();
+  const { przypisania } = useDopuszczone();
   const [agents, setAgents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -186,13 +189,30 @@ export default function AgentsPage() {
     setSaving(true);
     setModalError(null);
     try {
+      // DOMYSLNY MODEL NOWEGO AGENTA — kolejnosc z rundy 8:
+      //   1. przypisanie `agent_domyslny` z bazy,
+      //   2. settings.defaultProvider/defaultModel z localStorage,
+      //   3. stale z lib/settings/defaults.js (w nich zaszyte w DEFAULT_SETTINGS,
+      //      wiec `settings` nigdy nie jest puste i trzeci szczebel jest tu
+      //      juz wliczony w drugi).
+      //
+      // Temperatura NIE jest czescia przypisania — model_assignments trzyma
+      // pare (dostawca, model) i tylko ja. Zostaje z Ustawien.
+      const domyslny = rozstrzygnij([
+        zPrzypisania(przypisania, "agent_domyslny"),
+        {
+          zrodlo: ZRODLO.USTAWIENIA,
+          provider: settings.defaultProvider,
+          model: settings.defaultModel,
+        },
+      ]);
+
       await createAgent(projectId, {
         name: newName,
         description: newDescription,
         role: newRole,
-        // Domyslne z Ustawien — nowy agent od razu z preferowanym modelem.
-        provider: settings.defaultProvider,
-        model: settings.defaultModel,
+        provider: domyslny.provider,
+        model: domyslny.model,
         temperature: settings.defaultTemperature,
       });
       setNewName("");

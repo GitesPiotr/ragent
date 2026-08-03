@@ -4,13 +4,16 @@ import { sendChat } from "@/lib/providers";
 import { fetchOllamaModels } from "@/lib/providers/ollama";
 import { modelSupportsTemperature } from "@/lib/config/models";
 import { loadKnowledge } from "@/lib/mentor/knowledge";
-import { MENTOR_PROVIDER } from "@/lib/config/mentor";
-import { wczytajDopuszczone } from "@/lib/settings/dopuszczoneServer";
+import { MENTOR_PROVIDER, MENTOR_MODEL } from "@/lib/config/mentor";
+import { wczytajModeleKonta } from "@/lib/settings/dopuszczoneServer";
 import {
   listaModeli,
   modeleOllamy,
   tekstDostepnychModeli,
+  czyModelMentoraDozwolony,
+  DOSTAWCA_MENTORA,
 } from "@/lib/settings/dopuszczoneModele";
+import { rozstrzygnij, zPrzypisania, ZRODLO } from "@/lib/settings/przypisaniaModeli";
 import {
   resolveMentorModel,
   resolveOllamaUrl,
@@ -97,12 +100,44 @@ export async function POST(request) {
   // `null` przy braku sesji/tabel — wtedy resolveMentorModel wraca do
   // sprawdzenia wzgledem statycznej listy Anthropic, czyli do zachowania
   // sprzed rundy 6.
-  const dopuszczone = await wczytajDopuszczone();
+  const { dopuszczone, przypisania } = await wczytajModeleKonta();
 
-  // Model mentora: tylko z modeli Anthropic dopuszczonych przez konto;
-  // inaczej fallback na env/stala. DOSTAWCA mentora zostaje stala —
-  // uzasadnienie w lib/settings/dopuszczoneModele.js (structured output).
-  const mentorModel = resolveMentorModel(body?.mentorModel, dopuszczone);
+  // =========================================================================
+  //  MODEL MENTORA — KOLEJNOSC Z RUNDY 8
+  //
+  //    1. przypisanie `mentor` z bazy
+  //    2. settings.mentorModel z localStorage (w ciele zadania)
+  //    3. MENTOR_MODEL ze zmiennej srodowiskowej / stala w kodzie
+  //
+  //  KAZDY SZCZEBEL PRZECHODZI TE SAMA WALIDACJE, nie tylko pierwszy. Dzieki
+  //  temu przypisanie do modelu, ktory wypadl z listy dopuszczonych, schodzi
+  //  o JEDEN szczebel — na ustawienie, ktore uzytkownik ma zapisane — zamiast
+  //  przeskakiwac od razu na stala.
+  //
+  //  DOSTAWCA MENTORA ZOSTAJE STALA "anthropic" (decyzja z rundy 6, nie
+  //  podwazana). Przypisanie wskazujace innego dostawce jest wiec ODRZUCANE
+  //  jako kandydat, a nie uzywane z podmieniona nazwa dostawcy — cicha
+  //  podmiana dawalaby model Anthropic o identyfikatorze z OpenRoutera.
+  //
+  //  Stala z MENTOR_MODEL wchodzi TU jako trzeci kandydat, a nie przez
+  //  fallback wewnatrz resolveMentorModel — inaczej nie dalo by sie
+  //  powiedziec, KTORY szczebel wygral.
+  const wyborMentora = rozstrzygnij(
+    [
+      zPrzypisania(przypisania, "mentor"),
+      { zrodlo: ZRODLO.USTAWIENIA, provider: DOSTAWCA_MENTORA, model: body?.mentorModel },
+      { zrodlo: ZRODLO.STALA, provider: DOSTAWCA_MENTORA, model: MENTOR_MODEL },
+    ],
+    (provider, model) =>
+      provider === DOSTAWCA_MENTORA && czyModelMentoraDozwolony(model, dopuszczone),
+  );
+
+  // resolveMentorModel zostaje OSTATNIM STRAZNIKIEM i nie zmienia zachowania:
+  // przepuszcza to, co juz przeszlo walidacje wyzej, a przy `zrodlo: brak`
+  // (zaden kandydat nie przeszedl) wraca do MENTOR_MODEL. Jego odwrotna regula
+  // przy `dopuszczone === null` — cofniecie do statycznej listy Anthropic —
+  // dziala dalej, bo ta sama lista idzie do obu miejsc.
+  const mentorModel = resolveMentorModel(wyborMentora.model, dopuszczone);
   const ollamaUrl = resolveOllamaUrl(body?.ollamaUrl);
 
   if (mode === "persona-feedback") {
