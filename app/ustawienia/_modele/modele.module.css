@@ -1,0 +1,340 @@
+/* Karta „Modele językowe" — TYLKO klasy, których nie ma w ustawienia.module.css.
+ *
+ * DWA ARKUSZE ZAMIAST JEDNEGO, ŚWIADOMIE. Komponent importuje oba: wspólny
+ * (.card, .row, .toggle, .select, .segmented…) i ten. Powód: gdyby te klasy
+ * dopisać do wspólnego arkusza, po pierwszym scaleniu nie dałoby się już
+ * odróżnić, co należy do systemu ustawień, a co do jednej karty. Rozdział
+ * ma też skutek praktyczny — usunięcie tej karty to usunięcie jednego pliku.
+ *
+ * Tokeny (kolory, promienie, rozmiary) są przepisane ze wspólnego arkusza
+ * CELOWO, a nie przez zmienne CSS: tamten arkusz ich nie ma, a wprowadzenie
+ * zmiennych tutaj znaczyłoby dwa systemy naraz.
+ */
+
+/* --- pasek narzędzi nad listą --- */
+
+.pasek {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 0 14px;
+  border-bottom: 1px solid #f4f4f5;
+}
+
+/* Pole wyszukiwania PEŁNEJ SZEROKOŚCI — inaczej niż .textInput (260 px),
+ * bo to jest główna kontrolka tej karty, a nie wartość w wierszu ustawienia. */
+.szukajka {
+  width: 100%;
+  padding: 9px 12px;
+  border: 1px solid #d4d4d8;
+  border-radius: 8px;
+  font-size: 13px;
+  font-family: inherit;
+  color: #18181b;
+  background: #fff;
+}
+
+.szukajka:focus {
+  outline: 2px solid #c4b5fd;
+  outline-offset: -1px;
+  border-color: #a78bfa;
+}
+
+.szukajka::placeholder {
+  color: #a1a1aa;
+}
+
+.filtry {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* Filtr jako przełącznik wciśnięty/niewciśnięty. Stan MUSI być widoczny
+ * bez najeżdżania — pusta lista przy zapomnianym filtrze wygląda dokładnie
+ * jak awaria katalogu. */
+.filtr {
+  padding: 6px 12px;
+  border: 1px solid #d4d4d8;
+  border-radius: 999px;
+  background: #fff;
+  color: #3f3f46;
+  font-size: 12.5px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.filtr:hover:not(:disabled) {
+  background: #fafafa;
+}
+
+.filtrAktywny {
+  border-color: #a78bfa;
+  background: #f1ecfe;
+  color: #6d28d9;
+}
+
+.filtrSelect {
+  padding: 6px 10px;
+  border: 1px solid #d4d4d8;
+  border-radius: 999px;
+  font-size: 12.5px;
+  font-family: inherit;
+  color: #3f3f46;
+  background: #fff;
+  cursor: pointer;
+}
+
+.licznik {
+  font-size: 12.5px;
+  color: #71717a;
+  margin-left: auto;
+}
+
+/* --- ostrzeżenie o narzędziach (bursztynowe, nie niebieskie) ---
+ * Wspólny .banner jest niebieski i znaczy „do wiadomości". To jest
+ * ostrzeżenie o objawie, który wygląda jak awaria czego innego — musi się
+ * odróżniać od noty informacyjnej stojącej wyżej na tej samej stronie. */
+.ostrzezenie {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 12px 0 0;
+  padding: 10px 14px;
+  border: 1px solid #fcd34d;
+  border-radius: 10px;
+  background: #fffbeb;
+}
+
+.ostrzezenieIkona {
+  font-size: 14px;
+  line-height: 1.5;
+  flex-shrink: 0;
+}
+
+.ostrzezenieTekst {
+  margin: 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: #92400e;
+}
+
+/* --- „włączone, ale niedostępne" --- */
+
+/* Wydzielona ramką, a nie samym nagłówkiem: te wiersze mają ten sam układ
+ * co wiersze katalogu (.wiersz), więc bez obwódki czytałyby się jako pierwsze
+ * pozycje listy — czyli jako modele do wybrania, a tych właśnie wybrać nie
+ * można. Bursztyn, nie czerwień: to nie jest błąd, tylko stan do posprzątania.
+ *
+ * BEZ max-height. Lista katalogu ma 420 px, bo ma 336 pozycji; tutaj pozycji
+ * są jednostki, a suwak w suwaku dokładałby drugie miejsce do przewijania. */
+.niedostepne {
+  margin: 12px 0 0;
+  padding: 2px 14px 6px;
+  border: 1px solid #fcd34d;
+  border-radius: 10px;
+  background: #fffbeb;
+}
+
+.niedostepneNaglowek {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 0 4px;
+}
+
+.niedostepneTytul {
+  display: block;
+  font-size: 13px;
+  color: #92400e;
+}
+
+.niedostepneWstep {
+  margin: 3px 0 0;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: #92400e;
+}
+
+/* Powód przy KAŻDYM wierszu, nie raz na sekcję: dwa modele potrafią tu trafić
+ * z dwóch różnych przyczyn („zniknął z katalogu" a „brak katalogu dostawcy”),
+ * a wspólne zdanie nad nimi byłoby prawdziwe najwyżej dla jednego. */
+.niedostepnePowod {
+  margin: 6px 0 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: #a16207;
+}
+
+/* Wiersze wewnątrz sekcji dzielą się kreską w kolorze ramki, nie szarą. */
+.niedostepne .wiersz {
+  border-bottom-color: #fde68a;
+}
+
+/* --- lista przewijalna --- */
+
+/* Wysokość stała, nie „ile trzeba": katalog OpenRoutera ma 336 pozycji,
+ * więc lista bez ograniczenia rozciąga stronę na kilkadziesiąt ekranów
+ * i pasek filtrów ucieka poza widok razem z licznikiem. */
+.lista {
+  max-height: 420px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  margin: 0 -4px;
+  padding: 0 4px;
+}
+
+/* flex-wrap JEST KONIECZNY, nie ozdobny. Komunikat blokady jest trzecim
+ * dzieckiem tego wiersza; bez zawijania ustawia się jako trzecia KOLUMNA
+ * i ściska tekst modelu do paska szerokości jednej litery — nazwa
+ * renderuje się wtedy pionowo, litera pod literą. Zmierzone na żywo. */
+.wiersz {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 11px 0;
+  border-bottom: 1px solid #f4f4f5;
+}
+
+.wiersz:last-child {
+  border-bottom: none;
+}
+
+.wierszTekst {
+  min-width: 0;
+  flex: 1;
+}
+
+.wierszNazwa {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: #18181b;
+  overflow-wrap: anywhere;
+}
+
+/* Identyfikator monospace — to jest napis do przepisania, nie do czytania,
+ * a w OpenRouterze bywa myląco podobny („claude-haiku-4.5" wobec
+ * „claude-haiku-4-5"). */
+.wierszId {
+  margin: 2px 0 0;
+  font-size: 11.5px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  color: #a1a1aa;
+  overflow-wrap: anywhere;
+}
+
+.wierszKontrolka {
+  flex-shrink: 0;
+}
+
+/* --- etykiety --- */
+
+.etykiety {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 6px 0 0;
+}
+
+.etykieta {
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.etykietaGdzie {
+  background: #f4f4f5;
+  color: #52525b;
+}
+
+.etykietaDarmowy {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.etykietaPlatny {
+  background: #f4f4f5;
+  color: #52525b;
+}
+
+.etykietaNarzedzia {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+
+/* Brak deklaracji NIE jest kolorem błędu. Czerwień znaczyłaby „ten model
+ * nie umie", a wiemy tylko, że dostawca nie napisał, czy umie — 66 modeli
+ * nie ma tej flagi i co najmniej jeden z nich narzędzia wywołuje. */
+.etykietaBezDeklaracji {
+  background: #fafafa;
+  color: #a1a1aa;
+  border: 1px dashed #d4d4d8;
+}
+
+.etykietaKontekst {
+  background: #f4f4f5;
+  color: #52525b;
+}
+
+/* --- stan pusty --- */
+
+.pusto {
+  padding: 32px 12px;
+  text-align: center;
+  color: #71717a;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.pustoTytul {
+  display: block;
+  font-weight: 600;
+  color: #3f3f46;
+  margin-bottom: 4px;
+}
+
+/* --- komunikat blokady --- */
+
+/* Pełna szerokość — komunikat ma stanąć POD wierszem, w nowej linii flexa,
+ * a nie obok przełącznika. Patrz komentarz przy .wiersz. */
+.blokada {
+  flex-basis: 100%;
+  margin: 10px 0 0;
+  padding: 9px 12px;
+  border: 1px solid #fecaca;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+/* --- wiersz przypisania wyłączonego (embeddingi) --- */
+
+.wylaczony {
+  opacity: 0.65;
+}
+
+.ladowanie {
+  padding: 24px 12px;
+  text-align: center;
+  color: #71717a;
+  font-size: 13px;
+}
+
+.blad {
+  margin: 12px 0 0;
+  padding: 10px 14px;
+  border: 1px solid #fecaca;
+  border-radius: 10px;
+  background: #fef2f2;
+  color: #b91c1c;
+  font-size: 12.5px;
+  line-height: 1.55;
+}

@@ -10,10 +10,12 @@ import {
   KNOWLEDGE_LIMIT_MAX,
   DEFAULT_OLLAMA_URL,
 } from "@/lib/settings/defaults";
+import ModeleJezykowe from "./_modele/ModeleJezykowe";
 import styles from "./ustawienia.module.css";
 
 const SECTIONS = [
   { id: "connections", label: "Połączenia", icon: "🔌" },
+  { id: "models", label: "Modele językowe", icon: "🧠" },
   { id: "appearance", label: "Wygląd", icon: "🎨" },
   { id: "mentor", label: "Mentor", icon: "💡" },
   { id: "defaults", label: "Domyślne agenta", icon: "🤖" },
@@ -393,6 +395,7 @@ export default function SettingsPage() {
               updateSettings={updateSettings}
             />
           )}
+          {active === "models" && <ModeleJezykowe />}
           {active === "appearance" && (
             <AppearanceSection
               settings={settings}
