@@ -3,8 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { listProjects } from "@/lib/data/projects";
 import { listActiveAgents } from "@/lib/data/agents";
-import { getModelsForProvider } from "@/lib/config/models";
 import { useSettings } from "@/lib/settings/SettingsContext";
+import { useDopuszczone } from "@/lib/settings/DopuszczoneContext";
+import { listaModeli, modeleOllamy } from "@/lib/settings/dopuszczoneModele";
 import { Avatar } from "./Avatar";
 import styles from "./chats.module.css";
 
@@ -42,6 +43,33 @@ export function RunnerLabel({
   );
 }
 
+// Kolejnosc grup modeli w liscie i prefiks nazwy dostawcy przy kazdej pozycji.
+//
+// PREFIKSY SA KROTSZE NIZ NAZWY_DOSTAWCOW z dopuszczoneModele.js, i to jest
+// swiadome: tamte ida do promptu mentora („Lokalne (Ollama):" jako naglowek
+// grupy), a te do waskiej listy rozwijanej. „Ollama: llama3.1:8b" zostaje
+// slowo w slowo takie, jak bylo przed runda 6.
+//
+// Anthropic BEZ prefiksu — tez jak wczesniej. To dostawca domyslny aplikacji
+// i doklejenie mu nazwy zmienialo by wyglad kazdej istniejacej pozycji listy.
+const PICKER_PROVIDERS = ["anthropic", "openai", "openrouter", "ollama"];
+const PREFIKS = {
+  anthropic: "",
+  openai: "OpenAI",
+  openrouter: "OpenRouter",
+  ollama: "Ollama",
+};
+
+// Prefiks doklejamy TYLKO, gdy nazwa sama go jeszcze nie niesie.
+// Etykiety z katalogu OpenRoutera maja postac „Wytworca: Model", wiec
+// „OpenRouter: Anthropic: Claude Haiku 4.5" czyta sie sensownie (ten model
+// Anthropica przez OpenRoutera), ale „OpenRouter: OpenRouter: Fusion" juz nie.
+function zNazwaDostawcy(provider, nazwa) {
+  const p = PREFIKS[provider];
+  if (!p || nazwa.startsWith(`${p}:`)) return nazwa;
+  return `${p}: ${nazwa}`;
+}
+
 // Wlasna lista rozwijana (natywny <select> nie pozwala ostylowac opcji chipami).
 //   - agenci pogrupowani po projektach + osobna grupa „Modele AI",
 //   - kazda opcja to chip typu + nazwa (RunnerLabel),
@@ -51,6 +79,7 @@ export function RunnerLabel({
 // onChange({ type:"agent", agentId }) albo ({ type:"model", provider, model }).
 export function RunnerSelect({ value, onChange }) {
   const { settings } = useSettings();
+  const { dopuszczone } = useDopuszczone();
   const [groups, setGroups] = useState([]);
   // Blad wczytywania agentow. MUSI byc widoczny: po wlaczeniu RLS (Sesja 4)
   // nieudane zapytanie objawia sie pusta lista, a nie wyjatkiem, wiec bez
@@ -142,28 +171,38 @@ export function RunnerSelect({ value, onChange }) {
       }
     }
 
+    // MODELE AI — Z LISTY KONTA, WSZYSCY DOSTAWCY.
+    //
+    // Przed runda 6 stalo tu twarde getModelsForProvider("anthropic") plus
+    // Ollama, czyli picker NIE ZNAL ani OpenAI, ani OpenRoutera: model dalo
+    // sie ustawic agentowi w kreatorze, ale nie dalo sie z nim porozmawiac
+    // bezposrednio w Czatach. Teraz zrodlo jest jedno i obejmuje kazdego
+    // dostawce, ktorego konto wlaczylo.
+    //
+    // Nazwa dostawcy w etykiecie zostaje przy KAZDYM modelu poza Anthropic —
+    // tak samo, jak wczesniej robil to prefiks „Ollama: ". Bez tego
+    // „Claude Haiku 4.5" z Anthropic i ten sam model przez OpenRoutera sa
+    // na liscie nie do odroznienia, a to dwie rozne trasy i dwa rozne klucze.
     its.push({ type: "header", key: "h-models", label: "Modele AI" });
-    for (const m of getModelsForProvider("anthropic")) {
-      pushOption({
-        type: "option",
-        key: `an-${m.id}`,
-        value: `m:anthropic:${m.id}`,
-        kind: "model",
-        name: m.label || m.id,
-      });
-    }
-    for (const m of ollama) {
-      pushOption({
-        type: "option",
-        key: `ol-${m.id}`,
-        value: `m:ollama:${m.id}`,
-        kind: "model",
-        name: `Ollama: ${m.label || m.id}`,
-      });
+    for (const provider of PICKER_PROVIDERS) {
+      const modele =
+        provider === "ollama"
+          ? modeleOllamy(dopuszczone, ollama).modele
+          : listaModeli(dopuszczone, provider).modele;
+
+      for (const m of modele) {
+        pushOption({
+          type: "option",
+          key: `${provider}-${m.id}`,
+          value: `m:${provider}:${m.id}`,
+          kind: "model",
+          name: zNazwaDostawcy(provider, m.label || m.id),
+        });
+      }
     }
 
     return { items: its, options: opts };
-  }, [groups, ollama]);
+  }, [groups, ollama, dopuszczone]);
 
   const selected = options.find((o) => o.value === value) || null;
   const selectedKind = selected ? selected.kind : "placeholder";

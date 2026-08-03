@@ -2,9 +2,15 @@ import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { sendChat } from "@/lib/providers";
 import { fetchOllamaModels } from "@/lib/providers/ollama";
-import { getModelsForProvider } from "@/lib/config/models";
+import { modelSupportsTemperature } from "@/lib/config/models";
 import { loadKnowledge } from "@/lib/mentor/knowledge";
 import { MENTOR_PROVIDER } from "@/lib/config/mentor";
+import { wczytajDopuszczone } from "@/lib/settings/dopuszczoneServer";
+import {
+  listaModeli,
+  modeleOllamy,
+  tekstDostepnychModeli,
+} from "@/lib/settings/dopuszczoneModele";
 import {
   resolveMentorModel,
   resolveOllamaUrl,
@@ -82,8 +88,21 @@ export async function POST(request) {
   }
 
   // Ustawienia z przegladarki — walidowane serwerowo (nie ufamy klientowi).
-  // Model mentora: tylko z listy Anthropic; inaczej fallback na env/stala.
-  const mentorModel = resolveMentorModel(body?.mentorModel);
+  //
+  // Lista dopuszczonych czytana RAZ, z bazy, i sluzy dwom rzeczom naraz:
+  // walidacji modelu mentora (nizej) i budowie listy modeli w promptcie
+  // (buildAvailableModelsText). Drugie zapytanie po te same dane byloby
+  // drugim miejscem, w ktorym te dwie odpowiedzi moglyby sie rozjechac.
+  //
+  // `null` przy braku sesji/tabel — wtedy resolveMentorModel wraca do
+  // sprawdzenia wzgledem statycznej listy Anthropic, czyli do zachowania
+  // sprzed rundy 6.
+  const dopuszczone = await wczytajDopuszczone();
+
+  // Model mentora: tylko z modeli Anthropic dopuszczonych przez konto;
+  // inaczej fallback na env/stala. DOSTAWCA mentora zostaje stala —
+  // uzasadnienie w lib/settings/dopuszczoneModele.js (structured output).
+  const mentorModel = resolveMentorModel(body?.mentorModel, dopuszczone);
   const ollamaUrl = resolveOllamaUrl(body?.ollamaUrl);
 
   if (mode === "persona-feedback") {
@@ -97,7 +116,7 @@ export async function POST(request) {
     return handlePersonaFeedback(agent || {}, messages, draft, mentorModel);
   }
   if (mode === "guided") {
-    return handleGuided(agent || {}, messages, mentorModel, ollamaUrl);
+    return handleGuided(agent || {}, messages, mentorModel, ollamaUrl, dopuszczone);
   }
   return handleReactive(agent || {}, messages, mentorModel);
 }
@@ -149,31 +168,53 @@ async function handleReactive(agent, messages, model) {
   }
 }
 
-// Buduje czytelna liste dostepnych modeli: Anthropic (models.js) + lokalne (Ollama).
-async function buildAvailableModelsText(ollamaUrl) {
-  const lines = [];
-
-  lines.push("Anthropic:");
-  for (const m of getModelsForProvider("anthropic")) {
-    const temp = m.supportsTemperature
-      ? "temperatura: tak"
-      : "temperatura: NIE (model sam dobiera losowość)";
-    lines.push(`- ${m.id} (${m.label}) — ${temp}`);
-  }
-
+// =============================================================================
+//  LISTA MODELI DO PROMPTU MENTORA — NAJDELIKATNIEJSZE MIEJSCE RUNDY 6.
+//
+//  Wynik NIE trafia do interfejsu, tylko do TRESCI promptu: mentor czyta te
+//  linie i na ich podstawie proponuje uzytkownikowi model. Blad nie objawi sie
+//  wyjatkiem ani pusta lista — objawi sie tym, ze mentor zaproponuje model,
+//  ktorego konto nie ma wlaczonego, propozycja trafi do kreatora i rozmowa
+//  z agentem skonczy sie bledem dopiero u dostawcy.
+//
+//  DLATEGO ZMIENIA SIE TYLKO ZRODLO POZYCJI, NIE ICH FORMAT. Sam sklad linii
+//  siedzi w lib/settings/dopuszczoneModele.js i jest przypiety testem
+//  porownujacym wynik ZNAK W ZNAK z tekstem sprzed tej rundy
+//  („PRZED/PO: format linii nie zmienil sie co do znaku").
+//
+//  Co sie zmienilo merytorycznie — i tylko to:
+//   • Anthropic: z MODELS_BY_PROVIDER -> z modeli Anthropic wlaczonych przez
+//     konto (konto bez wyboru dostaje dalej MODELS_BY_PROVIDER),
+//   • doszly grupy OpenAI i OpenRouter, ktorych ten tekst nie znal — mentor
+//     nie mial jak zaproponowac modelu przez OpenRoutera, mimo ze agent
+//     potrafil na nim dzialac od rundy 2,
+//   • Ollama: lista z demona PRZECIETA z lista konta — bez tego mentor
+//     proponowalby modele wylaczone w Ustawieniach.
+// =============================================================================
+async function buildAvailableModelsText(ollamaUrl, dopuszczone) {
   const { models: ollamaModels, error } = await fetchOllamaModels(ollamaUrl);
-  if (ollamaModels.length > 0) {
-    lines.push("Lokalne (Ollama):");
-    for (const m of ollamaModels) {
-      lines.push(`- ${m.id} (lokalny, Ollama) — temperatura: tak`);
-    }
-  } else {
-    lines.push(
-      `Lokalne (Ollama): niedostępne${error ? ` (${error})` : ""} — nie proponuj modeli lokalnych.`,
-    );
-  }
 
-  return lines.join("\n");
+  const grupy = [
+    { provider: "anthropic", modele: listaModeli(dopuszczone, "anthropic").modele },
+    { provider: "openai", modele: listaModeli(dopuszczone, "openai").modele },
+    { provider: "openrouter", modele: listaModeli(dopuszczone, "openrouter").modele },
+    { provider: "ollama", modele: modeleOllamy(dopuszczone, ollamaModels).modele },
+  ];
+
+  // Powod „niedostepnosci" lokalnych rozroznia dwie sytuacje, bo mentor
+  // dostaje to zdanie jako uzasadnienie: demon nie odpowiedzial (error)
+  // wobec „odpowiedzial, ale nic nie jest wlaczone na koncie".
+  const powodBrakuLokalnych =
+    error ||
+    (ollamaModels.length > 0
+      ? "żaden model lokalny nie jest włączony na koncie"
+      : null);
+
+  return tekstDostepnychModeli(
+    grupy,
+    modelSupportsTemperature,
+    powodBrakuLokalnych,
+  );
 }
 
 // Zamienia surowa odpowiedz JSON mentora na znormalizowana propozycje pola.
@@ -204,10 +245,13 @@ function normalizeProposal(parsed) {
 // --- Tryb prowadzenia ("Przeprowadź mnie krok po kroku") — DWA ETAPY.
 // Etap 1: proza mentora BEZ structured output (nie psuje długiej prozy).
 // Etap 2: sama propozycja pola ZE structured output (krótkie, czyste dane).
-async function handleGuided(agent, messages, model, ollamaUrl) {
+async function handleGuided(agent, messages, model, ollamaUrl, dopuszczone) {
   try {
     const knowledge = await loadKnowledge();
-    const availableModelsText = await buildAvailableModelsText(ollamaUrl);
+    const availableModelsText = await buildAvailableModelsText(
+      ollamaUrl,
+      dopuszczone,
+    );
 
     // --- Etap 1: czysta proza (zwykły tekst, jak tryb reaktywny) ---
     const proseSystem = buildGuidedProseSystem(

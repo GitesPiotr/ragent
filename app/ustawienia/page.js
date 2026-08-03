@@ -2,7 +2,9 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useSettings } from "@/lib/settings/SettingsContext";
-import { getModelsForProvider, PROVIDERS } from "@/lib/config/models";
+import { PROVIDERS } from "@/lib/config/models";
+import { useDopuszczone } from "@/lib/settings/DopuszczoneContext";
+import { listaModeli, modeleMentora, ZRODLO } from "@/lib/settings/dopuszczoneModele";
 import {
   THEMES,
   DEFAULT_AGENT_PROVIDERS,
@@ -211,7 +213,11 @@ function AppearanceSection({ settings, updateSettings }) {
 }
 
 function MentorSection({ settings, updateSettings }) {
-  const models = getModelsForProvider("anthropic");
+  const { dopuszczone } = useDopuszczone();
+  // Modele Anthropic WLACZONE PRZEZ KONTO. Konto bez wlasnej listy dostaje
+  // statyczna liste Anthropic — patrz regula fallbacku w dopuszczoneModele.js.
+  const { modele, zrodlo } = modeleMentora(dopuszczone);
+
   return (
     <div className={styles.card}>
       <div className={styles.cardHead}>
@@ -220,7 +226,12 @@ function MentorSection({ settings, updateSettings }) {
 
       <Row
         label="Model mentora"
-        desc="Mentora zawsze napędza Claude (Anthropic). Wpływa na rozmowę z mentorem."
+        // Zdanie „zawsze napędza Claude" ZOSTAJE, bo dalej jest prawdziwe —
+        // i teraz mówi też, dlaczego. Dostawca mentora jest stałą: tryb
+        // prowadzenia robi drugie wywołanie ze structured output, a tego
+        // w tej aplikacji ma sprawdzone wyłącznie Anthropic (uzasadnienie
+        // w lib/settings/dopuszczoneModele.js).
+        desc="Mentora zawsze napędza Claude (Anthropic) — tryb prowadzenia wymaga odpowiedzi w ustalonym formacie, co sprawdzone jest tylko u tego dostawcy. Lista poniżej to Twoje włączone modele Anthropic."
         htmlFor="mentorModel"
       >
         <select
@@ -228,14 +239,39 @@ function MentorSection({ settings, updateSettings }) {
           className={styles.select}
           value={settings.mentorModel}
           onChange={(e) => updateSettings({ mentorModel: e.target.value })}
+          disabled={modele.length === 0}
         >
-          {models.map((m) => (
+          {/* Zapisana wartość spoza listy dostaje własną pozycję, zamiast
+              cicho pokazać pierwszą z listy. <select> bez pasującej opcji
+              wyświetla element[0], więc bez tego użytkownik widziałby model,
+              którego nie ustawił — i nie miałby jak zauważyć różnicy. */}
+          {settings.mentorModel &&
+            !modele.some((m) => m.id === settings.mentorModel) && (
+              <option value={settings.mentorModel}>
+                {settings.mentorModel} — poza Twoją listą
+              </option>
+            )}
+          {modele.map((m) => (
             <option key={m.id} value={m.id}>
               {m.label || m.id}
             </option>
           ))}
         </select>
       </Row>
+
+      {modele.length === 0 && (
+        <p className={styles.error}>
+          Nie masz włączonego żadnego modelu Anthropic. Mentor będzie działał na
+          modelu domyślnym z konfiguracji. Włącz modele w sekcji „Modele
+          językowe”.
+        </p>
+      )}
+      {zrodlo === ZRODLO.DOMYSLNE && (
+        <p className={styles.rowDesc} style={{ margin: "0 0 4px" }}>
+          To są modele domyślne — swoją listę wybierzesz w sekcji „Modele
+          językowe”.
+        </p>
+      )}
 
       <Row
         label="Automatyczne otwieranie mentora"
@@ -253,7 +289,12 @@ function MentorSection({ settings, updateSettings }) {
 }
 
 function DefaultsSection({ settings, updateSettings }) {
-  const providerModels = getModelsForProvider(settings.defaultProvider);
+  const { dopuszczone } = useDopuszczone();
+  // Modele domyślnego dostawcy WŁĄCZONE PRZEZ KONTO (fallback jak wyżej).
+  const { modele: providerModels } = listaModeli(
+    dopuszczone,
+    settings.defaultProvider,
+  );
   const providerLabel = (id) =>
     PROVIDERS.find((p) => p.id === id)?.label || id;
 
@@ -292,7 +333,16 @@ function DefaultsSection({ settings, updateSettings }) {
           className={styles.select}
           value={settings.defaultModel}
           onChange={(e) => updateSettings({ defaultModel: e.target.value })}
+          disabled={providerModels.length === 0}
         >
+          {/* Jak przy mentorze: wartość spoza listy dostaje własną pozycję,
+              żeby <select> nie pokazał cicho pierwszej opcji zamiast niej. */}
+          {settings.defaultModel &&
+            !providerModels.some((m) => m.id === settings.defaultModel) && (
+              <option value={settings.defaultModel}>
+                {settings.defaultModel} — poza Twoją listą
+              </option>
+            )}
           {providerModels.map((m) => (
             <option key={m.id} value={m.id}>
               {m.label || m.id}
@@ -300,6 +350,14 @@ function DefaultsSection({ settings, updateSettings }) {
           ))}
         </select>
       </Row>
+
+      {providerModels.length === 0 && (
+        <p className={styles.error}>
+          Nie masz włączonego żadnego modelu dostawcy{" "}
+          {providerLabel(settings.defaultProvider)}. Włącz modele w sekcji
+          „Modele językowe” albo zmień dostawcę powyżej.
+        </p>
+      )}
 
       <Row
         label="Domyślna temperatura"
