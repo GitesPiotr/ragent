@@ -63,7 +63,16 @@ export function usePojecia() {
     });
   }, []);
 
-  const wyciagaj = useCallback(async (collectionId, docId) => {
+  // `model` — { provider, model } wybrane w etapie 2, obowiązujące WYŁĄCZNIE
+  // dla tego przebiegu. Hook go tylko przenosi; rozstrzygnięcie „na jedno
+  // wywołanie, nie do przypisań" i jego uzasadnienie stoją w trasie
+  // app/api/rag/collections/[id]/concepts/extract/route.js.
+  //
+  // Wartość jest ZAMROŻONA NA CAŁY PRZEBIEG — pętla trwa minutami, a użytkownik
+  // może w tym czasie ruszyć listę wyboru. Gdyby każda partia czytała bieżący
+  // stan kontrolki, jeden dokument dostałby pojęcia z dwóch różnych modeli,
+  // i to bez śladu, który fragment od którego.
+  const wyciagaj = useCallback(async (collectionId, docId, model) => {
     stopRef.current[docId] = false;
     setPostep((p) => ({ ...p, [docId]: { ...(p[docId] || { done: 0, total: 0 }), running: true, error: null } }));
 
@@ -98,7 +107,7 @@ export function usePojecia() {
         const res = await fetch(`/api/rag/collections/${collectionId}/concepts/extract`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ documentId: docId }),
+          body: JSON.stringify(model ? { documentId: docId, model } : { documentId: docId }),
         });
         json = await res.json();
       } catch (e) {

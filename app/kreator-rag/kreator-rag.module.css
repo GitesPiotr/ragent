@@ -899,3 +899,205 @@
 .ostrzezenie-nieodwracalne strong {
   color: #7f1d1d;
 }
+
+/* =============================================================================
+   ETAPY KOLEKCJI (runda 3)
+
+   Widok kolekcji pokazywał dwa paski postępu obok siebie — wektory i pojęcia —
+   i nic nie mówiło, że drugi jest opcjonalny. Ta sekcja istnieje po to, żeby
+   KOLEJNOŚĆ I OBOWIĄZKOWOŚĆ były widoczne, zanim ktokolwiek zacznie czytać
+   napisy: numer w kółku, stan kolorem, znacznik „wymagany" / „opcjonalny".
+
+   Paleta z tego samego arkusza co reszta panelu: fiolet #7c3aed na krok
+   aktywny (ten sam, co przy zaznaczonym modelu embeddingów), zieleń #15803d
+   na ukończony (ta sama, co --ok).
+   ============================================================================= */
+
+.etapy {
+  display: flex;
+  gap: 0;
+  margin: 16px 0 20px;
+  flex-wrap: wrap;
+}
+
+.etap-krok {
+  flex: 1;
+  min-width: 220px;
+  padding: 14px 16px;
+  border: 1px solid var(--obwod);
+  background: var(--karta);
+  position: relative;
+}
+
+/* Zszyte w jeden pasek: zaokrąglenia tylko na skrajnych, wspólna krawędź
+   w środku. Dwa osobne prostokąty czytałyby się jak dwie niezależne karty,
+   a to ma być JEDNA ścieżka o dwóch przystankach. */
+.etap-krok:first-child { border-radius: 10px 0 0 10px; }
+.etap-krok:last-child { border-radius: 0 10px 10px 0; border-left: none; }
+
+.etap-krok.aktywny {
+  border-color: #7c3aed;
+  background: #faf5ff;
+  box-shadow: inset 0 0 0 1px #7c3aed;
+  z-index: 1;
+}
+
+.etap-krok.ukonczony {
+  background: #f0fdf4;
+  border-color: #86efac;
+}
+
+/* Krok zablokowany jest PRZYGASZONY, ale CZYTELNY. Nie chowamy go: to, że
+   drugi krok istnieje i jest opcjonalny, jest właśnie tą informacją, której
+   dotąd brakowało. Ukrycie go do czasu ukończenia etapu 1 zamieniłoby jeden
+   brak wiedzy na drugi. */
+.etap-krok.zablokowany {
+  opacity: 0.55;
+}
+
+.etap-numer {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--obwod);
+  color: #52525b;
+  font-size: 12px;
+  font-weight: 800;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+.etap-krok.aktywny .etap-numer { background: #7c3aed; color: #fff; }
+.etap-krok.ukonczony .etap-numer { background: var(--ok); color: #fff; }
+
+.etap-tytul {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--tekst);
+  display: flex;
+  align-items: center;
+}
+
+.etap-opis {
+  font-size: 12px;
+  color: var(--przygaszony);
+  line-height: 1.45;
+  margin-top: 6px;
+  padding-left: 30px;
+}
+
+.etap-znacznik {
+  display: block;
+  margin: 4px 0 0 30px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--przygaszony);
+}
+
+/* WYMAGANY dostaje kolor, OPCJONALNY zostaje szary. Odwrotnie niż podpowiada
+   odruch „wyróżnij to, co nowe" — wyróżnienie należy się temu, bez czego
+   kolekcja nie działa. */
+.etap-znacznik.wymagany { color: #6d28d9; }
+
+/* --- panele etapów --------------------------------------------------------- */
+
+.etap-panel {
+  background: var(--karta);
+  border: 1px solid var(--obwod);
+  border-radius: 12px;
+  padding: 18px;
+  margin-bottom: 16px;
+}
+
+/* Przygaszenie ORAZ odcięcie kliknięć. Sam `opacity` zostawiłby działające
+   przyciski pod wyblakłą warstwą — użytkownik kliknąłby coś, czego widok
+   właśnie odradza, i miałby rację czuć się oszukany. */
+.etap-panel.niedostepny {
+  opacity: 0.55;
+  pointer-events: none;
+}
+
+.etap-panel-tytul {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--tekst);
+}
+
+.etap-panel-opis {
+  font-size: 13px;
+  line-height: 1.5;
+  color: #52525b;
+  margin: 6px 0 14px;
+}
+
+/* --- pola informacyjne ----------------------------------------------------- */
+
+/* Niebieskie = „to jest wyjaśnienie", w odróżnieniu od bursztynu
+   („do wiadomości") i czerwieni („nieodwracalne"). Trzeci kolor jest tu
+   potrzebny, bo treść jest uspokajająca: ten krok WOLNO pominąć. */
+.nota-wyjasnienie {
+  margin: 12px 0;
+  padding: 11px 13px;
+  border: 1px solid #bfdbfe;
+  border-radius: 8px;
+  background: #eff6ff;
+  color: #1e40af;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.nota-gotowe {
+  margin: 12px 0 0;
+  padding: 12px 14px;
+  border: 1px solid #86efac;
+  border-radius: 8px;
+  background: #f0fdf4;
+  color: #166534;
+  font-size: 13px;
+  line-height: 1.55;
+  font-weight: 600;
+}
+
+/* Instrukcja „gdzie ją wskazać" ma być czytelna, ale nie krzyczeć tak samo
+   jak sam komunikat o gotowości — stąd zwykła grubość w drugiej linii. */
+.nota-gotowe .krok-dalej {
+  display: block;
+  margin-top: 4px;
+  font-weight: 400;
+  font-size: 12.5px;
+}
+
+/* --- wiersz dokumentu w etapie 2 ------------------------------------------- */
+
+.pojecia-rzad {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--obwod);
+  border-radius: 10px;
+  margin-bottom: 8px;
+}
+
+.pojecia-rzad-tresc {
+  flex: 1;
+  min-width: 0;
+}
+
+.pojecia-nazwa {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--tekst);
+}
+
+.stan-ok { color: var(--ok); font-weight: 600; }
+.stan-czeka { color: var(--przygaszony); font-weight: 600; }
