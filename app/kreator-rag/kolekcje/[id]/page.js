@@ -406,7 +406,11 @@ export default function KolekcjaPage() {
       <h1>{kolekcja ? kolekcja.name : 'Kolekcja'}</h1>
       {kolekcja ? (
         <p className={styles.podtytul}>
-          model: <code>{kolekcja.embedModel}</code> · wymiar: <code>{kolekcja.embedDim}</code>
+          model:{' '}
+          <span className={`${styles["znacznik-gdzie"]} ${kolekcja.embedProvider === 'openrouter' ? styles["gdzie-chmura"] : styles["gdzie-lokalny"]}`}>
+            {kolekcja.embedProvider === 'openrouter' ? 'w chmurze' : 'lokalny'}
+          </span>{' '}
+          <code>{kolekcja.embedProvider}/{kolekcja.embedModel}</code> · wymiar: <code>{kolekcja.embedDim}</code>
         </p>
       ) : null}
 

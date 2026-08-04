@@ -3,6 +3,10 @@
 import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { komunikatBledu } from '@/app/kreator-rag/_lib/bledy.js';
+import {
+  MODELE_EMBEDDINGOW,
+  DOMYSLNY_MODEL_EMBEDDINGOW,
+} from '@/lib/config/modeleEmbeddingow.js';
 import styles from '../kreator-rag.module.css';
 import PrzyciskDiagnostyki from '@/app/kreator-rag/_components/PrzyciskDiagnostyki.jsx';
 
@@ -28,7 +32,16 @@ export default function KolekcjePage() {
   const [nazwa, setNazwa] = useState('');
   const [opis, setOpis] = useState('');
   const [externalRef, setExternalRef] = useState('');
-  const [embedModel, setEmbedModel] = useState('');
+  // Wybrana para trzymana jako JEDNA wartość „provider/model", nie dwa stany.
+  // Dwa stany dałoby się ustawić niezależnie i powstałaby para spoza oferty
+  // (np. openrouter + bge-m3), której serwer i tak nie przyjmie — lepiej,
+  // żeby taki stan był w interfejsie niewyrażalny.
+  const [wybranyModel, setWybranyModel] = useState(
+    `${DOMYSLNY_MODEL_EMBEDDINGOW.provider}/${DOMYSLNY_MODEL_EMBEDDINGOW.model}`,
+  );
+  const wybrany =
+    MODELE_EMBEDDINGOW.find((m) => `${m.provider}/${m.model}` === wybranyModel) ||
+    DOMYSLNY_MODEL_EMBEDDINGOW;
   const [bladFormularza, setBladFormularza] = useState(null);
   const [tworzenie, setTworzenie] = useState(false);
 
@@ -68,7 +81,8 @@ export default function KolekcjePage() {
           name: nazwa,
           description: opis || undefined,
           externalRef: externalRef || undefined,
-          embedModel: embedModel || undefined,
+          embedProvider: wybrany.provider,
+          embedModel: wybrany.model,
         }),
       });
       const json = await res.json();
@@ -79,7 +93,9 @@ export default function KolekcjePage() {
       setNazwa('');
       setOpis('');
       setExternalRef('');
-      setEmbedModel('');
+      // Wybór modelu NIE jest czyszczony — kolejna kolekcja najczęściej ma
+      // powstać na tym samym, a przestawienie z powrotem na domyślny byłoby
+      // cichą zmianą decyzji, której nikt nie prosił.
       await pobierz();
     } catch (err) {
       setBladFormularza('Nie udało się utworzyć kolekcji: ' + (err && err.message ? err.message : 'nieznany błąd.'));
@@ -156,8 +172,59 @@ export default function KolekcjePage() {
           <label htmlFor="externalRef">Powiązanie zewnętrzne (external_ref)</label>
           <input id="externalRef" type="text" value={externalRef} onChange={(e) => setExternalRef(e.target.value)} placeholder="opcjonalnie — hak integracyjny, bez FK" />
 
-          <label htmlFor="embedModel">Model embeddingów</label>
-          <input id="embedModel" type="text" value={embedModel} onChange={(e) => setEmbedModel(e.target.value)} placeholder="puste = globalny (bge-m3); wymiar wykryjemy z modelu" />
+          <fieldset className={styles["wybor-modelu"]}>
+            <legend>Model embeddingów</legend>
+
+            {/* KARTY, NIE LISTA ROZWIJANA — świadomie. Wybór jest
+                nieodwracalny i wymaga przeczytania trzech rzeczy naraz
+                (gdzie liczy, ile kosztuje, czego wymaga). Lista rozwijana
+                pokazuje jedną linijkę i chowa resztę za kliknięciem, więc
+                decyzję podejmowałoby się bez połowy przesłanek. */}
+            <div className={styles["karty-modeli"]} role="radiogroup" aria-label="Model embeddingów">
+              {MODELE_EMBEDDINGOW.map((m) => {
+                const klucz = `${m.provider}/${m.model}`;
+                const zaznaczony = klucz === wybranyModel;
+                return (
+                  <label
+                    key={klucz}
+                    className={`${styles["karta-modelu"]} ${zaznaczony ? styles["karta-modelu-wybrana"] : ''}`}
+                  >
+                    <input
+                      type="radio"
+                      name="embedModel"
+                      value={klucz}
+                      checked={zaznaczony}
+                      onChange={() => setWybranyModel(klucz)}
+                    />
+                    <span className={styles["karta-modelu-tresc"]}>
+                      <span className={styles["karta-modelu-naglowek"]}>
+                        <code>{m.etykieta}</code>
+                        <span className={`${styles["znacznik-gdzie"]} ${m.provider === 'ollama' ? styles["gdzie-lokalny"] : styles["gdzie-chmura"]}`}>
+                          {m.gdzie}
+                        </span>
+                        <span className={styles["znacznik-koszt"]}>{m.koszt}</span>
+                      </span>
+                      <span className={styles["karta-modelu-opis"]}>{m.opis}</span>
+                    </span>
+                  </label>
+                );
+              })}
+            </div>
+
+            {/* OSTRZEŻENIE PRZY WYBORZE, NIE W PODPOWIEDZI — i mówi POWÓD,
+                nie tylko fakt. „Nie da się zmienić" bez wyjaśnienia brzmi jak
+                ograniczenie interfejsu, które ktoś kiedyś zniesie; „wektory
+                z dwóch modeli są nieporównywalne" mówi, że to właściwość
+                danych i że obejścia nie będzie. */}
+            <p className={styles["ostrzezenie-nieodwracalne"]}>
+              <strong>Tego wyboru nie da się później zmienić.</strong> Wektory
+              policzone różnymi modelami są nieporównywalne — wyszukiwanie
+              zestawia je ze sobą, więc pomieszanie dałoby wyniki przypadkowe,
+              a nie gorsze. Zmiana modelu oznaczałaby przeliczenie wszystkich
+              dokumentów tej kolekcji od nowa, dlatego kolekcja zapamiętuje parę
+              dostawca + model na stałe.
+            </p>
+          </fieldset>
 
           {bladFormularza ? <p className={styles["blad-formularza"]}>{bladFormularza}</p> : null}
 
@@ -188,8 +255,16 @@ export default function KolekcjePage() {
                   {k.status === 'archived' ? <span className={`${styles.znacznik} ${styles.zarchiwizowana}`}>zarchiwizowana</span> : null}
                 </h3>
                 {k.description ? <div className={styles.detale}>{k.description}</div> : null}
+                {/* DOSTAWCA WIDOCZNY RAZEM Z MODELEM, bez wchodzenia w szczegóły.
+                    Sam model nie wystarczy: „bge-m3" i „baai/bge-m3" to ten sam
+                    plik wag dwiema drogami, a to od pary zależy, czy kolekcja
+                    działa przy bieżącej konfiguracji. */}
                 <div className={styles.detale}>
-                  model: <code>{k.embedModel}</code> · wymiar: <code>{k.embedDim}</code>
+                  model:{' '}
+                  <span className={`${styles["znacznik-gdzie"]} ${k.embedProvider === 'openrouter' ? styles["gdzie-chmura"] : styles["gdzie-lokalny"]}`}>
+                    {k.embedProvider === 'openrouter' ? 'w chmurze' : 'lokalny'}
+                  </span>{' '}
+                  <code>{k.embedProvider}/{k.embedModel}</code> · wymiar: <code>{k.embedDim}</code>
                   {k.externalRef ? <> · external_ref: <code>{k.externalRef}</code></> : null}
                 </div>
               </div>

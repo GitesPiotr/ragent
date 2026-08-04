@@ -771,3 +771,131 @@
 .werdykt strong {
   color: var(--tekst);
 }
+
+/* === WYBÓR MODELU EMBEDDINGÓW (runda 2) ================================== */
+
+/* Kolory wprost, nie przez nowe zmienne w .panel: te dwa odcienie występują
+   wyłącznie tutaj, a dopisanie ich do palety sugerowałoby, że są częścią
+   systemu i mają być używane gdzie indziej. */
+
+.wybor-modelu {
+  border: 1px solid var(--obwod);
+  border-radius: 10px;
+  padding: 12px 14px 14px;
+  margin: 6px 0 0;
+}
+
+.wybor-modelu legend {
+  padding: 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tekst);
+}
+
+.karty-modeli {
+  display: grid;
+  gap: 10px;
+  /* Jedna kolumna poniżej ~640 px — dwie karty obok siebie na wąskim ekranie
+     ścisnęłyby opis do słupka. */
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+
+/* Cała karta jest polem wyboru — nie sam kółeczkowy radiobutton.
+   Kliknięcie gdziekolwiek w kartę wybiera model. */
+.karta-modelu {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 11px 12px;
+  border: 1px solid var(--obwod);
+  border-radius: 10px;
+  cursor: pointer;
+  background: var(--karta);
+  /* Nadpisuje .panel label { display:block; margin-bottom } z góry pliku. */
+  margin: 0;
+}
+
+.karta-modelu:hover {
+  border-color: #a1a1aa;
+}
+
+.karta-modelu input[type='radio'] {
+  margin: 2px 0 0;
+  flex-shrink: 0;
+}
+
+/* Stan wybrany MUSI być widoczny bez najeżdżania i bez patrzenia na kółko —
+   to jest decyzja nieodwracalna, więc „który wariant jest zaznaczony" nie może
+   zależeć od jednego małego znacznika. */
+.karta-modelu-wybrana {
+  border-color: #6d28d9;
+  box-shadow: inset 0 0 0 1px #6d28d9;
+  background: #faf7ff;
+}
+
+.karta-modelu-tresc {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 0;
+}
+
+.karta-modelu-naglowek {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.karta-modelu-naglowek code {
+  font-size: 12.5px;
+  font-weight: 600;
+}
+
+.karta-modelu-opis {
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--przygaszony);
+}
+
+.znacznik-gdzie,
+.znacznik-koszt {
+  padding: 1px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.gdzie-lokalny {
+  background: #dcfce7;
+  color: #15803d;
+}
+
+.gdzie-chmura {
+  background: #e0e7ff;
+  color: #4338ca;
+}
+
+.znacznik-koszt {
+  background: #f4f4f5;
+  color: #52525b;
+}
+
+/* MOCNIEJSZE NIŻ NOTA INFORMACYJNA, i to jest cel. Bursztyn znaczy w tej
+   aplikacji „do wiadomości"; tu chodzi o decyzję, której nie da się cofnąć,
+   więc ostrzeżenie jest czerwone i ma pełną ramkę, a nie samą lewą krechę. */
+.ostrzezenie-nieodwracalne {
+  margin: 12px 0 0;
+  padding: 10px 12px;
+  border: 1px solid #fca5a5;
+  border-radius: 8px;
+  background: #fef2f2;
+  color: #991b1b;
+  font-size: 12.5px;
+  line-height: 1.55;
+}
+
+.ostrzezenie-nieodwracalne strong {
+  color: #7f1d1d;
+}
