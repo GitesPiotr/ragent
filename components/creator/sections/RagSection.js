@@ -124,10 +124,28 @@ export function RagSection() {
             zindeksowane — kolekcje zakładasz i wypełniasz w zakładce „Kreator
             RAG”.
           </span>
+          {/* =================================================================
+              KOSZT ZALEZY OD KOLEKCJI, NIE OD APLIKACJI (cykl RAG-embed).
+
+              Do rundy 1 zdanie brzmialo „Bez kosztow zewnetrznych:
+              wyszukiwanie liczy sie lokalnie (Ollama). Wymaga uruchomionej
+              Ollamy" — i bylo prawda, bo innej drogi nie bylo. Odkad kolekcja
+              pamieta wlasna pare (dostawca, model) i nia sie napedza, to samo
+              zdanie stalo sie NIEPRAWDA dla kolekcji chmurowej: liczy sie
+              przez OpenRoutera, kosztuje ulamek grosza i Ollamy nie potrzebuje.
+
+              Tekst stoi dokladnie tam, gdzie zapada decyzja, wiec nie moze
+              obiecywac jednej z dwoch mozliwosci jako jedynej. Nie podajemy
+              tu, KTORA droga pojdzie ta kolekcja — to widac przy jej wyborze
+              nizej i w Kreatorze RAG; tutaj wystarczy, ze uzytkownik wie,
+              iz odpowiedz zalezy od kolekcji.
+              ================================================================= */}
           <span className={styles.toolCost}>
-            💳 Bez kosztów zewnętrznych: wyszukiwanie liczy się lokalnie
-            (Ollama). Wymaga uruchomionej Ollamy — bez niej agent odpowie bez
-            dokumentów i powie o tym wprost.
+            💳 Koszt i wymagania zależą od kolekcji: kolekcja lokalna liczy się
+            w Ollamie (bez kosztów, ale wymaga jej uruchomienia), kolekcja
+            chmurowa przez OpenRoutera (ułamek grosza, bez Ollamy). Gdy dostawca
+            wybranej kolekcji nie odpowiada, agent odpowie bez dokumentów i powie
+            o tym wprost.
           </span>
         </span>
         <button
