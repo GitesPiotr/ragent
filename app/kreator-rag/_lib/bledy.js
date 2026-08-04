@@ -23,7 +23,21 @@ const OPISY = {
     co: 'Nie udało się połączyć z Ollamą, czyli programem, który zamienia tekst na wektory.',
     rada:
       'Sprawdź, czy Ollama jest uruchomiona i czy pobrany jest model wskazany w konfiguracji. ' +
-      'Bez niej można wgrywać i czytać dokumenty, ale nie da się ich zaindeksować ani przeszukać.',
+      'Bez niej można wgrywać i czytać dokumenty, ale nie da się ich zaindeksować ani przeszukać. ' +
+      'Możesz też utworzyć kolekcję na modelu w chmurze — działa bez Ollamy.',
+  },
+  // OSOBNY KOD OD `no_key` WYŻEJ, I TO JEST SEDNO TEGO WPISU.
+  // `no_key` znaczy w tej aplikacji „brak dostępu do bazy" i ma pod sobą radę
+  // o RAG_SUPABASE_URL. Gdy w rundzie 1 doszedł chmurowy dostawca embeddingów,
+  // brak JEGO klucza zaczął wpadać w ten sam kod — użytkownik widziałby wtedy
+  // zdanie o kluczu Supabase, choć brakuje zupełnie innego. Dwa różne braki
+  // wymagają dwóch różnych rad, więc mają dwa kody.
+  no_embed_key: {
+    co: 'Brakuje klucza do dostawcy embeddingów w chmurze.',
+    rada:
+      'Uzupełnij OPENROUTER_API_KEY w pliku .env.local i uruchom serwer od nowa — ' +
+      'zmiany w .env.local działają dopiero po restarcie. Alternatywnie utwórz kolekcję ' +
+      'na modelu lokalnym (Ollama), który klucza nie wymaga.',
   },
   dim_mismatch: {
     co: 'Rozmiar wektorów zapisanych w bazie nie zgadza się z bieżącym ustawieniem.',
@@ -31,11 +45,18 @@ const OPISY = {
       'To znaczy, że baza powstała dla innego modelu. Nie zapisuj nic do czasu ujednolicenia — ' +
       'trzeba albo wrócić do poprzedniego ustawienia, albo przebudować kolumnę wektorów i zaindeksować dokumenty od nowa.',
   },
+  // ZNACZENIE ZMIENIONE W RUNDZIE 3. Do rundy 2 ten kod znaczył „kolekcja
+  // zbudowana innym modelem niż obecnie ustawiony" i radził zmienić ustawienie.
+  // Odkąd kolekcja napędza własnego dostawcę, taka rozbieżność NIE JEST błędem —
+  // dwie kolekcje na dwóch dostawcach działają obok siebie przy jednej
+  // konfiguracji. Został jeden przypadek: dostawca, dla którego aplikacja nie ma
+  // implementacji. Stara rada („ustaw model kolekcji") byłaby dziś szkodliwa —
+  // odsyłałaby do zmiennej, która niczego już nie steruje.
   model_mismatch: {
-    co: 'Ta kolekcja została zbudowana innym modelem niż obecnie ustawiony.',
+    co: 'Ta kolekcja korzysta z dostawcy embeddingów, którego ta wersja aplikacji nie obsługuje.',
     rada:
-      'Wyniki wyszukiwania byłyby przypadkowe, więc operacja została wstrzymana. Ustaw model, ' +
-      'którym zbudowano kolekcję, albo zbuduj kolekcję od nowa obecnym modelem.',
+      'Nie da się jej ani zaindeksować, ani przeszukać. Załóż kolekcję od nowa, wybierając ' +
+      'dostawcę z listy, i wgraj do niej dokumenty ponownie.',
   },
   no_text: {
     co: 'W tym pliku nie ma tekstu do odczytania.',
