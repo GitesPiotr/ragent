@@ -72,6 +72,12 @@ const CZAS_PODSWIETLENIA = 1200; // gaśnięcie podświetlenia nowej krawędzi
 // moment odsłonięcia byłby wymyślony, a użytkownik widzi tylko moment.
 const WEJSCIE_PUNKTU = 600;
 const ODSTEP_ODSWIEZANIA = 5000; // odpytywanie AWARYJNE — patrz komentarz przy efekcie
+// Czujnik znacznika „na żywo". Zmierzone w rundzie 4: przy partii 32 fragmentów
+// kolejne odpowiedzi /embed przychodzą co ~15 s (Ollama) i ~5 s (OpenRouter).
+// 45 s to trzykrotność tego wolniejszego przypadku — na tyle dużo, żeby znacznik
+// nie mrugał między partiami, i na tyle mało, żeby po „Przerwij" zgasł, zanim
+// ktokolwiek zdąży uznać nieruchomą mapę za wieszającą się.
+const CZUJNIK_ZYWEJ_MAPY = 45000;
 const KUBELKI_GLEBI = 10;
 const OBROT_NA_KLATKE = 0.0016;
 
@@ -243,8 +249,63 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
     });
   }, []);
 
+  // =============================================================================
+  //  LICZNIK PONIŻEJ PROGU — ODCZYT, KTÓREGO DO RUNDY 4 NIE BYŁO
+  //
+  //  ZMIERZONE PRZED ZMIANĄ: przy świeżej kolekcji na 193 fragmenty licznik
+  //  „0 / 50" stał nieruchomo przez 102 sekundy, podczas gdy pasek indeksowania
+  //  doszedł do 160/193. Potem mapa pojawiała się jednym skokiem od razu w całości.
+  //
+  //  DLACZEGO TAK BYŁO — i dlaczego to NIE jest usterka `naPartie`:
+  //  poniżej progu rzutowania w ogóle nie ma, więc `projectPendingChunks`
+  //  (documents.js, gałąź „nie finished") nie ma czym rzutować i odsyła pustą
+  //  listę. Do mapy nie przychodzi nic, a `dolaczFragmenty` i tak odrzuciłoby
+  //  wszystko na `!d.projectionBuilt`. Kanał działa dokładnie tam, gdzie ma
+  //  działać — po prostu poniżej progu nie ma współrzędnych do wysłania.
+  //
+  //  Czego więc brakowało: nie punktów, tylko LICZBY. Fragment bez współrzędnych
+  //  wciąż jest fragmentem z wektorem i ma się liczyć do progu. Dlatego poniżej
+  //  progu odświeżamy sam licznik — jednym lekkim odczytem `/map`, który w tym
+  //  stanie zwraca `chunks: []` (getMapData, gałąź `!projection`), więc kosztuje
+  //  tyle co zapytanie o liczbę. Nie wołamy `pobierz`, bo ono ciągnie jeszcze
+  //  kolekcję i listę dokumentów, których licznik nie potrzebuje.
+  //
+  //  REGUŁA 12.9 NIETKNIĘTA: ta ścieżka rusza WYŁĄCZNIE `chunkCount`
+  //  i `projectionBuilt`. Nie dopisuje ani jednego punktu i nie dotyka
+  //  współrzędnych — poniżej progu żadnych współrzędnych po prostu nie ma.
+  // =============================================================================
+  const odswiezLicznik = useCallback(async () => {
+    try {
+      const r = await fetch(`/api/rag/collections/${id}/map`, { cache: 'no-store' });
+      const j = await r.json();
+      if (j.error || j.projectionBuilt) return; // próg przekroczony — zajmie się tym `recalculated`
+      setDane((d) => (d && !d.projectionBuilt ? { ...d, chunkCount: j.chunkCount } : d));
+    } catch {
+      // Licznik jest odczytem pomocniczym. Gdy padnie, indeksowanie idzie dalej,
+      // a następna partia spróbuje ponownie.
+    }
+  }, [id]);
+
+  // Znacznik „na żywo" gaśnie sam, gdyby ostatnia partia nigdy nie przyszła.
+  // Dzieje się tak po „Przerwij": pętla staje bez odpowiedzi z `finished: true`,
+  // więc bez tego pilnowania napis wisiałby nad nieruchomą mapą w nieskończoność.
+  const zegarZywoRef = useRef(0);
+  const [naZywo, setNaZywo] = useState(false);
+
+  useEffect(() => () => clearTimeout(zegarZywoRef.current), []);
+
   const onPartia = useCallback(
     (json) => {
+      // Partia przyszła — indeksowanie trwa. `finished` gasi znacznik od razu,
+      // bez czekania na czujnik.
+      clearTimeout(zegarZywoRef.current);
+      if (json.finished) {
+        setNaZywo(false);
+      } else {
+        setNaZywo(true);
+        zegarZywoRef.current = setTimeout(() => setNaZywo(false), CZUJNIK_ZYWEJ_MAPY);
+      }
+
       // Przeliczenie bazy (12.4, przyrost > 30%) rusza WSZYSTKIE współrzędne, więc
       // przyrostowa lista nie wystarcza — dociągamy całość raz, a efekt useEffect niżej
       // animuje przejście na nowe pozycje, tak jak przy „Przelicz bazę".
@@ -253,9 +314,15 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
         pobierz(true);
         return;
       }
-      dolaczFragmenty(json.newChunks);
+      if (json.newChunks && json.newChunks.length) {
+        dolaczFragmenty(json.newChunks);
+        return;
+      }
+      // Brak współrzędnych w tej partii znaczy „jeszcze poniżej progu" — wtedy
+      // aktualny jest sam licznik.
+      odswiezLicznik();
     },
-    [dolaczFragmenty, pobierz]
+    [dolaczFragmenty, pobierz, odswiezLicznik]
   );
 
   // Kanał dla rodzica: gdy indeksowanie rusza z listy dokumentów, odpowiedzi /embed
@@ -1030,6 +1097,18 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
       {osadzona ? (
         <div className={styles["mapa-belka"]}>
           <strong>Mapa fragmentów</strong>
+          {/* ZNACZNIK „NA ŻYWO" — przy nagłówku, nie na płótnie.
+              Do rundy 4 osadzona mapa nie mówiła nic o tym, że coś się właśnie
+              dzieje: pełna strona miała zdanie „trwa indeksowanie" w podtytule,
+              a wersja osadzona — czyli ta, na którą się patrzy podczas
+              indeksowania — nie miała odpowiednika. Kropka pulsuje, ale to
+              element BELKI, nie punkt mapy: reguła 12.9 dotyczy fragmentów
+              na płótnie i zostaje nietknięta. */}
+          {naZywo ? (
+            <span className={styles["znacznik-nazywo"]}>
+              <span className={styles["kropka-zywa"]} />na żywo
+            </span>
+          ) : null}
           {dane ? <span className={styles.zrodlo}>{dane.chunkCount} z wektorem{gotowa ? ` · ${krawedzie.length} połączeń` : ''}</span> : null}
           <Link href={`/kreator-rag/kolekcje/${id}/mapa`} className={styles["mapa-pelny"]}>Pełny ekran →</Link>
         </div>
@@ -1090,12 +1169,43 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
           <div className={styles["mapa-stan"]}><p className={styles.pusto}>Brak danych.</p></div>
         ) : !gotowa ? (
           <div className={styles["mapa-stan"]}>
-            <div className={styles["mapa-licznik"]}>{dane.chunkCount} / {dane.minChunks}</div>
-            <p className={styles.komunikat} style={{ margin: 0 }}>
-              {dane.chunkCount < dane.minChunks
-                ? 'Za mało danych do mapy. Rzutowanie powstaje dopiero po przekroczeniu progu — wcześniej osie byłyby policzone z garstki fragmentów i myliłyby bardziej, niż pomagały.'
-                : 'Fragmenty mają wektory, ale baza rzutowania jeszcze nie istnieje.'}
-            </p>
+            {/* =====================================================================
+                UŁAMEK TYLKO PONIŻEJ PROGU.
+
+                Odkąd licznik żyje (runda 4), widać stan, którego wcześniej nikt
+                nie oglądał: próg zostaje przekroczony w TRAKCIE dokumentu, ale
+                rzutowanie powstaje dopiero na jego KOŃCU
+                (documents.js woła refreshProjectionAfterIndexing przy `finished`).
+                Między jednym a drugim licznik pokazywał „192 / 50" — ułamek,
+                którego mianownik już nic nie znaczy, i który sugeruje, że coś
+                poszło źle. Zmierzone na 193 fragmentach: taki stan trwał 40 sekund.
+
+                Dlatego po przekroczeniu progu ułamek znika, a zostaje sama liczba
+                i zdanie o tym, na co się czeka.
+                ================================================================= */}
+            {dane.chunkCount < dane.minChunks ? (
+              <>
+                <div className={styles["mapa-licznik"]}>{dane.chunkCount} / {dane.minChunks}</div>
+                {/* WYJAŚNIENIE MÓWI, CZEGO SIĘ SPODZIEWAĆ, nie tylko czego brakuje.
+                    Bez drugiego zdania użytkownik patrzący na rosnący licznik
+                    spodziewałby się, że punkty zaczną dochodzić po jednym.
+                    Nie zaczną — i lepiej, żeby wiedział o tym wcześniej. */}
+                <p className={styles.komunikat} style={{ margin: 0 }}>
+                  Mapa pojawi się po przekroczeniu progu {dane.minChunks} fragmentów z wektorem —
+                  i od razu w całości, nie punkt po punkcie. Rzutowanie liczy osie z całego
+                  zbioru naraz; z garstki fragmentów wyszłyby osie, które myliłyby bardziej,
+                  niż pomagały.
+                </p>
+              </>
+            ) : (
+              <>
+                <div className={styles["mapa-licznik"]}>{dane.chunkCount}</div>
+                <p className={styles.komunikat} style={{ margin: 0 }}>
+                  Próg przekroczony. Rzutowanie policzy się po zakończeniu indeksowania
+                  dokumentu — osie powstają raz, z całego zbioru, więc mapa czeka na komplet.
+                </p>
+              </>
+            )}
             {dane.canBuild ? (
               <button onClick={zbuduj} disabled={budowanie} style={{ marginBottom: 0 }}>
                 {budowanie ? 'Buduję…' : 'Zbuduj mapę'}

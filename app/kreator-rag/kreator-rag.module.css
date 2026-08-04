@@ -1101,3 +1101,49 @@
 
 .stan-ok { color: var(--ok); font-weight: 600; }
 .stan-czeka { color: var(--przygaszony); font-weight: 600; }
+
+/* =============================================================================
+   ZNACZNIK „NA ŻYWO" PRZY BELCE MAPY (runda 4)
+
+   Osadzona mapa nie mówiła nic o tym, że indeksowanie właśnie trwa — pełna
+   strona miała zdanie w podtytule, a wersja osadzona, czyli ta oglądana
+   podczas indeksowania, nie miała odpowiednika.
+
+   PULSUJE KROPKA W BELCE, NIE PUNKT NA PŁÓTNIE. Reguła 12.9 mówi o fragmentach:
+   punkty nie ruszają się i nie mają animacji wejścia. Belka to warstwa opisu,
+   nie danych — animacja tutaj niczego o danych nie sugeruje.
+
+   `prefers-reduced-motion` wyłącza puls, ale ZOSTAWIA kropkę i napis: informacja
+   ma dojść tak samo do kogoś, kto animacji nie chce oglądać.
+   ============================================================================= */
+.znacznik-nazywo {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: #dcfce7;
+  color: #166534;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  white-space: nowrap;
+}
+
+.kropka-zywa {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--ok);
+  animation: puls-zywy 1.4s ease-in-out infinite;
+}
+
+@keyframes puls-zywy {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.25; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kropka-zywa { animation: none; }
+}
