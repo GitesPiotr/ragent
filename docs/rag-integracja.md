@@ -145,6 +145,7 @@ zwróceniu strumienia.
 | `017_rls_rag_storage_fix.sql` | poprawka polityki bucketu — `objects.name` zamiast `name` | tak |
 | `018_rag_integracja.sql` | `rag_documents.external_ref`, `heading_path` w indeksie FTS, `revoke` dla `anon` | tak |
 | `019_agent_kolekcja.sql` | `agents.rag_collection_id` + indeks częściowy | tak |
+| `021_embed_provider.sql` | `rag_collections.embed_provider` (`not null`, domyślnie `ollama`), wypełnienie istniejących wierszy, dopiero potem zacieśnienie do `not null` | tak |
 
 **`016` nie da się uruchomić ponownie** — jego warunek wstępny przerywa migrację,
 gdy tabele `rag_*` nie są puste. Dlatego poprawka polityki poszła osobnym plikiem.
@@ -269,6 +270,178 @@ W `scripts/`: `_env.mjs` (wczytanie `.env.local`), cztery diagnostyczne
 
 Nienaprawione. Kierunki: podawać `owner_id` jawnie z argumentu, albo logować
 skrypt jako użytkownika.
+
+---
+
+## Embeddingi przez OpenRouter
+
+Cykl RAG-embed (rundy 0–5). Do tej pory moduł liczył wektory wyłącznie lokalną
+Ollamą — czyli aplikacja postawiona na serwerze albo pokazywana zdalnie nie
+działała wcale. Po cyklu wybór drogi zapada **przy zakładaniu kolekcji**
+i zostaje z nią na stałe.
+
+### Zasada: kolekcja jest źródłem prawdy dla własnego embedowania
+
+Para `(embed_provider, embed_model)` zapisana w wierszu kolekcji **napędza**
+trzy miejsca:
+
+| miejsce | co robi parą kolekcji |
+|---|---|
+| `lib/rag/documents.js` — `embedNextBatch` | liczy wektory fragmentów |
+| `lib/rag/search.js` — `searchCollection` | liczy wektor zapytania |
+| `lib/rag/concepts.js` — `extractConceptsForDocument` | liczy wektory etykiet pojęć |
+
+Mapowanie mieszka w jednym miejscu: `embedConfigDlaKolekcji` w
+`lib/rag/embedding.js`. Bierze parę z kolekcji, resztę — partię, prefiksy, adres
+Ollamy, klucz OpenRoutera — ze środowiska, bo to właściwości maszyny, a nie
+wyboru użytkownika.
+
+> **`RAG_EMBED_PROVIDER` i `RAG_EMBED_MODEL` są DOMYŚLNYMI DLA NOWYCH kolekcji.
+> Nie sterują istniejącymi.** Kolekcja chmurowa indeksuje się i przeszukuje przez
+> OpenRoutera także wtedy, gdy serwer stoi na `ollama` — i odwrotnie.
+
+**Zmierzone obok siebie**, przy jednej konfiguracji serwera (`RAG_EMBED_PROVIDER=ollama`),
+z podsłuchem globalnego `fetch`, oba wyszukiwania w jednym `Promise.all`:
+
+```
+hosty dotknięte w tym samym oknie: localhost:11434 + openrouter.ai
+LOKALNA top=0.6451  › § 99. Kotwica pomiarowa rundy 3
+CHMURA  top=0.6451  › § 99. Kotwica pomiarowa rundy 3
+```
+
+### Dlaczego pojęcia też idą z pary kolekcji
+
+Wektory pojęć porównuje się wyłącznie **między sobą**, nigdy z wektorami
+fragmentów — więc pytanie „czy mogą zostać na konfiguracji serwera" było realne.
+Nie mogą, z dwóch powodów:
+
+1. **`rag_concepts` ma `collection_id`.** Przestrzeń wektorowa pojęć jest per
+   kolekcja, nie globalna. Kolekcja przerobiona raz przy jednym, raz przy drugim
+   ustawieniu serwera dostałaby w jednej kolekcji wektory z dwóch dróg.
+2. **Obietnica kolekcji chmurowej.** Bez tego dokument zaindeksowałby się przez
+   OpenRoutera, a pojęcia wywróciłyby się na `ollama_unavailable`. Kolekcja
+   działająca w połowie jest gorsza od niedziałającej — awaria wychodzi dopiero
+   przy mapie pojęć.
+
+Model **pojęć** (czatowy, ten wymyślający etykiety) zostaje na przypisaniach
+konta. Kolekcja pamięta parę embeddingów, nie model językowy.
+
+### `baai/bge-m3` to ten sam plik wag co lokalny
+
+Zmierzone (runda 0), nie założone — pięć prawdziwych fragmentów, ta sama treść
+policzona obiema drogami:
+
+```
+cosinus lokalny ↔ chmurowy        0,999987 – 0,999993
+kontrola negatywna (dwa różne
+fragmenty tą samą drogą)          0,389
+wymiar                            1024 z obu stron
+```
+
+Kontrola negatywna jest tu istotna: bez niej „0,9999" nie dowodziłoby niczego
+poza tym, że metryka w ogóle działa. Konsekwencja praktyczna: **próg
+`RAG_MIN_SCORE = 0,45` obowiązuje bez zmian niezależnie od wyboru**, a wybór
+dotyczy DROGI, nie jakości. Potwierdzone niezależnie w rundzie 3 — obie kolekcje
+zwróciły identyczny top score `0.6451`.
+
+**Dokładanie kolejnych modeli do oferty wymaga POMIARU, nie tylko wpisu**: inny
+model to inna skala podobieństw, czyli próg do dostrojenia od nowa
+(`scripts/diag-prog.mjs`).
+
+### Prędkość: transport 4,5×, pełna ścieżka ~3×
+
+Ten sam plik, 193 fragmenty, 7 partii po 32, pełna ścieżka HTTP → trasa → rdzeń
+→ transport. Dwie serie w odwróconej kolejności, żeby wykluczyć rozgrzewkę:
+
+| seria | ollama | openrouter | iloraz |
+|---|---|---|---|
+| 1 (lokalna pierwsza) | 114 911 ms (595,4 ms/fr.) | 37 022 ms (191,8 ms/fr.) | **3,10×** |
+| 2 (chmurowa pierwsza) | 110 120 ms (570,6 ms/fr.) | 38 609 ms (200,0 ms/fr.) | **2,85×** |
+
+Runda 0 zmierzyła na samym transporcie **4,5×**. Przez pełną ścieżkę zysk jest
+o jedną trzecią mniejszy i **to nie jest sprzeczność** — różnicę rozcieńcza to,
+co obie drogi mają wspólne: **193 osobne `UPDATE`-y wektorów do Supabase**,
+jeden na fragment. Kto planuje na podstawie liczby z transportu, przeszacuje.
+
+### Strażnik: co zostało, a co zniknęło
+
+**Zniknęło** `niezgodnoscModelu()` — porównanie pary kolekcji z konfiguracją
+serwera. Straciło sens w chwili, w której kolekcja zaczęła napędzać własnego
+dostawcę: „kolekcja mówi `openrouter`, serwer `ollama`" nie jest już
+niezgodnością, tylko normalną sytuacją, i to dokładnie tą, dla której cały cykl
+powstał.
+
+**Zostało** `nieobslugiwanaPara()` — jedyne pytanie, na które odpowiedź dalej
+brzmi „nie da się": czy rdzeń **umie zbudować** dostawcę zapisanego w kolekcji.
+`openai` i `voyage` to od Sesji 4 zaślepki. Odmowa (`model_mismatch`) idzie
+**przed** zmianą statusu dokumentu, więc nie zostawia go w martwym `embedding`.
+
+**Rdzeń NIE porównuje modelu z ofertą aplikacji.** Oferta
+(`lib/config/modeleEmbeddingow.js`) to warstwa AIDEAS, a granica z sekcji 3 SPEC
+działa w obie strony. Pilnuje jej **trasa przy zakładaniu**
+(`app/api/rag/collections/route.js`) — jedyne miejsce, gdzie ma to sens, bo po
+zapisie nikt pary już nie zweryfikuje wobec listy. Praktyczna konsekwencja:
+kolekcja na `ollama/mxbai-embed-large` sprzed cyklu jest spoza dzisiejszej
+oferty, a napędzana własną parą **działa poprawnie** — odmowa byłaby regresją.
+
+### Dwa etapy Kreatora: indeksowanie wymagane, pojęcia opcjonalne
+
+Widok kolekcji pokazywał dwa paski postępu obok siebie — wektory i pojęcia —
+i nic nie mówiło, że drugi jest opcjonalny. **Agent korzysta wyłącznie
+z wektorów.** Pomiar 14/14 z rundy 10 (wyżej w tym dokumencie) zrobiono na
+kolekcji, w której główny dokument miał **0/107 pojęć**.
+
+Po zmianie: pasek etapów u góry widoku, etap 1 „Indeksowanie" oznaczony jako
+**wymagany**, etap 2 „Pojęcia i graf" jako **opcjonalny** i nieosiągalny, dopóki
+etap 1 nie jest gotowy (`inert`, nie sam `opacity` — inaczej przyciski zostają
+osiągalne Tabem). Etap 1 kończy się komunikatem **„Kolekcja gotowa dla agenta"**
+wraz z miejscem, w którym tę kolekcję wskazać.
+
+Reguła ukończenia mieszka w `app/kreator-rag/_lib/etapy.js` — czysta funkcja,
+poza Reactem, 17 testów. Etap 2 jest ukończony **dopiero przy komplecie pojęć we
+wszystkich zindeksowanych dokumentach**; próg „cokolwiek" kazałby kolekcji TEST
+ogłosić się ukończoną przy 8 pojęciach na 107.
+
+**Wybór modelu do pojęć obowiązuje tylko na to jedno wywołanie** i nie zapisuje
+się w przypisaniach konta: zasięg kontrolki musi zgadzać się z zasięgiem skutku,
+a ta stoi w widoku jednej kolekcji. Domyślna wartość pochodzi z roli
+`rag_pojecia`. Zmierzone: przebieg poszedł na `openrouter/anthropic/claude-haiku-4.5`,
+a przypisanie po nim dalej wskazywało `ollama/mistral-nemo`.
+
+### Weryfikacja końca do końca — bez Ollamy
+
+Pełny przebieg na kolekcji `openrouter/baai/bge-m3`: założenie → 193 fragmenty →
+indeksowanie → „Kolekcja gotowa dla agenta" → wskazanie agentowi → pytanie
+z dokumentu (odpowiedź z cytowaniem pliku i ścieżki nagłówkowej) → pytanie spoza
+dokumentu (**odmowa**, mimo że model zna odpowiedź z kodeksu pracy).
+
+Połączenia TCP do `:11434` przez cały przebieg: **zero w oknie indeksowania
+i zero przez 7 min 40 s pracy agenta**. Jedyne trafienia to dwa impulsy po ~3 s
+przy wejściu na strony Kreatora RAG — sonda diody diagnostyki
+(`PrzyciskDiagnostyki` → `/api/rag/status` → `checkOllama`). To pomiar zdrowia,
+nie ścieżka indeksowania ani wyszukiwania.
+
+### Otwarte po cyklu RAG-embed
+
+1. **`documents.js` nie mapuje błędu wymiaru pgvectora na `dim_mismatch`.**
+   `throwDb` zna tylko `22P02`, więc rozjazd wymiaru przy zapisie wektora poleci
+   surowym `internal` z komunikatem Postgresa. Dziś nie boli, bo **oba modele
+   oferty mają 1024** — zaboli przy pierwszym modelu o innym wymiarze.
+   `search.js` taką gałąź ma (`throwRpc`), `documents.js` nie.
+2. **Znacznik „na żywo" nie pojawia się przy dokumencie mieszczącym się w jednej
+   partii.** Jedyna partia ma `finished: true`, więc nie ma czego oznaczać —
+   całość trwa ~4 s. Zmierzone: 0/30 próbek przy 7 fragmentach. Świadomie bez
+   sztucznego minimalnego czasu wyświetlania: udawanie stanu, którego nie ma,
+   jest gorsze niż jego brak.
+3. **Dioda diagnostyki świeci na czerwono przy wyłączonej Ollamie, choć kolekcje
+   chmurowe działają.** `checkOllama` nie wie nic o parach kolekcji. Do decyzji
+   produktowej: czy dioda ma mierzyć środowisko, czy zdatność do pracy.
+4. **Wyciąganie pojęć nie miało pokrycia testowego na ścieżce produkcyjnej.**
+   `ReferenceError` w `concepts.js` (brak importu `embedConfigFromGlobal`) żył od
+   rundy 1 i **żaden test go nie widział**, bo wszystkie wstrzykują
+   `deps.provider`. Naprawione, ale luka w pokryciu została.
+5. **Oferta ma dwie pozycje i obie są tym samym plikiem wag.** Pierwszy naprawdę
+   inny model wymaga przemierzenia progu — patrz akapit o równoważności wyżej.
 
 ---
 
