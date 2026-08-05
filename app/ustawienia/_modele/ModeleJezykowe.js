@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSettings } from "@/lib/settings/SettingsContext";
+import { useDopuszczone, STAN } from "@/lib/settings/DopuszczoneContext";
 import { ROLE, NAZWY_ZADAN_PELNE } from "./nazwy";
 import {
   znormalizujLokalne,
@@ -25,19 +26,20 @@ import styles from "./modele.module.css";
 //
 //  ZRODLO PRAWDY JEST W BAZIE, NIE TUTAJ. Kazde przelaczenie i kazde
 //  przypisanie leci PUT-em na /api/settings/models (runda 4) i dopiero
-//  odpowiedz serwera aktualizuje stan. Trzymanie wlasnej kopii „na chwile"
-//  byloby czwartym miejscem, w ktorym zyje lista modeli — a caly sens rund
-//  3-4 polegal na tym, zeby ich nie mnozyc.
+//  odpowiedz serwera aktualizuje stan.
 //
 //  ZAPIS JEST CALOSCIOWY. Trasa przyjmuje komplet (lista + przypisania),
 //  bo przypisanie musi wskazywac model z tej samej listy — patrz naglowek
 //  app/api/settings/models/route.js.
 //
-//  TA KARTA NICZEGO JESZCZE NIE NAPEDZA. ModelSection, RunnerPicker i mentor
-//  dalej czytaja swoje dotychczasowe zrodla — podpiecie to runda 6.
+//  LISTA KONTA NIE MIESZKA JUZ W TEJ KARCIE (runda 9). Do rundy 8 karta miala
+//  wlasny `konto` z wlasnym pobraniem, rownolegly do DopuszczoneContext —
+//  i to byla przyczyna usterki: po zapisie odswiezala sie TYLKO ta kopia,
+//  wiec kreator, Czaty i sekcje Mentor/Domyslne pokazywaly stara liste az do
+//  F5. Karta czyta teraz z kontekstu i przez kontekst zapisuje; jej wlasny
+//  stan to juz tylko rzeczy naprawde tutejsze — katalog OpenRoutera, modele
+//  Ollamy, filtry, blokady.
 // =============================================================================
-
-const PUSTE = { dopuszczone: [], przypisania: {} };
 
 // --- male kontrolki ------------------------------------------------------------
 
@@ -131,7 +133,7 @@ function KartaDostawcow({ status, ollama, odswiezKatalog, odswiezanie }) {
 
 // --- 2. KATALOG ----------------------------------------------------------------
 
-function WierszModelu({ model, wlaczony, zablokowany, onPrzelacz }) {
+function WierszModelu({ model, wlaczony, zablokowany, onPrzelacz, zapisWstrzymany }) {
   const darmowy = model.darmowy;
   return (
     <div className={styles.wiersz}>
@@ -162,6 +164,7 @@ function WierszModelu({ model, wlaczony, zablokowany, onPrzelacz }) {
         <Przelacznik
           checked={wlaczony}
           onChange={onPrzelacz}
+          disabled={zapisWstrzymany}
           etykietaAria={`Włącz model ${model.label}`}
         />
       </div>
@@ -187,7 +190,7 @@ function WierszModelu({ model, wlaczony, zablokowany, onPrzelacz }) {
 //  SEKCJA NIE POKAZUJE SIE, GDY JEST PUSTA — pusty naglowek „wlaczone, ale
 //  niedostepne" nad zdrowa lista czytalby sie jak ostrzezenie o niczym.
 // =============================================================================
-function SekcjaNiedostepnych({ modele, wlaczoneKlucze, blokada, onPrzelacz }) {
+function SekcjaNiedostepnych({ modele, wlaczoneKlucze, blokada, onPrzelacz, zapisWstrzymany }) {
   if (modele.length === 0) return null;
 
   return (
@@ -223,6 +226,7 @@ function SekcjaNiedostepnych({ modele, wlaczoneKlucze, blokada, onPrzelacz }) {
               <Przelacznik
                 checked={wlaczoneKlucze.has(klucz)}
                 onChange={(nowy) => onPrzelacz(m, nowy)}
+                disabled={zapisWstrzymany}
                 etykietaAria={`Wyłącz niedostępny model ${m.label}`}
               />
             </div>
@@ -238,7 +242,7 @@ function SekcjaNiedostepnych({ modele, wlaczoneKlucze, blokada, onPrzelacz }) {
 
 function KartaKatalogu({
   zrodlo, setZrodlo, katalog, lokalne, wlaczoneKlucze, przypisania,
-  onPrzelacz, blokada, bladKatalogu, ladowanie, niedostepne,
+  onPrzelacz, blokada, bladKatalogu, ladowanie, niedostepne, zapisWstrzymany,
 }) {
   const [filtry, setFiltry] = useState(FILTRY_DOMYSLNE);
 
@@ -357,6 +361,7 @@ function KartaKatalogu({
         wlaczoneKlucze={wlaczoneKlucze}
         blokada={blokada}
         onPrzelacz={onPrzelacz}
+        zapisWstrzymany={zapisWstrzymany}
       />
 
       {ladowanie ? (
@@ -381,6 +386,7 @@ function KartaKatalogu({
                 wlaczony={wlaczoneKlucze.has(klucz)}
                 zablokowany={blokada?.klucz === klucz ? blokada.tekst : null}
                 onPrzelacz={(nowy) => onPrzelacz(m, nowy)}
+                zapisWstrzymany={zapisWstrzymany}
               />
             );
           })}
@@ -392,7 +398,7 @@ function KartaKatalogu({
 
 // --- 3. PRZYPISANIA ------------------------------------------------------------
 
-function KartaPrzypisan({ dopuszczone, przypisania, onPrzypisz }) {
+function KartaPrzypisan({ dopuszczone, przypisania, onPrzypisz, zapisWstrzymany }) {
   const opcje = dopuszczone.map((m) => ({
     klucz: kluczModelu(m.provider, m.model_id),
     etykieta: `${m.label || m.model_id} (${m.provider})`,
@@ -426,7 +432,7 @@ function KartaPrzypisan({ dopuszczone, przypisania, onPrzypisz }) {
                   const wybrany = opcje.find((o) => o.klucz === e.target.value);
                   onPrzypisz(rola, wybrany || null);
                 }}
-                disabled={opcje.length === 0}
+                disabled={opcje.length === 0 || zapisWstrzymany}
               >
                 {/* Pusta opcja NIE jest „brak modelu", tylko „bez własnego
                     zdania — użyj domyślki z kodu". Tak samo rozumie to serwer
@@ -477,8 +483,18 @@ function KartaPrzypisan({ dopuszczone, przypisania, onPrzypisz }) {
 
 export default function ModeleJezykowe() {
   const { settings } = useSettings();
+  // JEDNA kopia listy konta w calej aplikacji — ta z kontekstu. Zapis tez
+  // idzie tedy, zeby pozostali czytelnicy (kreator, Czaty, Mentor, Domyslne)
+  // zobaczyli zmiane bez przeladowania strony.
+  const {
+    dopuszczone,
+    przypisania,
+    stan,
+    blad: bladKonta,
+    przeladuj,
+    zapisz: zapiszKonto,
+  } = useDopuszczone();
 
-  const [konto, setKonto] = useState(PUSTE);
   const [katalog, setKatalog] = useState([]);
   const [lokalne, setLokalne] = useState([]);
   const [ollama, setOllama] = useState(null);
@@ -491,9 +507,24 @@ export default function ModeleJezykowe() {
   const [blokada, setBlokada] = useState(null);
 
   const wlaczoneKlucze = useMemo(
-    () => new Set(konto.dopuszczone.map((m) => kluczModelu(m.provider, m.model_id))),
-    [konto.dopuszczone],
+    () => new Set(dopuszczone.map((m) => kluczModelu(m.provider, m.model_id))),
+    [dopuszczone],
   );
+
+  // =========================================================================
+  //  BEZ POTWIERDZONEJ LISTY NIE WOLNO ZAPISYWAC.
+  //
+  //  Zapis jest CALOSCIOWY: trasa kasuje wszystko, czego nie ma w ciele
+  //  zadania. Gdyby odczyt sie nie udal (401, brak migracji 020, awaria
+  //  sieci), `dopuszczone` jest puste — i jedno klikniecie przelacznika
+  //  wyslaloby liste jednoelementowa, czyli SKASOWALO reszte modeli konta,
+  //  ktorych uzytkownik nawet nie zobaczyl na ekranie.
+  //
+  //  Stad blokada przelacznikow przy stanie innym niz GOTOWE. Nie jest to
+  //  ostroznosc na zapas: pusta lista przy nieudanym odczycie wyglada na
+  //  ekranie dokladnie tak samo jak konto, ktore naprawde nic nie wlaczylo.
+  // =========================================================================
+  const zapisWstrzymany = stan !== STAN.GOTOWE;
 
   // Modele wlaczone na koncie, ktorych nie ma w biezacym katalogu.
   //
@@ -505,13 +536,16 @@ export default function ModeleJezykowe() {
   //
   // Dla Ollamy warunkiem jest `ollama` z odpowiedzia BEZ bledu: przed pierwszym
   // pobraniem jest null, a wtedy pusta lista lokalnych nic nie znaczy.
+  //
+  // `stan` obok `ladowanie` z tego samego powodu: lista konta przychodzi
+  // teraz z kontekstu, czyli moze byc jeszcze w drodze, gdy katalog juz jest.
   const niedostepne = useMemo(() => {
-    if (ladowanie) return [];
-    return niedostepneWlaczone(konto.dopuszczone, {
+    if (ladowanie || stan !== STAN.GOTOWE) return [];
+    return niedostepneWlaczone(dopuszczone, {
       openrouter: bladKatalogu ? null : katalog,
       ollama: ollama && !ollama.blad ? lokalne : null,
     });
-  }, [ladowanie, konto.dopuszczone, katalog, lokalne, bladKatalogu, ollama]);
+  }, [ladowanie, stan, dopuszczone, katalog, lokalne, bladKatalogu, ollama]);
 
   const wczytajKatalog = useCallback(async (wymus) => {
     setBladKatalogu(null);
@@ -543,20 +577,15 @@ export default function ModeleJezykowe() {
     }
   }, []);
 
-  const wczytajKonto = useCallback(async () => {
-    const res = await fetch("/api/settings/models", { cache: "no-store" });
-    const dane = await res.json();
-    if (!res.ok) throw new Error(dane.error || "Nie udało się odczytać ustawień modeli.");
-    setKonto({ dopuszczone: dane.dopuszczone || [], przypisania: dane.przypisania || {} });
-  }, []);
-
+  // BEZ POBRANIA LISTY KONTA — robi to DopuszczoneProvider, raz na aplikacje.
+  // Drugie pobranie tutaj bylo czescia usterki: dwie kopie tej samej listy,
+  // z ktorych po zapisie odswiezala sie tylko jedna.
   useEffect(() => {
     let zywy = true;
     (async () => {
       setLadowanie(true);
       try {
         await Promise.all([
-          wczytajKonto(),
           wczytajKatalog(false),
           wczytajLokalne(settings.ollamaUrl),
           fetch("/api/providers/status", { cache: "no-store" })
@@ -571,39 +600,39 @@ export default function ModeleJezykowe() {
       }
     })();
     return () => { zywy = false; };
-  }, [settings.ollamaUrl, wczytajKonto, wczytajKatalog, wczytajLokalne]);
+  }, [settings.ollamaUrl, wczytajKatalog, wczytajLokalne]);
 
   // JEDNA DROGA ZAPISU dla obu kart. Cala tresc idzie razem, bo trasa
   // sprawdza przypisania wzgledem TEJ listy — patrz naglowek trasy.
-  const zapisz = useCallback(async (dopuszczone, przypisania) => {
-    setBlad(null);
-    try {
-      const res = await fetch("/api/settings/models", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dopuszczone, przypisania }),
-      });
-      const dane = await res.json();
-      if (!res.ok) throw new Error(dane.error || "Nie udało się zapisać.");
-      // Stan bierzemy Z ODPOWIEDZI SERWERA, nie z tego, co wyslalismy —
-      // serwer moze cos odrzucic (model spoza listy) i wtedy nasza kopia
-      // klamalaby az do odswiezenia strony.
-      setKonto({ dopuszczone: dane.dopuszczone || [], przypisania: dane.przypisania || {} });
-      const odrzucone = dane.odrzucone?.przypisania || [];
-      if (odrzucone.length > 0) {
-        setBlad(
-          "Serwer wyczyścił przypisania do modeli spoza listy: " +
-            odrzucone.map((o) => NAZWY_ZADAN_PELNE[o.rola]?.tytul || o.rola).join(", "),
-        );
+  //
+  // Samo zadanie robi kontekst: stan zapisany przez serwer ma trafic do
+  // WSZYSTKICH czytelnikow, a nie tylko do tej karty. Tutaj zostaje to, co
+  // dotyczy wylacznie tego ekranu — komunikat o tym, co serwer odrzucil.
+  const zapisz = useCallback(
+    async (noweDopuszczone, nowePrzypisania) => {
+      setBlad(null);
+      try {
+        const dane = await zapiszKonto(noweDopuszczone, nowePrzypisania);
+        const odrzucone = dane.odrzucone?.przypisania || [];
+        if (odrzucone.length > 0) {
+          setBlad(
+            "Serwer wyczyścił przypisania do modeli spoza listy: " +
+              odrzucone.map((o) => NAZWY_ZADAN_PELNE[o.rola]?.tytul || o.rola).join(", "),
+          );
+        }
+      } catch (e) {
+        setBlad(e.message);
       }
-    } catch (e) {
-      setBlad(e.message);
-    }
-  }, []);
+    },
+    [zapiszKonto],
+  );
 
   const przelacz = useCallback(
     (model, wlaczyc) => {
       setBlokada(null);
+      // Zapis calosciowy bez potwierdzonej listy skasowalby to, czego nie
+      // widac na ekranie — patrz `zapisWstrzymany` wyzej.
+      if (zapisWstrzymany) return;
       const klucz = kluczModelu(model.provider, model.id);
 
       if (!wlaczyc) {
@@ -611,33 +640,34 @@ export default function ModeleJezykowe() {
         // „on delete set null", wiec wylaczenie przypisanego modelu
         // PRZESZLOBY — po cichu zerujac przypisanie. Uzytkownik zobaczylby
         // udany zapis i zniknieta konfiguracje.
-        const role = zadaniaKorzystajace(model.provider, model.id, konto.przypisania);
+        const role = zadaniaKorzystajace(model.provider, model.id, przypisania);
         if (role.length > 0) {
           setBlokada({ klucz, tekst: komunikatBlokady(role) });
           return;
         }
       }
 
-      const bez = konto.dopuszczone.filter(
+      const bez = dopuszczone.filter(
         (m) => kluczModelu(m.provider, m.model_id) !== klucz,
       );
       const nowa = wlaczyc
         ? [...bez, { provider: model.provider, model_id: model.id, label: model.label }]
         : bez;
-      zapisz(nowa, konto.przypisania);
+      zapisz(nowa, przypisania);
     },
-    [konto, zapisz],
+    [dopuszczone, przypisania, zapisWstrzymany, zapisz],
   );
 
   const przypisz = useCallback(
     (rola, wybrany) => {
       setBlokada(null);
-      zapisz(konto.dopuszczone, {
-        ...konto.przypisania,
+      if (zapisWstrzymany) return;
+      zapisz(dopuszczone, {
+        ...przypisania,
         [rola]: wybrany ? { provider: wybrany.provider, model_id: wybrany.model_id } : null,
       });
     },
-    [konto, zapisz],
+    [dopuszczone, przypisania, zapisWstrzymany, zapisz],
   );
 
   const odswiezKatalog = useCallback(async () => {
@@ -649,6 +679,22 @@ export default function ModeleJezykowe() {
   return (
     <>
       {blad && <p className={styles.blad}>{blad}</p>}
+
+      {/* NIEUDANY ODCZYT LISTY KONTA — z przyciskiem, nie samym zdaniem.
+          Przelaczniki sa wtedy wylaczone, wiec bez drogi powrotnej ekran
+          bylby martwy az do F5, czyli dokladnie tego, co ta runda usuwa.
+          Ponowienie jest RECZNE: automatyczne po nieudanym odczycie robi
+          petle zadan przy kazdej awarii serwera. */}
+      {stan === STAN.BRAK && (
+        <p className={styles.blad}>
+          Nie udało się odczytać modeli konta{bladKonta ? `: ${bladKonta}` : "."}{" "}
+          Przełączniki są nieaktywne, żeby zapis nie skasował listy, której nie
+          widać.{" "}
+          <button type="button" className={wspolne.secondaryButton} onClick={przeladuj}>
+            Spróbuj ponownie
+          </button>
+        </p>
+      )}
 
       <KartaDostawcow
         status={status}
@@ -663,18 +709,20 @@ export default function ModeleJezykowe() {
         katalog={katalog}
         lokalne={lokalne}
         wlaczoneKlucze={wlaczoneKlucze}
-        przypisania={konto.przypisania}
+        przypisania={przypisania}
         onPrzelacz={przelacz}
         blokada={blokada}
         bladKatalogu={bladKatalogu}
         ladowanie={ladowanie}
         niedostepne={niedostepne}
+        zapisWstrzymany={zapisWstrzymany}
       />
 
       <KartaPrzypisan
-        dopuszczone={konto.dopuszczone}
-        przypisania={konto.przypisania}
+        dopuszczone={dopuszczone}
+        przypisania={przypisania}
         onPrzypisz={przypisz}
+        zapisWstrzymany={zapisWstrzymany}
       />
     </>
   );
