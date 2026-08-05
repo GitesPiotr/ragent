@@ -527,8 +527,18 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
 
     if (widokTypRef.current === '3d') rysuj3d(ctx, canvas, d, dpr, W, H);
     else rysuj2d(ctx, canvas, d, dpr, W, H);
+    // `paleta` W ZALEZNOSCIACH — I TO NIE JEST PORZADKOWANIE LISTY.
+    //
+    // Bez niej `rysuj` domyka rysuj2d/rysuj3d z PIERWSZEGO renderu, a te domykaja
+    // `paleta` zwiazana z pierwszym motywem. Skutek: po przelaczeniu motywu
+    // przemalowywalo sie wszystko OPROCZ PUNKTOW — tlo, panele i legenda ida przez
+    // CSS, krawedzie przez efekt sciezek (jego cialo powstaje na nowo co render),
+    // a same punkty zostawaly w starej palecie.
+    //
+    // Zmiana tozsamosci `rysuj` przy zmianie motywu jest tania: wszystkie efekty,
+    // ktore od niego zaleza, wolaja go wylacznie po to, zeby przerysowac.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [paleta]);
 
   function swiezeAktywne(teraz) {
     const m = swiezeRef.current;
