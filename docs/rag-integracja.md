@@ -891,3 +891,34 @@ w żadnym spisie. Przy każdej pochodzenie, bo od niego zależy, czyj to dług.
     z poprzednią — czyli wiedzy o polskich konwencjach prawnych, której ta
     funkcja świadomie nie ma (patrz komentarz przy `identyfikatoryZapytania`).
     Zapisane jako znany kształt, nie jako zadanie.
+
+19. **Mignięcie niewłaściwego tła przy starcie strony.**
+    *Zastana usterka AIDEAS, nie skutek rundy o motywie ciemnym —* mechanizm
+    jest starszy niż Kreator RAG i dotyczy **całej aplikacji**, nie mapy.
+    Zauważone dopiero teraz, bo do tej rundy panel RAG nie miał motywu
+    ciemnego i nie było czego z czym porównać.
+
+    **Mechanizm.** Pierwszy render idzie z `DEFAULT_SETTINGS`
+    (`lib/settings/SettingsContext.js:35`), czyli z motywem `"auto"`.
+    Odczyt z `localStorage` dzieje się dopiero w efekcie po zamontowaniu
+    (`:43-47`), a `applyTheme` w kolejnym (`:67-69`). Do tego czasu na
+    `<html>` **nie ma atrybutu `data-theme`**, więc obowiązuje gałąź
+    `@media (prefers-color-scheme: dark)`. `app/layout.js` nie ma żadnego
+    skryptu, który ustawiłby atrybut przed hydratacją.
+
+    **KIEDY TO WIDAĆ — nie zawsze, i to jest istotne dla naprawy.** Skoro
+    brak atrybutu oddaje głos preferencji systemu, mignięcie pojawia się
+    **wyłącznie wtedy, gdy ustawienie wymuszone różni się od preferencji OS**:
+    wymuszony ciemny na jasnym systemie daje błysk bieli, wymuszony jasny na
+    ciemnym — błysk czerni. Przy ustawieniu „Auto (system)", czyli domyślnym,
+    mignięcia nie ma w ogóle, bo pierwsza klatka i docelowa są tym samym.
+
+    **Naprawa: skrypt odczytujący motyw z `localStorage` przed hydratacją**,
+    w `app/layout.js`, ustawiający `data-theme` synchronicznie. To wzorzec
+    znany z bibliotek motywów i jedyny, który działa — każde rozwiązanie
+    po stronie Reacta jest z definicji po pierwszej klatce.
+
+    **Poza zakresem cyklu o mapie**, bo zmienia zachowanie startu całej
+    aplikacji, a nie tylko tej zakładki. Wymaga też decyzji o tym, co zrobić
+    przy wyłączonym JavaScripcie i przy niedostępnym `localStorage`
+    (tryb prywatny części przeglądarek rzuca przy odczycie).
