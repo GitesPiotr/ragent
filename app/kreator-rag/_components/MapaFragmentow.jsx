@@ -5,6 +5,17 @@ import Link from 'next/link';
 import { useIndeksowanie } from '@/app/kreator-rag/_hooks/useIndeksowanie.js';
 import { komunikatBledu } from '@/app/kreator-rag/_lib/bledy.js';
 import { useMotyw } from '@/lib/hooks/useMotyw.js';
+import { useRedukcjaRuchu } from '@/lib/hooks/useRedukcjaRuchu.js';
+import {
+  znacznikiKaskady,
+  czasZapalania,
+  fazaPunktu,
+  cokolwiekTrwa,
+  krycieSmugi,
+  pierscien,
+  srodekZbioru,
+  CZAS_POSWIATY,
+} from '@/app/kreator-rag/_lib/efektyMapy.js';
 import { paletaDlaMotywu, koloryDokumentow } from '@/app/kreator-rag/_lib/paletaPlotna.js';
 import { buildEdges, grupujPoKolorze, indeksKrawedzi, sredniKolor } from '@/lib/mapview/edges.js';
 import styles from '../kreator-rag.module.css';
@@ -132,6 +143,15 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
   //  z motywem w chwili użycia, bez ani jednego dodatkowego renderu.
   // =============================================================================
   const motyw = useMotyw();
+  // PODZIAL ROZSTRZYGNIETY PRZEZ WLASCICIELA PRODUKTU, wbrew mojej rekomendacji
+  // i dlatego zapisany: przy prefers-reduced-motion gasna KASKADA I POSWIATA,
+  // a zostaja SMUGI I PIERSCIEN. Argument wlasciciela: kaskada i poswiata sa
+  // ozdoba, a smugi i pierscien niosa informacje o zdarzeniu.
+  // Moj kontrargument, dla nastepnej osoby: smugi i pierscien sa CZYSTYM RUCHEM
+  // (rozchodzacy sie okrag, ciagnace sie odcinki), czyli ta klasa bodzca, ktorej
+  // ta preferencja dotyczy, a informacja o przeliczeniu dochodzi niezaleznie
+  // komunikatem tekstowym (setKomunikat przy `recalculated`).
+  const mniejRuchu = useRedukcjaRuchu();
   const korzenRef = useRef(null);
 
   // Element do odczytu szukany przez `document`, a NIE przez ref: bramka bywa
@@ -156,6 +176,10 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
   const petlaRef = useRef(0);
   const przeciagRef = useRef(null);
   const swiezeRef = useRef(new Map()); // id fragmentu → czas pojawienia się
+  // Stan PRZEJSCIA po przeliczeniu bazy. Zapisywany w petli klatek (nigdy
+  // w renderze), zerowany razem z koncem przejscia — nie ma wlasnego czasu zycia.
+  const smugiRef = useRef(null);   // Map(id → {x0,y0,x1,y1}) w przestrzeni swiata
+  const pierscienRef = useRef(null); // { srodek: {x,y}, post }
   // Indeks krawędzi trzymany w ref, NIE czytany z domknięcia: `rysuj` jest zapamiętane
   // z pustą listą zależności (żeby nie odtwarzać go przy każdym renderze), więc widziałoby
   // wartość z pierwszego renderu — czyli pusty indeks i mapę bez połączeń.
@@ -266,10 +290,14 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
       const znane = new Set(d.chunks.map((c) => c.id));
       const doDodania = nowe.filter((c) => !znane.has(c.id));
       if (!doDodania.length) return d;
-      for (const c of doDodania) swiezeRef.current.set(c.id, teraz);
+      // KASKADA: znacznik zapalenia rozsuniety w czasie. Punkt przed swoim
+      // znacznikiem NIE JEST rysowany wcale — patrz fazaPunktu(). Wspolrzedne ma
+      // od poczatku i sie nie zmieniaja; rozsuwa sie wylacznie moment odsloniecia.
+      const znaczniki = znacznikiKaskady(doDodania.map((c) => c.id), teraz, { kaskada: !mniejRuchu });
+      for (const [cid, t] of znaczniki) swiezeRef.current.set(cid, t);
       return { ...d, chunks: d.chunks.concat(doDodania), chunkCount: d.chunkCount + doDodania.length };
     });
-  }, []);
+  }, [mniejRuchu]);
 
   // =============================================================================
   //  LICZNIK PONIŻEJ PROGU — ODCZYT, KTÓREGO DO RUNDY 4 NIE BYŁO
@@ -540,12 +568,22 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paleta]);
 
+  // Wpis zyje TAK DLUGO, JAK NAJDLUZSZY Z DWOCH EFEKTOW, ktore z niego korzystaja:
+  // poswiata punktu (CZAS_POSWIATY) trwa dluzej niz podswietlenie krawedzi
+  // (CZAS_PODSWIETLENIA), wiec kasowanie po tym krotszym urywaloby poswiate
+  // w polowie. Kazdy efekt liczy swoj wlasny wiek osobno.
+  const CZAS_SWIEZOSCI = Math.max(CZAS_PODSWIETLENIA, CZAS_POSWIATY);
+
+  // Punkt, ktory nigdy nie byl swiezy albo dawno wygasl — zdecydowana wiekszosc.
+  // Stala, zeby nie budowac tego obiektu szescset razy na klatke.
+  const FAZA_ZWYKLA = { widoczny: true, krycie: 1, mnoznikPromienia: 1, swiezy: false };
+
   function swiezeAktywne(teraz) {
     const m = swiezeRef.current;
     if (m.size === 0) return null;
     const zywe = new Set();
     for (const [cid, t] of m) {
-      if (teraz - t < CZAS_PODSWIETLENIA) zywe.add(cid);
+      if (teraz - t < CZAS_SWIEZOSCI) zywe.add(cid);
       else m.delete(cid);
     }
     return zywe.size ? zywe : null;
@@ -557,12 +595,14 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
 
     // Jeden odczyt palety na klatke — i tylko wtedy, gdy motyw sie zmienil.
     const P = paleta();
+    const mniejRuchuRys = mniejRuchu;
     const kolory = koloryDokumentow(d.documents, P);
     const pozycje = pozycjeRef.current;
     const zazn = trafieniaRef.current;
     const hover = hoverRef.current;
     const teraz = performance.now();
     const swieze = swiezeAktywne(teraz);
+    const poZid = new Map(d.chunks.map((c) => [c.id, c]));
     const r = Math.max(1.4, 2.2 * Math.sqrt(t.zoom));
 
     // 1) Krawędzie — jedno wywołanie stroke() na kolor, pod transformacją canvasa.
@@ -607,6 +647,58 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
       ctx.globalAlpha = 1;
     }
 
+    // 2b) SMUGI I PIERŚCIEŃ — wyłącznie w trakcie przejścia po przeliczeniu bazy.
+    //
+    //  DLACZEGO TO NIE ŁAMIE 12.9: smuga jest ŚLADEM RUCHU, KTÓRY NAPRAWDĘ ZACHODZI.
+    //  Punkty przechodzą na nowe pozycje, bo baza rzutowania została przeliczona
+    //  i współrzędne SIĘ ZMIENIŁY — SPEC:1678 tego wprost wymaga. Poza przejściem
+    //  `smugiRef` jest pusty, więc przy zwykłym dokładaniu partii nie ma ani jednej
+    //  smugi: tam nic się nie rusza i nie ma czego śledzić.
+    if (smugiRef.current) {
+      const grupySmug = new Map();
+      for (const [cid, sm] of smugiRef.current) {
+        const c = poZid.get(cid);
+        if (!c) continue;
+        const [x0, y0] = t.doEkranu(sm.x0, sm.y0);
+        const [x1, y1] = t.doEkranu(sm.x1, sm.y1);
+        const kr = krycieSmugi(Math.hypot(x1 - x0, y1 - y0));
+        if (kr <= 0) continue;
+        const kolor = kolory.get(c.documentId) || P.fallback;
+        // Grupujemy po kolorze ORAZ po kryciu zaokrąglonym do setnych: bez tego
+        // każdy odcinek wymagałby własnego stroke(), czyli sześciuset na klatkę.
+        const klucz = kolor + '|' + kr.toFixed(2);
+        let g = grupySmug.get(klucz);
+        if (!g) { g = { kolor, kr, sciezka: new Path2D() }; grupySmug.set(klucz, g); }
+        g.sciezka.moveTo(x0, y0);
+        g.sciezka.lineTo(x1, y1);
+      }
+      ctx.lineWidth = Math.max(1, r * 0.9);
+      ctx.lineCap = 'round';
+      for (const g of grupySmug.values()) {
+        ctx.globalAlpha = g.kr;
+        ctx.strokeStyle = g.kolor;
+        ctx.stroke(g.sciezka);
+      }
+      ctx.globalAlpha = 1;
+      ctx.lineCap = 'butt';
+    }
+
+    if (pierscienRef.current) {
+      const { srodek, post } = pierscienRef.current;
+      // Największy promień = przekątna widoku, żeby okrąg zdążył wyjść poza kadr.
+      const p = pierscien(post, { maksPromien: Math.hypot(W, H) / 2 });
+      if (p) {
+        const [cx, cy] = t.doEkranu(srodek.x, srodek.y);
+        ctx.globalAlpha = p.krycie;
+        ctx.strokeStyle = P.wyroznienie;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(cx, cy, p.promien, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+    }
+
     // 3) Świeże krawędzie — podświetlenie gasnące, tylko dla fragmentów, które
     //    faktycznie właśnie doszły.
     if (swieze) {
@@ -645,14 +737,20 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
       widoczne.push({ c, sx, sy, wyrozniony });
       if (wyrozniony) continue;
 
-      // Punkt, który właśnie doszedł, rysujemy osobno — grupa po kolorze ma jedną alfę
-      // dla całej ścieżki, więc nie da się w niej rozjaśnić pojedynczego punktu.
+      // Punkt świeży rysujemy OSOBNO — grupa po kolorze ma jedną alfę dla całej
+      // ścieżki, więc nie da się w niej rozjaśnić ani powiększyć pojedynczego punktu.
       // Takich punktów jest najwyżej tyle, ile liczy partia (32), więc koszt jest żaden.
-      const wejscie = swieze && swieze.has(c.id)
-        ? (teraz - swiezeRef.current.get(c.id)) / WEJSCIE_PUNKTU
-        : 1;
-      if (wejscie < 1) {
-        wchodzace.push({ c, sx, sy, alfa: wejscie });
+      // To jest zarazem cała odpowiedź na wydajność: poświata NIE dotyka pozostałych
+      // pięciuset kilkudziesięciu punktów, które idą wspólną ścieżką jak dotąd.
+      const faza = swieze && swieze.has(c.id)
+        ? fazaPunktu(swiezeRef.current.get(c.id), teraz, { poswiata: !mniejRuchuRys })
+        : FAZA_ZWYKLA;
+      // Przed swoim znacznikiem punkt nie jest rysowany W OGÓLE — nie jako ledwie
+      // widoczna plamka, tylko nie ma go. Współrzędne ma od początku (12.9), zmienia
+      // się wyłącznie moment odsłonięcia.
+      if (!faza.widoczny) continue;
+      if (faza.swiezy) {
+        wchodzace.push({ c, sx, sy, alfa: faza.krycie, r: r * faza.mnoznikPromienia });
         continue;
       }
 
@@ -674,14 +772,16 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
       ctx.fill(sciezka);
     }
 
-    // Nowe punkty: od PIERWSZEJ klatki na swoich współrzędnych, tylko coraz mniej
-    // przezroczyste. Nie lecą z losowej pozycji i nie "szukają miejsca" — miejsce
-    // policzył PCA przed narysowaniem (12.9).
-    for (const { c, sx, sy, alfa } of wchodzace) {
+    // POŚWIATA: od PIERWSZEJ klatki na swoich współrzędnych — większy i bledszy,
+    // schodzący do docelowego rozmiaru i docelowej jasności. Nie leci z losowej
+    // pozycji i nie "szuka miejsca", bo miejsce policzył PCA przed narysowaniem (12.9).
+    // Zmienia się WYŁĄCZNIE jasność i rozmiar, a żadne z nich nie mówi nic
+    // o odległości znaczeniowej — tę niesie sama pozycja i ta stoi nieruchomo.
+    for (const { c, sx, sy, alfa, r: rp } of wchodzace) {
       ctx.globalAlpha = alfa * alfaPodstawowa;
       ctx.fillStyle = kolory.get(c.documentId) || P.fallback;
       ctx.beginPath();
-      ctx.arc(sx, sy, r, 0, Math.PI * 2);
+      ctx.arc(sx, sy, rp, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.globalAlpha = 1;
@@ -870,21 +970,50 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
     const od = new Map();
     for (const [cid, p] of cel) od.set(cid, stare.get(cid) || p);
     const start = performance.now();
+    const srodek = srodekZbioru(cel.values());
     cancelAnimationFrame(animRef.current);
+
+    // `ePrev` to CALY stan potrzebny smugom: jedna liczba. Smuga to odcinek miedzy
+    // pozycja dla poprzedniego kroku easingu a pozycja dla biezacego, wiec gasnie
+    // RUCHEM — przy easeInOutQuad ruch wyplaszcza sie na koncu, odcinki maleja do
+    // zera i smugi znikaja w tej samej klatce, w ktorej nie ma juz czego pokazywac.
+    let ePrev = 0;
     const krok = (teraz) => {
       const post = Math.min(1, (teraz - start) / CZAS_PRZEJSCIA);
       const e = post < 0.5 ? 2 * post * post : 1 - Math.pow(-2 * post + 2, 2) / 2;
       const biezace = new Map();
+      // SMUGI I PIERSCIEN ZOSTAJA TAKZE PRZY prefers-reduced-motion — decyzja
+      // wlasciciela produktu, uzasadnienie i moj kontrargument przy `mniejRuchu`.
+      const smugi = new Map();
       for (const [cid, p] of cel) {
         const o = od.get(cid);
-        biezace.set(cid, { x: o.x + (p.x - o.x) * e, y: o.y + (p.y - o.y) * e });
+        const x = o.x + (p.x - o.x) * e;
+        const y = o.y + (p.y - o.y) * e;
+        biezace.set(cid, { x, y });
+        const x0 = o.x + (p.x - o.x) * ePrev;
+        const y0 = o.y + (p.y - o.y) * ePrev;
+        if (x0 !== x || y0 !== y) smugi.set(cid, { x0, y0, x1: x, y1: y });
       }
+      ePrev = e;
       pozycjeRef.current = biezace;
+      smugiRef.current = smugi.size ? smugi : null;
+      pierscienRef.current = srodek ? { srodek, post } : null;
       rysuj();
-      if (post < 1) animRef.current = requestAnimationFrame(krok);
+      if (post < 1) {
+        animRef.current = requestAnimationFrame(krok);
+      } else {
+        // Sprzatanie razem z koncem ruchu, nie po osobnym czasie.
+        smugiRef.current = null;
+        pierscienRef.current = null;
+        rysuj();
+      }
     };
     animRef.current = requestAnimationFrame(krok);
-    return () => cancelAnimationFrame(animRef.current);
+    return () => {
+      cancelAnimationFrame(animRef.current);
+      smugiRef.current = null;
+      pierscienRef.current = null;
+    };
   }, [dane, rysuj]);
 
   // PRZEMALOWANIE PO ZMIANIE MOTYWU — WYMUSZONE JAWNIE.
@@ -912,7 +1041,13 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
   // punktu patrzenia, nie danych) albo gasnące podświetlenia nowych krawędzi.
   // W spoczynku w 2D nie chodzi nic.
   useEffect(() => {
-    const potrzebna = (widok === '3d' && autoObrot && !przeciaganie) || swiezeRef.current.size > 0;
+    // `cokolwiekTrwa` zamiast samego `size > 0`: przy kaskadzie w mapie siedza tez
+    // znaczniki Z PRZYSZLOSCI (punkty jeszcze niezapalone). Sam rozmiar nie odroznia
+    // ich od wpisow, ktore juz wygasly, a czekaja na przyciecie w najblizszym
+    // rysowaniu — a to wlasnie ta petla je rysuje.
+    const potrzebna =
+      (widok === '3d' && autoObrot && !przeciaganie) ||
+      cokolwiekTrwa(swiezeRef.current, performance.now());
     if (!potrzebna) return;
     let zywe = true;
     const krok = () => {
@@ -923,7 +1058,7 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
       // Pętla zatrzymuje się SAMA, gdy nie ma już czego animować. Bez tego kręciłaby się
       // po zgaśnięciu ostatniego podświetlenia aż do najbliższej zmiany stanu — czyli
       // przez cały czas indeksowania, w 2D, bez powodu.
-      if (!obraca && swiezeRef.current.size === 0) return;
+      if (!obraca && !cokolwiekTrwa(swiezeRef.current, performance.now())) return;
       petlaRef.current = requestAnimationFrame(krok);
     };
     petlaRef.current = requestAnimationFrame(krok);
@@ -1375,6 +1510,27 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
           przed narysowaniem, a skupiska nie powstają, tylko wychodzą z rzutowania.
         </p>
       )}
+
+      {/* =====================================================================
+          ZASTRZEŻENIE O KASKADZIE — WIDOCZNE, NIE TYLKO W KOMENTARZU.
+
+          Sprawdzone w kodzie u OBU dostawców: liczą partiami, nie fragment po
+          fragmencie. lib/rag/embedding.js:59-62 (Ollama) i :207-208 (OpenRouter)
+          wołają to samo runBatched, a transport wysyła całą tablicę jednym
+          żądaniem i dostaje komplet wektorów. Aplikacja nie ma więc ŻADNEGO
+          dowodu, że model liczył je po kolei.
+
+          Widok, którego całą racją bytu jest pokazywanie prawdy o działaniu
+          RAG-a, nie może milczeć o własnej ozdobie. Stoi przy zastrzeżeniu
+          o rzucie, bo to ta sama klasa informacji: „na co patrzysz i czego
+          to nie znaczy".
+          ===================================================================== */}
+      <p className={styles.zastrzezenie}>
+        <strong>Kaskada rozkłada partię w czasie — to sposób pokazania, nie pomiar.</strong>{' '}
+        Fragmenty wracają jednym żądaniem (partia po <code>RAG_EMBED_BATCH</code>, domyślnie 32),
+        więc kolejność i tempo zapalania są nasze, a nie modelu. Prawdziwe jest to,
+        ile fragmentów doszło i gdzie leżą.
+      </p>
 
       {gotowa && !osadzona ? (
         <p className={styles.komunikat}>
