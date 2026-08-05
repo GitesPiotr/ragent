@@ -847,3 +847,47 @@ w żadnym spisie. Przy każdej pochodzenie, bo od niego zależy, czyj to dług.
     Przy pojęciach stawka jest niższa (nie unieważnia to korpusu), ale pytanie
     „czy ten graf pojęć powstał jednym modelem" powinno mieć odpowiedź
     w bazie, a nie w pamięci osoby, która klikała.
+
+17. **`plainto_tsquery` nie wymaga SĄSIEDZTWA lexemów, więc identyfikator
+    z dwóch członów łapie fragmenty o innym identyfikatorze.**
+    *Ograniczenie precyzji, nie usterka — właściwy fragment i tak wchodzi
+    w topK.* Znalezione przy rundzie „Identyfikatory ze znakiem łączącym".
+
+    Parser Postgresa tnie `P-03` na dwa lexemy: `'p'` i `'-03'`, a
+    `plainto_tsquery` łączy je operatorem AND — czyli pyta „fragment zawiera
+    oba", nie „zawiera je obok siebie". Fragment o **A-03**, w którym gdzieś
+    dalej pada `parametrem P-24`, ma u siebie i `'p'`, i `'-03'`, więc pasuje
+    tak samo dobrze jak fragment definiujący P-03. Zmierzone na kolekcji
+    z dokumentacją KMX-410, zapytanie `P-03`:
+
+    ```
+    0.4687  7.3 Alarm uszkodzenia czujnika      ← o A-03
+    0.4672  13.6 Praca awaryjna przy uszkodzeniu ← o A-03
+    0.4632  6.2 Opóźnienia załączania           ← WŁAŚCIWY, „Parametr P-03 ustawia…"
+    ```
+
+    Lexem `'p'` jest w tym dokumencie pospolity (`P-01`…`P-45`), więc całą
+    selektywność niesie drugi człon.
+
+    **`phraseto_tsquery` dałoby wymóg sąsiedztwa** (`'p' <-> '-03'`) i te
+    fragmenty by odpadły. Zmiana dotyczy `rag_search_chunks_text`, czyli
+    **wymaga migracji SQL uruchamianej ręcznie** — dlatego nie weszła razem
+    z poprawką w `hybryda.js`, która żadnej zmiany w bazie nie potrzebowała.
+    Przed zamianą trzeba sprawdzić, czy sąsiedztwo nie wycina przypadków,
+    w których człony rozdziela znak interpunkcyjny.
+
+18. **Identyfikator wieloczłonowy BEZ znaku łączącego dalej rozpada się na
+    osobne tokeny łączone AND-em.** *Zachowanie sprzed rundy „Identyfikatory
+    ze znakiem łączącym" — ta runda go nie dotyka i nie pogarsza.*
+
+    `art. 5 ust. 1` daje `["5", "1"]`, bo między członami stoi słowo, a nie
+    znak łączący. Do `plainto_tsquery` idzie `5 1`, czyli „fragment zawiera
+    5 oraz 1" — warunek, który spełnia wiele fragmentów z zupełnie innych
+    powodów. Zmierzone w kolekcji TEST: ścieżka tekstowa wskazała `§ 93`
+    (0.3883), a **właściwy `§ 5` wszedł ścieżką WEKTOROWĄ** ze score 0.4768.
+
+    Wynik jest więc poprawny, ale niesie go drugi sygnał, nie ten, który
+    miał go nieść. Rozwiązanie wymagałoby rozumienia, że „ust." wiąże liczbę
+    z poprzednią — czyli wiedzy o polskich konwencjach prawnych, której ta
+    funkcja świadomie nie ma (patrz komentarz przy `identyfikatoryZapytania`).
+    Zapisane jako znany kształt, nie jako zadanie.
