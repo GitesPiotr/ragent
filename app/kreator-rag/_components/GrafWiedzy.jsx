@@ -2,6 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { komunikatBledu } from '@/app/kreator-rag/_lib/bledy.js';
+import { useMotyw } from '@/lib/hooks/useMotyw.js';
+import { paletaDlaMotywu, koloryDokumentow } from '@/app/kreator-rag/_lib/paletaPlotna.js';
 import { FIZYKA, krok, promien, grubosc, stanWygaszania, pozycjeStartowe } from '@/lib/mapview/fizyka.js';
 import { kluczZadania, czyPrzyjac } from '@/lib/mapview/zadania.js';
 import styles from '../kreator-rag.module.css';
@@ -121,15 +123,9 @@ const ZWLOKA_SUWAKA = 250;
 // =============================================================================
 // Tlo maluje CSS (.mapa-obudowa) — plotno zostaje przezroczyste, tak samo jak
 // mapa, ktora wlasnego tla nigdy nie malowala. Dlatego nie ma tu pola `tlo`.
-const PALETA = {
-  siatka: 'rgba(24,24,27,.05)',
-  podpis: '#3f3f46',
-  wyroznienie: '#18181b',
-  obrysPodpisu: 'rgba(255,255,255,.85)',
-  przygaszony: '#a1a1aa',
-  most: '#b45309',
-  fallback: '#71717a',
-};
+// PALETY JAKO STALEJ TU JUZ NIE MA — kolory przychodza ze zmiennych CSS w .panel
+// (paletaPlotna). Do rundy 2 ten sam zestaw stal w dwoch plikach, co do znaku
+// identyczny; teraz jest jeden, wspolny z mapa i z arkuszem.
 
 // Grubosci obrysow — nastepcy poswiat (shadowBlur 18 przy moscie, 16 przy dokumencie,
 // 12/5/4 przy pojeciu i fragmencie). Most grubszy, bo jego wyroznienie jest trwale;
@@ -160,6 +156,10 @@ export default function GrafWiedzy({ collectionId }) {
   // różnych układów, węzeł odjeżdżał do 65 px.
   const [szerokosc, setSzerokosc] = useState(0);
 
+  // Bramka na motywie — uzasadnienie jak w MapaFragmentow.jsx: getComputedStyle
+  // liczy sie tylko wtedy, gdy motyw sie zmienil, nigdy w petli klatek.
+  const motyw = useMotyw();
+
   const canvasRef = useRef(null);
   const obudowaRef = useRef(null);
   // Cały stan symulacji żyje w ref, nie w useState: pętla animacji dotyka go
@@ -170,6 +170,15 @@ export default function GrafWiedzy({ collectionId }) {
   // wolno TYLKO w obrębie tych samych danych (rozwinięcie pojęcia) — przy zmianie
   // progu albo trybu startujemy od spirali, inaczej układ zależy od tego, po ilu
   // sekundach człowiek kliknął. Uzasadnienie i pomiar: komentarz przy pozycjeStartowe.
+  // Element do odczytu szukany przez `document`, a NIE przez ref: bramka bywa
+  // wolana z `useMemo`, a czytanie refa w renderze to `react-hooks/refs`.
+  // `.panel` niesie zmienne i opakowuje cala zakladke (layout.js), wiec jest
+  // pod reka niezaleznie od tego, ktory widok akurat stoi na ekranie.
+  const paleta = useCallback(
+    () => paletaDlaMotywu(motyw, typeof document === 'undefined' ? null : document.querySelector('.' + styles.panel)),
+    [motyw]
+  );
+
   const daneUkladuRef = useRef(null);
   // Numer i klucz ostatniego wysłanego pytania o dane. Odpowiedź niepasująca do nich
   // jest ODRZUCANA, nie rysowana — uzasadnienie i testy w lib/mapview/zadania.js.
@@ -281,7 +290,8 @@ export default function GrafWiedzy({ collectionId }) {
 
     const maksFragmentow = Math.max(1, ...dane.documents.map((d) => d.chunkCount));
     const maksWystapien = Math.max(1, ...dane.concepts.map((c) => c.mentionCount));
-    const kolorDokumentu = new Map(dane.documents.map((d) => [d.id, d.color]));
+    const P = paleta();
+    const kolorDokumentu = koloryDokumentow(dane.documents, P);
 
     // Węzły powstają najpierw BEZ pozycji — współrzędne nadaje jedna funkcja z lib
     // (pozycjeStartowe), żeby reguła „dziedzicz tylko z układu wyciszonego" miała
@@ -320,7 +330,7 @@ export default function GrafWiedzy({ collectionId }) {
         conceptId: c.id,
         typ: 'pojecie',
         etykieta: c.label,
-        kolor: most ? PALETA.most : kolorDokumentu.get(wlasciciel) || PALETA.fallback,
+        kolor: most ? P.most : kolorDokumentu.get(wlasciciel) || P.fallback,
         most,
         r: promien(c.mentionCount, maksWystapien, R_POJECIE[0], R_POJECIE[1]),
         opis: `${c.mentionCount} wystąpień · ${stopien} ${stopien === 1 ? 'dokument' : 'dokumenty'}`,
@@ -347,7 +357,7 @@ export default function GrafWiedzy({ collectionId }) {
           id: 'frg:' + f.chunkId,
           typ: 'fragment',
           etykieta: f.headingPath || f.fileName || '',
-          kolor: kolorDokumentu.get(f.documentId) || PALETA.fallback,
+          kolor: kolorDokumentu.get(f.documentId) || P.fallback,
           r: R_FRAGMENT,
           opis: (f.content || '').replace(/\s+/g, ' ').slice(0, 160),
           plik: f.fileName,
@@ -371,10 +381,12 @@ export default function GrafWiedzy({ collectionId }) {
     // szerokości, na której rozstawiła węzły.
     symRef.current = { wezly, krawedzie, wgId, szer, spokojnych: 0, pomiar: { ruch: 1, maks: 1 } };
     setWystygl(false);
-  }, [dane, wybrane, stopnie, pojecDokumentu, szerokosc]);
+  }, [dane, wybrane, stopnie, pojecDokumentu, szerokosc, paleta]);
 
   // --- rysowanie ------------------------------------------------------------
   const rysuj = useCallback(() => {
+    // Jeden odczyt na klatke, za bramka motywu.
+    const P = paleta();
     const canvas = canvasRef.current;
     if (!canvas) return;
     const ctx = canvas.getContext('2d');
@@ -395,7 +407,7 @@ export default function GrafWiedzy({ collectionId }) {
     // — już nie, i węzły zostawiałyby smugi.
     ctx.clearRect(0, 0, szer, wys);
 
-    ctx.strokeStyle = PALETA.siatka;
+    ctx.strokeStyle = P.siatka;
     ctx.lineWidth = 1;
     for (let x = 0; x < szer; x += 38) {
       ctx.beginPath();
@@ -412,7 +424,7 @@ export default function GrafWiedzy({ collectionId }) {
 
     const { wezly, krawedzie } = symRef.current;
     if (!wezly.length) {
-      ctx.fillStyle = PALETA.przygaszony;
+      ctx.fillStyle = P.przygaszony;
       ctx.font = '600 14px system-ui, sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText('Brak pojęć w tej kolekcji — graf nie ma czego pokazać', szer / 2, wys / 2);
@@ -440,7 +452,7 @@ export default function GrafWiedzy({ collectionId }) {
       // „przygaszona", tylko skasowana — a wygaszenie ma kierować uwagę, nie ukrywać graf.
       ctx.globalAlpha = sasiedzi.size ? (podswietlona ? 0.95 : 0.18) : 0.45;
       ctx.strokeStyle = e.kolor;
-      // Poświata krawędzi zastąpiona pogrubieniem — patrz komentarz przy PALETA.
+      // Poświata krawędzi zastąpiona pogrubieniem — patrz komentarz przy P.
       ctx.lineWidth = podswietlona && sasiedzi.size ? e.w * 1.8 : e.w;
       ctx.beginPath();
       ctx.moveTo(a.x, a.y);
@@ -465,7 +477,7 @@ export default function GrafWiedzy({ collectionId }) {
 
       if (w.typ === 'dokument') {
         const s = w.r;
-        ctx.fillStyle = w.pusty ? PALETA.przygaszony : w.kolor;
+        ctx.fillStyle = w.pusty ? P.przygaszony : w.kolor;
         ctx.beginPath();
         ctx.roundRect(w.x - s, w.y - s, s * 2, s * 2, 4);
         ctx.fill();
@@ -474,7 +486,7 @@ export default function GrafWiedzy({ collectionId }) {
         // na nieostry. Obrys w kolorze wezla, ciemniejszy o krok, niesie to samo
         // „ten wezel jest wazny", zostajac ostrym.
         if (!w.pusty) {
-          ctx.strokeStyle = PALETA.wyroznienie;
+          ctx.strokeStyle = P.wyroznienie;
           ctx.lineWidth = OBRYS_WEZLA;
           ctx.stroke();
         }
@@ -489,7 +501,7 @@ export default function GrafWiedzy({ collectionId }) {
           x: w.x,
           y: w.y + s + 14,
           font: '700 10.5px system-ui, sans-serif',
-          kolor: PALETA.wyroznienie,
+          kolor: P.wyroznienie,
           waga: 2, // dokumenty na samej górze
           // PODPIS PEŁNĄ KRYCIA, nawet gdy węzeł jest przygaszony. Przygaszenie ma
           // mówić „ten dokument nie ma pojęć" — i mówi to KOLOREM WĘZŁA oraz legendą.
@@ -507,7 +519,7 @@ export default function GrafWiedzy({ collectionId }) {
         // ZADNYCH POSWIAT — obrys niesie te sama informacje, nie rozmywajac ksztaltu.
         //
         // OBRYS MOSTU JEST CIEMNY, NIE W KOLORZE MOSTU. Pierwsza wersja rysowala go
-        // w PALETA.most, czyli DOKLADNIE tym samym kolorem co wypelnienie — obrys
+        // w P.most, czyli DOKLADNIE tym samym kolorem co wypelnienie — obrys
         // istnial w kodzie i nie istnial na ekranie. Zlapane dopiero po wymuszeniu
         // mostow na danych bez ani jednego mostu, bo wczesniej nie bylo czego ogladac.
         // Rozroznienie mostu niesie WYPELNIENIE (#b45309 wobec kolorow dokumentow);
@@ -516,7 +528,7 @@ export default function GrafWiedzy({ collectionId }) {
         ctx.fillStyle = w.kolor;
         ctx.fillRect(-w.r, -w.r, w.r * 2, w.r * 2);
         if (w.most || podKursorem) {
-          ctx.strokeStyle = PALETA.wyroznienie;
+          ctx.strokeStyle = P.wyroznienie;
           ctx.lineWidth = w.most ? OBRYS_MOSTU : OBRYS_WEZLA;
           ctx.strokeRect(-w.r, -w.r, w.r * 2, w.r * 2);
         }
@@ -530,7 +542,7 @@ export default function GrafWiedzy({ collectionId }) {
             x: w.x,
             y: w.y - w.r - 7,
             font: (w.most ? '700 ' : '600 ') + '10px system-ui, sans-serif',
-            kolor: w.most ? PALETA.most : PALETA.podpis,
+            kolor: w.most ? P.most : P.podpis,
             waga: 1,
             alfa: widoczny ? 1 : 0.3,
           });
@@ -543,7 +555,7 @@ export default function GrafWiedzy({ collectionId }) {
         ctx.fill();
         // Fragment pod kursorem: obrys zamiast poswiaty (shadowBlur 12/4).
         if (podKursorem) {
-          ctx.strokeStyle = PALETA.wyroznienie;
+          ctx.strokeStyle = P.wyroznienie;
           ctx.lineWidth = OBRYS_WEZLA;
           ctx.stroke();
         }
@@ -562,14 +574,14 @@ export default function GrafWiedzy({ collectionId }) {
     for (const p of podpisy.sort((a, b) => a.waga - b.waga)) {
       ctx.globalAlpha = p.alfa;
       ctx.font = p.font;
-      ctx.strokeStyle = PALETA.obrysPodpisu;
+      ctx.strokeStyle = P.obrysPodpisu;
       ctx.lineWidth = 3;
       ctx.strokeText(p.tekst, p.x, p.y);
       ctx.fillStyle = p.kolor;
       ctx.fillText(p.tekst, p.x, p.y);
     }
     ctx.globalAlpha = 1;
-  }, [wybrane]);
+  }, [wybrane, paleta]);
 
   // --- pętla ----------------------------------------------------------------
   // Zatrzymuje się po zbiegnięciu układu. To nie jest oszczędność procesora
@@ -609,6 +621,13 @@ export default function GrafWiedzy({ collectionId }) {
       cancelAnimationFrame(rafRef.current);
     };
   }, [rysuj]);
+
+  // PRZEMALOWANIE PO ZMIANIE MOTYWU — WYMUSZONE JAWNIE, tak samo jak na mapie.
+  // Graf ma dodatkowy powód: jego pętla klatek ZATRZYMUJE SIĘ, gdy układ
+  // wystygnie (stanWygaszania). Na wystudzonym grafie nic nie chodzi, więc bez
+  // tego wywołania przełączenie motywu zostawiłoby stary rysunek na nowym tle
+  // aż do najechania kursorem albo ruszenia suwakiem progu.
+  useEffect(() => { rysuj(); }, [motyw, rysuj]);
 
   const dogrzej = useCallback(() => {
     symRef.current.wystygl = false;
@@ -744,13 +763,13 @@ export default function GrafWiedzy({ collectionId }) {
           {/* LICZNIK 12.9 — ta sama zasada co „pokazano 30 z 312" przy fragmentach.
               Filtr ukrywa 408 z 565 pojęć i widok nie ma prawa tego przemilczeć. */}
           {totals ? (
-            <strong style={{ fontSize: 12, color: totals.shown < totals.concepts ? PALETA.most : undefined }}>
+            <strong style={{ fontSize: 12, color: totals.shown < totals.concepts ? 'var(--plotno-most)' : undefined }}>
               {podpisPojec(totals.shown, totals.concepts)}
             </strong>
           ) : null}
 
           <span className={styles["legenda-wpis"]}>
-            <span className={styles.probka} style={{ background: PALETA.most, transform: 'rotate(45deg)' }} />
+            <span className={styles.probka} style={{ background: 'var(--plotno-most)', transform: 'rotate(45deg)' }} />
             {mosty
               ? `${mosty} pojęć wspólnych (≥2 dokumenty)`
               : 'brak pojęć wspólnych — każde należy do jednego pliku'}
@@ -768,8 +787,8 @@ export default function GrafWiedzy({ collectionId }) {
               niescalonych duplikatach w bazie, bo krok scalania został pominięty,
               a nic tego nie sygnalizowało. */}
           {dane && dane.normalizacjaOczekuje ? (
-            <span className={styles["legenda-wpis"]} style={{ fontSize: 11, alignItems: 'flex-start', color: PALETA.most }}>
-              <span className={styles.probka} style={{ background: PALETA.most, marginTop: 3 }} />
+            <span className={styles["legenda-wpis"]} style={{ fontSize: 11, alignItems: 'flex-start', color: 'var(--plotno-most)' }}>
+              <span className={styles.probka} style={{ background: 'var(--plotno-most)', marginTop: 3 }} />
               <span>
                 pojęcia policzone, scalanie duplikatów oczekuje —
                 <span style={{ display: 'block' }}>liczba pojęć i mostów może się jeszcze zmienić</span>
@@ -779,7 +798,7 @@ export default function GrafWiedzy({ collectionId }) {
 
           {przygaszone.length ? (
             <span className={styles["legenda-wpis"]} style={{ fontSize: 11, alignItems: 'flex-start' }}>
-              <span className={styles.probka} style={{ background: PALETA.przygaszony, marginTop: 3 }} />
+              <span className={styles.probka} style={{ background: 'var(--plotno-przygaszony)', marginTop: 3 }} />
               <span>
                 przygaszone dokumenty — nie usterka:
                 {przygaszone.map((p) => (

@@ -4,6 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { useIndeksowanie } from '@/app/kreator-rag/_hooks/useIndeksowanie.js';
 import { komunikatBledu } from '@/app/kreator-rag/_lib/bledy.js';
+import { useMotyw } from '@/lib/hooks/useMotyw.js';
+import { paletaDlaMotywu, koloryDokumentow } from '@/app/kreator-rag/_lib/paletaPlotna.js';
 import { buildEdges, grupujPoKolorze, indeksKrawedzi, sredniKolor } from '@/lib/mapview/edges.js';
 import styles from '../kreator-rag.module.css';
 import {
@@ -44,20 +46,13 @@ import {
 // =============================================================================
 // Tlo mapy maluje CSS (.mapa-obudowa) — plotno zostaje przezroczyste,
 // dlatego nie ma tu pola `tlo`.
-const PALETA = {
-  siatka: 'rgba(24,24,27,.05)',
-  podpis: '#3f3f46',
-  // Obwódka punktu trafionego i podświetlenie świeżej krawędzi. Na ciemnym tle
-  // była to biel; na jasnym musi być najciemniejszym kolorem widoku, inaczej
-  // „wyróżnienie" znika w tle.
-  wyroznienie: '#18181b',
-  obrysPodpisu: 'rgba(255,255,255,.85)',
-  przygaszony: '#a1a1aa',
-  most: '#b45309',
-  // Fragment bez znanego dokumentu. Ta sama wartość co ZASTEPCZY w lib/mapview/edges.js
-  // — obie muszą się zgadzać, inaczej ten sam fragment ma dwa różne szare.
-  fallback: '#71717a',
-};
+//
+// PALETY JAKO STAŁEJ TU JUŻ NIE MA. Kolory przychodzą ze zmiennych CSS w .panel,
+// czytane przez paletaPlotna() — jedno źródło dla obu motywów i dla obu płócien.
+// Fragment bez znanego dokumentu bierze --plotno-fallback; ta wartość musi się
+// zgadzać z ZASTEPCZY w lib/mapview/edges.js, inaczej ten sam fragment ma dwa
+// różne szare (patrz raport rundy 2 — edges.js zostaje przy wartości jasnej
+// świadomie, bo krawędź sieroty ma być tłem, nie treścią).
 
 const WYSOKOSC = 560;
 const WYSOKOSC_OSADZONA = 400;
@@ -120,6 +115,33 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
   const [widok, setWidok] = useState('2d'); // '2d' | '3d' — domyślnie 2D (12.8)
   const [autoObrot, setAutoObrot] = useState(true);
   const [licz3d, setLicz3d] = useState(false);
+
+  // =============================================================================
+  //  MOTYW PŁÓTNA — ODCZYT ZDARZENIOWY, NIE KLATKOWY
+  //
+  //  `getComputedStyle` wymusza obliczenie stylu. W pętli rysowania byłoby to
+  //  60 wywołań na sekundę, przy dwóch płótnach 120 — i to za każdym razem po tę
+  //  samą wartość. Dlatego odczyt jest ZA BRAMKĄ NA MOTYWIE: pierwsze wywołanie
+  //  po zmianie przelicza, każde kolejne oddaje to, co już policzone.
+  //
+  //  DLACZEGO LENIWIE, A NIE W EFEKCIE DO STANU: paleta jest potrzebna w trzech
+  //  miejscach o różnym czasie życia — w memo krawędzi, w efekcie budującym
+  //  ścieżki i w samych funkcjach rysujących. Trzymana w stanie wymuszałaby
+  //  `setState` w efekcie (kaskadowy render) i tak czy owak byłaby o jeden
+  //  render spóźniona względem `motyw`. Bramka daje wartość ZAWSZE zgodną
+  //  z motywem w chwili użycia, bez ani jednego dodatkowego renderu.
+  // =============================================================================
+  const motyw = useMotyw();
+  const korzenRef = useRef(null);
+
+  // Element do odczytu szukany przez `document`, a NIE przez ref: bramka bywa
+  // wolana z `useMemo`, a czytanie refa w renderze to `react-hooks/refs`.
+  // `.panel` niesie zmienne i opakowuje cala zakladke (layout.js), wiec jest
+  // pod reka niezaleznie od tego, ktory widok akurat stoi na ekranie.
+  const paleta = useCallback(
+    () => paletaDlaMotywu(motyw, typeof document === 'undefined' ? null : document.querySelector('.' + styles.panel)),
+    [motyw]
+  );
 
   const canvasRef = useRef(null);
   const widokRef = useRef({ zoom: 1, panX: 0, panY: 0 });
@@ -196,7 +218,7 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
   // Wczytanie ODROCZONE dla osadzenia: na wąskim ekranie mapa ląduje pod listą
   // dokumentów, więc kto do niej nie zjedzie, nie płaci za pełny odczyt kolekcji.
   // Na szerokim ekranie panel jest widoczny od razu i obserwator odpala się natychmiast.
-  const korzenRef = useRef(null);
+  // (`korzenRef` stoi wyżej — jest też elementem, z którego czytana jest paleta.)
   const [widoczna, setWidoczna] = useState(!osadzona);
 
   useEffect(() => {
@@ -389,11 +411,13 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
 
   // --- krawędzie 2D: liczone RAZ na zmianę danych, nie na klatkę (12.6) ------------
 
+  // `paleta` w zaleznosciach, bo kolor krawedzi to SREDNIA kolorow obu koncow —
+  // przy zmianie motywu trzeba przeliczyc, nie da sie przetlumaczyc gotowego hexa.
   const krawedzie = useMemo(() => {
     if (!dane || !dane.projectionBuilt) return [];
-    const kolory = new Map(dane.documents.map((d) => [d.id, d.color]));
+    const kolory = koloryDokumentow(dane.documents, paleta());
     return buildEdges(dane.chunks, kolory);
-  }, [dane]);
+  }, [dane, paleta]);
 
   const indeks = useMemo(() => indeksKrawedzi(krawedzie), [krawedzie]);
 
@@ -471,8 +495,9 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
       const punkty = dane.chunks.map((c) => ({ id: c.id, x: c.x, y: c.y, z: c.z }));
       const sasiedzi = computeNeighbors3d(punkty, 3);
       const kolorFragmentu = new Map();
-      const kolory = new Map(dane.documents.map((d) => [d.id, d.color]));
-      for (const c of dane.chunks) kolorFragmentu.set(c.id, kolory.get(c.documentId) || PALETA.fallback);
+      const P = paleta();
+      const kolory = koloryDokumentow(dane.documents, P);
+      for (const c of dane.chunks) kolorFragmentu.set(c.id, kolory.get(c.documentId) || P.fallback);
       const kraw = krawedzie3d(sasiedzi, kolorFragmentu, sredniKolor);
       dane3dRef.current = { dlaDanych: dane, sasiedzi, krawedzie: kraw, indeks: indeksKrawedzi(kraw) };
       setLicz3d(false);
@@ -520,7 +545,9 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
     const t = transformacja(canvas);
     if (!t) return;
 
-    const kolory = new Map(d.documents.map((doc) => [doc.id, doc.color]));
+    // Jeden odczyt palety na klatke — i tylko wtedy, gdy motyw sie zmienil.
+    const P = paleta();
+    const kolory = koloryDokumentow(d.documents, P);
     const pozycje = pozycjeRef.current;
     const zazn = trafieniaRef.current;
     const hover = hoverRef.current;
@@ -583,7 +610,7 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
           if (!a || !b) continue;
           const [ax, ay] = t.doEkranu(a.x, a.y);
           const [bx, by] = t.doEkranu(b.x, b.y);
-          ctx.strokeStyle = PALETA.wyroznienie;
+          ctx.strokeStyle = P.wyroznienie;
           ctx.beginPath();
           ctx.moveTo(ax, ay);
           ctx.lineTo(bx, by);
@@ -619,7 +646,7 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
         continue;
       }
 
-      const kolor = kolory.get(c.documentId) || PALETA.fallback;
+      const kolor = kolory.get(c.documentId) || P.fallback;
       let g = grupy.get(kolor);
       if (!g) { g = new Path2D(); grupy.set(kolor, g); }
       g.moveTo(sx + r, sy);
@@ -642,7 +669,7 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
     // policzył PCA przed narysowaniem (12.9).
     for (const { c, sx, sy, alfa } of wchodzace) {
       ctx.globalAlpha = alfa * alfaPodstawowa;
-      ctx.fillStyle = kolory.get(c.documentId) || PALETA.fallback;
+      ctx.fillStyle = kolory.get(c.documentId) || P.fallback;
       ctx.beginPath();
       ctx.arc(sx, sy, r, 0, Math.PI * 2);
       ctx.fill();
@@ -653,21 +680,21 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
       if (!wyrozniony) continue;
       ctx.beginPath();
       ctx.arc(sx, sy, r * 2.2, 0, Math.PI * 2);
-      ctx.fillStyle = kolory.get(c.documentId) || PALETA.fallback;
+      ctx.fillStyle = kolory.get(c.documentId) || P.fallback;
       ctx.fill();
       // Przy 1x bylo to 1 px wokol kolka o promieniu ~2,2 px — obrys ginal.
       ctx.lineWidth = Math.max(1.8, 1.8 * Math.sqrt(t.zoom));
-      ctx.strokeStyle = PALETA.wyroznienie;
+      ctx.strokeStyle = P.wyroznienie;
       ctx.stroke();
     }
 
     // 5) Skrócone podpisy powyżej ~3× (12.7), z kontrolą zajętości.
-    if (t.zoom >= ZOOM_PODPISY) rysujPodpisy(ctx, d, widoczne, r);
+    if (t.zoom >= ZOOM_PODPISY) rysujPodpisy(ctx, d, widoczne, r, P);
   }
 
-  function rysujPodpisy(ctx, d, widoczne, r) {
+  function rysujPodpisy(ctx, d, widoczne, r, P) {
     ctx.font = '11px ui-monospace, Consolas, monospace';
-    ctx.fillStyle = PALETA.podpis;
+    ctx.fillStyle = P.podpis;
     const zajete = new Set();
     const nazwy = new Map(d.documents.map((doc) => [doc.id, doc.name]));
     for (const { c, sx, sy } of widoczne) {
@@ -683,7 +710,8 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
 
   function rysuj3d(ctx, canvas, d, dpr, W, H) {
     const trzy = dane3dRef.current;
-    const kolory = new Map(d.documents.map((doc) => [doc.id, doc.color]));
+    const P = paleta();
+    const kolory = koloryDokumentow(d.documents, P);
     const zazn = trafieniaRef.current;
     const hover = hoverRef.current;
     const { yaw, pitch } = obrotRef.current;
@@ -777,7 +805,7 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
       const wyrozniony = (zazn && zazn.has(p.id)) || (sasiedziHover && sasiedziHover.has(p.id));
       if (wyrozniony) { wyroznione.push({ p, sx, sy }); continue; }
       const b = kubelekGlebi(p.skalaGlebi, minK, maxK, KUBELKI_GLEBI);
-      const kolor = kolory.get(p.documentId) || PALETA.fallback;
+      const kolor = kolory.get(p.documentId) || P.fallback;
       const klucz = b + '|' + kolor;
       let g = kubelki.get(klucz);
       if (!g) { g = { bucket: b, kolor, sciezka: new Path2D() }; kubelki.set(klucz, g); }
@@ -801,10 +829,10 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
       const r = 3.4 * Math.sqrt(zoom);
       ctx.beginPath();
       ctx.arc(sx, sy, r, 0, Math.PI * 2);
-      ctx.fillStyle = kolory.get(p.documentId) || PALETA.fallback;
+      ctx.fillStyle = kolory.get(p.documentId) || P.fallback;
       ctx.fill();
       ctx.lineWidth = 1.2;
-      ctx.strokeStyle = PALETA.wyroznienie;
+      ctx.strokeStyle = P.wyroznienie;
       ctx.stroke();
     }
   }
@@ -848,6 +876,16 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
     animRef.current = requestAnimationFrame(krok);
     return () => cancelAnimationFrame(animRef.current);
   }, [dane, rysuj]);
+
+  // PRZEMALOWANIE PO ZMIANIE MOTYWU — WYMUSZONE JAWNIE.
+  //
+  // Bez tego płótno czekałoby na najbliższe zdarzenie, które i tak woła rysuj():
+  // ruch myszy, zmianę trybu, przyjście partii. W 2D pętla klatek stoi
+  // (patrz efekt niżej — chodzi tylko przy obrocie 3D i gasnących podświetleniach),
+  // więc mapa zostawałaby w starych kolorach dopóki ktoś jej nie dotknie. Tło pod
+  // płótnem przechodzi natychmiast, bo maluje je CSS — rozjazd byłby widoczny
+  // od razu jako jasne punkty na ciemnym tle.
+  useEffect(() => { rysuj(); }, [motyw, rysuj]);
 
   useEffect(() => { trafieniaRef.current = trafienia; rysuj(); }, [trafienia, rysuj]);
   useEffect(() => { trybRef.current = tryb; rysuj(); }, [tryb, rysuj]);
@@ -994,12 +1032,13 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
     }
 
     const doc = d.documents.find((x) => x.id === naj.c.documentId);
+    const kolorDoc = koloryDokumentow(d.documents, paleta()).get(naj.c.documentId);
     const liczbaPolaczen = (widok === '3d' && dane3dRef.current ? dane3dRef.current.indeks : indeks).get(naj.c.id);
     setDymek({
       x: Math.min(naj.sx + 14, naj.W - 350),
       y: Math.max(8, naj.sy - 10),
       nazwa: doc ? doc.name : '—',
-      kolor: doc ? doc.color : PALETA.fallback,
+      kolor: kolorDoc || paleta().fallback,
       heading: naj.c.headingPath,
       strona: naj.c.pageFrom,
       preview: naj.c.preview,
@@ -1215,9 +1254,13 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
         ) : (
           <>
             <div className={styles["mapa-panel"]}>
-              {dane.documents.map((d) => (
+              {/* PROBKA BIERZE ZMIENNA CSS WPROST, a nie kolor z odpowiedzi: przegladarka
+                  przelicza `var()` sama przy zmianie motywu, wiec legenda nie moze sie
+                  rozjechac z plotnem ani spoznic o jeden render. Indeks liczony tak samo
+                  jak w kolorDokumentu() — patrz koloryDokumentow(). */}
+              {dane.documents.map((d, i) => (
                 <div className={styles["legenda-wpis"]} key={d.id}>
-                  <span className={styles.probka} style={{ background: d.color }} />
+                  <span className={styles.probka} style={{ background: `var(--dokument-${i % 10})` }} />
                   <span>{d.name}</span>
                 </div>
               ))}
