@@ -19,9 +19,29 @@
    #71717a na przygaszenie. Nazwy zostają polskie: to nadal osobny moduł,
    zmienia się paleta, nie konwencja.
 
-   CZEGO TE ZMIENNE NIE OBEJMUJĄ: płótna mapy i grafu. Canvas nie czyta
-   zmiennych CSS, więc jego kolory żyją w stałej PALETA w MapaFragmentow.jsx
-   i GrafWiedzy.jsx. Zmiana motywu wymaga ruszenia OBU miejsc. */
+   MOTYW CIEMNY STOI NA KOŃCU PLIKU, wg konwencji z app/globals.css: para
+   @media (prefers-color-scheme: dark) + :root[data-theme="dark"]. Powód pary
+   jest w globals.css — brak atrybutu znaczy „Auto", więc sam atrybut nie
+   wystarcza, a sama preferencja OS nie da się wymusić przełącznikiem.
+
+   ---------------------------------------------------------------------------
+   ZMIENNE PŁÓTNA (--plotno-*) I DOKUMENTÓW (--dokument-*)
+
+   Do rundy 1 kolory płótna żyły w stałej PALETA w MapaFragmentow.jsx
+   i GrafWiedzy.jsx — w DWÓCH kopiach, co do znaku identycznych. Canvas nie
+   czyta CSS sam z siebie, ale skoro i tak musi się dowiedzieć o motywie,
+   to niech się dowie RAZ i stąd: jedno źródło zamiast dwóch stałych
+   i dwóch motywów w każdej z nich.
+
+   Zmienne są DEKLAROWANE JAWNIE, nie sklejane z istniejących. Kusiło, żeby
+   podpis wziął --przygaszony, a wyróżnienie --tekst: wartości dziś się
+   zgadzają. Ale to zbieżność, nie zależność — pierwsza zmiana koloru tekstu
+   panelu przemalowałaby wtedy podpisy na mapie bez niczyjej decyzji.
+
+   RUNDA 1 TYLKO JE DEFINIUJE. Czytanie ich przez canvas to runda 2; do tego
+   czasu mapa i graf malują po staremu ze swoich stałych i w ciemnym motywie
+   będą jasnymi prostokątami. Stan pośredni, nie usterka.
+   --------------------------------------------------------------------------- */
 .panel {
   --tlo: #ffffff;
   --karta: #ffffff;
@@ -31,6 +51,35 @@
   --ok: #15803d;
   --blad: #b91c1c;
   --nieznane: #b45309;
+
+  /* PŁÓTNO. Wartości = dzisiejsza stała PALETA w obu komponentach, przepisane
+     co do znaku, plus --plotno-tlo z .mapa-obudowa. Runda 1 niczego tu nie
+     przestraja — ma wyjść na zero, żeby dało się sprawdzić sam motyw. */
+  --plotno-tlo: #fafafa;
+  --plotno-siatka: rgba(24, 24, 27, 0.05);
+  --plotno-podpis: #3f3f46;
+  --plotno-wyroznienie: #18181b;
+  --plotno-obrys-podpisu: rgba(255, 255, 255, 0.85);
+  --plotno-przygaszony: #a1a1aa;
+  --plotno-most: #b45309;
+  --plotno-fallback: #71717a;
+
+  /* DOKUMENTY. Dziesięć kolorów przypisywanych po INDEKSIE dokumentu
+     w kolekcji posortowanej po dacie — patrz kolorDokumentu() w lib/rag/map.js.
+     Wartości jasne są przepisane stamtąd co do znaku i mają takie pozostać:
+     serwer dalej wysyła kolor w `documents[].color`, a runda 2 rozstrzygnie,
+     czy klient go nadpisuje. Kolejność JEST znacząca i musi się zgadzać
+     z tamtą tablicą, inaczej dokument zmieni kolor przy zmianie motywu. */
+  --dokument-0: #2563eb; /* niebieski */
+  --dokument-1: #166534; /* zielony */
+  --dokument-2: #c026d3; /* fuksja */
+  --dokument-3: #0891b2; /* cyjan */
+  --dokument-4: #db2777; /* róż */
+  --dokument-5: #4d7c0f; /* limonka */
+  --dokument-6: #5b21b6; /* fiolet */
+  --dokument-7: #0d9488; /* morski */
+  --dokument-8: #dc2626; /* czerwony */
+  --dokument-9: #475569; /* grafit */
 
   /* Z reguly body oryginalu. Bez margin: 0 — to nalezy do dokumentu,
      a dokumentem zarzadza AIDEAS. */
@@ -450,9 +499,13 @@
   padding: 24px 20px 48px;
 }
 
+/* TŁO POD PŁÓTNEM, nie tło płótna — canvas jest przezroczysty i nigdy własnego
+   tła nie malował (patrz komentarz nad PALETA w MapaFragmentow.jsx). Dlatego ta
+   jedna wartość jest zmienną: to ona i paleta punktów muszą zmienić się razem,
+   inaczej w ciemnym motywie zostaje jasny prostokąt albo znikają punkty. */
 .mapa-obudowa {
   position: relative;
-  background: #fafafa;
+  background: var(--plotno-tlo);
   border: 1px solid var(--obwod);
   border-radius: 10px;
   overflow: hidden;
@@ -1147,3 +1200,386 @@
 @media (prefers-reduced-motion: reduce) {
   .kropka-zywa { animation: none; }
 }
+
+/* =============================================================================
+   MOTYW CIEMNY
+
+   KONWENCJA JAK W CAŁYM AIDEAS (app/globals.css, plus 14 arkuszy modułowych):
+   dwa bloki o identycznej treści.
+     1. @media (prefers-color-scheme: dark) + :root:not([data-theme="light"])
+        — obsługuje ustawienie „Auto (system)", czyli DOMYŚLNE. Przy nim
+          SettingsContext ZDEJMUJE atrybut (SettingsContext.js:30), więc sam
+          selektor atrybutowy nie zadziałałby nigdy.
+     2. :root[data-theme="dark"] — obsługuje wymuszenie przełącznikiem.
+   Duplikat jest świadomy: to jedyny sposób, żeby „wymuś jasny na ciemnym OS"
+   i „wymuś ciemny na jasnym OS" działały oba. Zmieniając jeden blok, zmień drugi.
+
+   SKĄD WARTOŚCI PANELU: z historii tego pliku, commit a97d502 — czyli stan
+   sprzed „Przestylowania Kreatora RAG" (4ff8ee9). To nie jest nowa paleta,
+   tylko przywrócona; moduł miał ciemny motyw od początku i stracił go przy
+   przejściu na jasny.
+
+   SKĄD WARTOŚCI PŁÓTNA: również z a97d502, gdzie siedziały jako literały
+   w komponencie — #9aa2b1 na podpisy (MapaFragmentow.jsx:565), #ffffff na
+   wyróżnienie (:486, :555, :700), #8a93a6 na fallback (:376, :522, :541),
+   #0b0d12 na tło pod płótnem (kreator-rag.module.css:379).
+   Trzy tokeny nie mają odpowiednika w historii, bo powstały dopiero przy
+   przestylowaniu — siatka, obrys podpisu i most. Pierwsze dwa są LUSTREM
+   wartości jasnych (tusz na papierze -> światło na ciemnym), trzeci
+   jest policzony niżej.
+
+   PALETA DOKUMENTÓW — POLICZONA, NIE DOBRANA. Trzy warunki, te same, które
+   lib/rag/map.js:34-50 stawia jasnej:
+     1. kontrast wobec tła płótna #0b0d12 >= 3:1  -> minimum 7,03, maksimum 12,89
+     2. odległość od złota mostów #f59e0b >= 25 dE -> minimum 57,8 dE
+     3. wzajemna rozróżnialność >= 25 dE          -> minimum 27,2 dE (cyjan<->morski,
+        czyli ta sama najsłabsza para co w palecie jasnej, gdzie wynosi 27,8)
+
+   DLACZEGO NIE ZOSTAJE PALETA JASNA: zmierzone, trzy z dziesięciu kolorów
+   schodzą pod 3:1 na ciemnym tle — fiolet #5b21b6 = 2,16, grafit #475569 = 2,56,
+   zielony #166534 = 2,73. Punkt o kontraście 2:1 po nałożeniu globalAlpha
+   przygaszania znika, więc byłaby to utrata danych, nie gorszy wygląd.
+
+   DLACZEGO NIE PALETA CIEMNA Z HISTORII: przechodzi kontrast (0 z 10 pod progiem),
+   ale ma w środku złoto #d1a53a, a złoto jest w grafie kolorem MOSTU. Tamta
+   paleta powstała przed grafem (Sesja 9), więc nigdy nie musiała się od niego
+   różnić; jej odległość od złota mostów to 23,1 dE, czyli poniżej wymaganych 25.
+
+   RODZINY BARW ZOSTAJĄ TE SAME co w jasnej — niebieski zostaje niebieskim,
+   grafit grafitem. Dokument ma być rozpoznawalny jako „ten sam" po przełączeniu
+   motywu; zmiana odcienia jest dopuszczalna, zmiana barwy byłaby nową tożsamością.
+
+   MOST #f59e0b: kontrast 9,05 wobec tła i 57,8 dE od najbliższego dokumentu.
+   Jasne #b45309 też przechodzi kontrast (3,87), ale schodzi do 23,1 dE od
+   czerwieni — na ciemnym tle most przestawałby być rozpoznawalny obok niej.
+   ============================================================================= */
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .panel {
+    --tlo: #0f1115;
+    --karta: #1a1d24;
+    --obwod: #2a2f3a;
+    --tekst: #e6e8ec;
+    --przygaszony: #9aa2b1;
+    --ok: #37b26b;
+    --blad: #e5484d;
+    --nieznane: #d1a53a;
+
+    --plotno-tlo: #0b0d12;
+    --plotno-siatka: rgba(230, 232, 236, 0.06);
+    --plotno-podpis: #9aa2b1;
+    --plotno-wyroznienie: #ffffff;
+    --plotno-obrys-podpisu: rgba(11, 13, 18, 0.85);
+    --plotno-przygaszony: #6b7385;
+    --plotno-most: #f59e0b;
+    --plotno-fallback: #8a93a6;
+
+    --dokument-0: #60a5fa; /* niebieski */
+    --dokument-1: #4ade80; /* zielony */
+    --dokument-2: #e879f9; /* fuksja */
+    --dokument-3: #22d3ee; /* cyjan */
+    --dokument-4: #f472b6; /* róż */
+    --dokument-5: #a3e635; /* limonka */
+    --dokument-6: #a78bfa; /* fiolet */
+    --dokument-7: #2dd4bf; /* morski */
+    --dokument-8: #f87171; /* czerwony */
+    --dokument-9: #94a3b8; /* grafit */
+  }
+
+  :root:not([data-theme="light"]) .panel button {
+    background: #2a2f3a;
+    color: var(--tekst);
+    border-color: var(--obwod);
+  }
+  :root:not([data-theme="light"]) .panel button:hover:not(:disabled) {
+    background: #333a47;
+    border-color: #3d4553;
+  }
+  /* Wyłączony przycisk dostaje WŁASNE TŁO także tutaj. Historia miała w tym
+     miejscu opacity: 0.5 i to właśnie zostało odrzucone przy przestylowaniu
+     (komentarz przy .panel button:disabled) — półprzezroczysty przycisk na
+     ciemnym tle zostawał ciemniejszy od tła i dalej było go widać jako plamę. */
+  :root:not([data-theme="light"]) .panel button:disabled {
+    background: #1a1d24;
+    border-color: #2a2f3a;
+    color: #5c6473;
+  }
+
+  :root:not([data-theme="light"]) .panel input[type='text'],
+  :root:not([data-theme="light"]) .panel textarea {
+    background: #12151b;
+    border-color: var(--obwod);
+  }
+  :root:not([data-theme="light"]) .panel input[type='text']:focus,
+  :root:not([data-theme="light"]) .panel textarea:focus {
+    outline-color: #7c5cd6;
+    border-color: #a78bfa;
+  }
+
+  :root:not([data-theme="light"]) .modele li { background: #1a1d24; }
+  :root:not([data-theme="light"]) .pasek { background: #1a1d24; }
+
+  :root:not([data-theme="light"]) .przycisk-diagnostyki {
+    background: #1a1d24;
+    border-color: #2a2f3a;
+    color: #c9cfd9;
+  }
+  :root:not([data-theme="light"]) .przycisk-diagnostyki:hover {
+    background: #232833;
+    border-color: #3d4553;
+    color: var(--tekst);
+  }
+
+  /* OSIEM PANELI NAD PŁÓTNEM. Półprzezroczysta biel .94 zamienia się w --karta
+     przy tym samym kryciu: panel ma dalej lekko przepuszczać to, co pod nim,
+     bo o to chodziło w wartości .94 — inaczej wystarczyłby kolor pełny.
+     CIEŃ ZMIENIA SENS, nie tylko wartość. Na jasnym odsuwał biały panel od
+     białego tła. Na ciemnym cień z czerni o kryciu 0,05 jest niewidzialny,
+     więc rolę „odsunięcia" bierze mocniejsza czerń — 0,45. */
+  :root:not([data-theme="light"]) .mapa-dymek,
+  :root:not([data-theme="light"]) .mapa-panel,
+  :root:not([data-theme="light"]) .mapa-skala,
+  :root:not([data-theme="light"]) .graf-suwak,
+  :root:not([data-theme="light"]) .mapa-postep,
+  :root:not([data-theme="light"]) .mapa-info-3d,
+  :root:not([data-theme="light"]) .mapa-sterowanie button,
+  :root:not([data-theme="light"]) .przelacznik button {
+    background: rgba(26, 29, 36, 0.94);
+  }
+  :root:not([data-theme="light"]) .mapa-dymek,
+  :root:not([data-theme="light"]) .mapa-panel,
+  :root:not([data-theme="light"]) .mapa-skala,
+  :root:not([data-theme="light"]) .graf-suwak,
+  :root:not([data-theme="light"]) .mapa-postep,
+  :root:not([data-theme="light"]) .mapa-info-3d,
+  :root:not([data-theme="light"]) .mapa-sterowanie button,
+  :root:not([data-theme="light"]) .przelacznik {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+  }
+  :root:not([data-theme="light"]) .przelacznik button { box-shadow: none; }
+
+  :root:not([data-theme="light"]) .graf-suwak input[type='range'] {
+    accent-color: #a78bfa;
+  }
+  :root:not([data-theme="light"]) .przelacznik button.wybrany {
+    background: #2e2450;
+    color: #c4b5fd;
+  }
+
+  :root:not([data-theme="light"]) .karta-modelu:hover { border-color: #3d4553; }
+  :root:not([data-theme="light"]) .karta-modelu-wybrana {
+    border-color: #8b5cf6;
+    box-shadow: inset 0 0 0 1px #8b5cf6;
+    background: #1e1a2e;
+  }
+
+  :root:not([data-theme="light"]) .gdzie-lokalny { background: #14301f; color: #6ee7a8; }
+  :root:not([data-theme="light"]) .gdzie-chmura { background: #1c2140; color: #a5b4fc; }
+  :root:not([data-theme="light"]) .znacznik-koszt { background: #1f242e; color: #9aa2b1; }
+
+  /* Ta sama trójka co w motywie ciemnym FormModal.module.css (:235-239) —
+     komunikat o błędzie ma wyglądać tak samo w całej aplikacji. */
+  :root:not([data-theme="light"]) .ostrzezenie-nieodwracalne {
+    border-color: #5a2a2a;
+    background: #2a1212;
+    color: #ff8f8f;
+  }
+  :root:not([data-theme="light"]) .ostrzezenie-nieodwracalne strong { color: #ffb4b4; }
+
+  :root:not([data-theme="light"]) .etap-krok.aktywny {
+    border-color: #8b5cf6;
+    background: #1e1a2e;
+    box-shadow: inset 0 0 0 1px #8b5cf6;
+  }
+  :root:not([data-theme="light"]) .etap-krok.ukonczony {
+    background: #12241a;
+    border-color: #2f6b45;
+  }
+  :root:not([data-theme="light"]) .etap-numer {
+    background: #2a2f3a;
+    color: #c9cfd9;
+  }
+  /* Cyfra na wypełnionym kółku jest CIEMNA, nie biała: tłem jest jasny fiolet
+     i jasna zieleń, więc biel dałaby tu kontrast poniżej 2:1. */
+  :root:not([data-theme="light"]) .etap-krok.aktywny .etap-numer {
+    background: #8b5cf6;
+    color: #12101c;
+  }
+  :root:not([data-theme="light"]) .etap-krok.ukonczony .etap-numer { color: #0b1a10; }
+  :root:not([data-theme="light"]) .etap-znacznik.wymagany { color: #c4b5fd; }
+  :root:not([data-theme="light"]) .etap-panel-opis { color: #9aa2b1; }
+
+  :root:not([data-theme="light"]) .nota-wyjasnienie {
+    border-color: #24406e;
+    background: #101a2e;
+    color: #93c5fd;
+  }
+  :root:not([data-theme="light"]) .nota-gotowe {
+    border-color: #2f6b45;
+    background: #12241a;
+    color: #6ee7a8;
+  }
+  :root:not([data-theme="light"]) .znacznik-nazywo {
+    background: #14301f;
+    color: #6ee7a8;
+  }
+}
+
+/* --- WYMUSZONY CIEMNY — dosłowny duplikat bloku wyżej ---------------------- */
+
+:root[data-theme="dark"] .panel {
+  --tlo: #0f1115;
+  --karta: #1a1d24;
+  --obwod: #2a2f3a;
+  --tekst: #e6e8ec;
+  --przygaszony: #9aa2b1;
+  --ok: #37b26b;
+  --blad: #e5484d;
+  --nieznane: #d1a53a;
+
+  --plotno-tlo: #0b0d12;
+  --plotno-siatka: rgba(230, 232, 236, 0.06);
+  --plotno-podpis: #9aa2b1;
+  --plotno-wyroznienie: #ffffff;
+  --plotno-obrys-podpisu: rgba(11, 13, 18, 0.85);
+  --plotno-przygaszony: #6b7385;
+  --plotno-most: #f59e0b;
+  --plotno-fallback: #8a93a6;
+
+  --dokument-0: #60a5fa; /* niebieski */
+  --dokument-1: #4ade80; /* zielony */
+  --dokument-2: #e879f9; /* fuksja */
+  --dokument-3: #22d3ee; /* cyjan */
+  --dokument-4: #f472b6; /* róż */
+  --dokument-5: #a3e635; /* limonka */
+  --dokument-6: #a78bfa; /* fiolet */
+  --dokument-7: #2dd4bf; /* morski */
+  --dokument-8: #f87171; /* czerwony */
+  --dokument-9: #94a3b8; /* grafit */
+}
+
+:root[data-theme="dark"] .panel button {
+  background: #2a2f3a;
+  color: var(--tekst);
+  border-color: var(--obwod);
+}
+:root[data-theme="dark"] .panel button:hover:not(:disabled) {
+  background: #333a47;
+  border-color: #3d4553;
+}
+:root[data-theme="dark"] .panel button:disabled {
+  background: #1a1d24;
+  border-color: #2a2f3a;
+  color: #5c6473;
+}
+
+:root[data-theme="dark"] .panel input[type='text'],
+:root[data-theme="dark"] .panel textarea {
+  background: #12151b;
+  border-color: var(--obwod);
+}
+:root[data-theme="dark"] .panel input[type='text']:focus,
+:root[data-theme="dark"] .panel textarea:focus {
+  outline-color: #7c5cd6;
+  border-color: #a78bfa;
+}
+
+:root[data-theme="dark"] .modele li { background: #1a1d24; }
+:root[data-theme="dark"] .pasek { background: #1a1d24; }
+
+:root[data-theme="dark"] .przycisk-diagnostyki {
+  background: #1a1d24;
+  border-color: #2a2f3a;
+  color: #c9cfd9;
+}
+:root[data-theme="dark"] .przycisk-diagnostyki:hover {
+  background: #232833;
+  border-color: #3d4553;
+  color: var(--tekst);
+}
+
+:root[data-theme="dark"] .mapa-dymek,
+:root[data-theme="dark"] .mapa-panel,
+:root[data-theme="dark"] .mapa-skala,
+:root[data-theme="dark"] .graf-suwak,
+:root[data-theme="dark"] .mapa-postep,
+:root[data-theme="dark"] .mapa-info-3d,
+:root[data-theme="dark"] .mapa-sterowanie button,
+:root[data-theme="dark"] .przelacznik button {
+  background: rgba(26, 29, 36, 0.94);
+}
+:root[data-theme="dark"] .mapa-dymek,
+:root[data-theme="dark"] .mapa-panel,
+:root[data-theme="dark"] .mapa-skala,
+:root[data-theme="dark"] .graf-suwak,
+:root[data-theme="dark"] .mapa-postep,
+:root[data-theme="dark"] .mapa-info-3d,
+:root[data-theme="dark"] .mapa-sterowanie button,
+:root[data-theme="dark"] .przelacznik {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+}
+:root[data-theme="dark"] .przelacznik button { box-shadow: none; }
+
+:root[data-theme="dark"] .graf-suwak input[type='range'] {
+  accent-color: #a78bfa;
+}
+:root[data-theme="dark"] .przelacznik button.wybrany {
+  background: #2e2450;
+  color: #c4b5fd;
+}
+
+:root[data-theme="dark"] .karta-modelu:hover { border-color: #3d4553; }
+:root[data-theme="dark"] .karta-modelu-wybrana {
+  border-color: #8b5cf6;
+  box-shadow: inset 0 0 0 1px #8b5cf6;
+  background: #1e1a2e;
+}
+
+:root[data-theme="dark"] .gdzie-lokalny { background: #14301f; color: #6ee7a8; }
+:root[data-theme="dark"] .gdzie-chmura { background: #1c2140; color: #a5b4fc; }
+:root[data-theme="dark"] .znacznik-koszt { background: #1f242e; color: #9aa2b1; }
+
+:root[data-theme="dark"] .ostrzezenie-nieodwracalne {
+  border-color: #5a2a2a;
+  background: #2a1212;
+  color: #ff8f8f;
+}
+:root[data-theme="dark"] .ostrzezenie-nieodwracalne strong { color: #ffb4b4; }
+
+:root[data-theme="dark"] .etap-krok.aktywny {
+  border-color: #8b5cf6;
+  background: #1e1a2e;
+  box-shadow: inset 0 0 0 1px #8b5cf6;
+}
+:root[data-theme="dark"] .etap-krok.ukonczony {
+  background: #12241a;
+  border-color: #2f6b45;
+}
+:root[data-theme="dark"] .etap-numer {
+  background: #2a2f3a;
+  color: #c9cfd9;
+}
+:root[data-theme="dark"] .etap-krok.aktywny .etap-numer {
+  background: #8b5cf6;
+  color: #12101c;
+}
+:root[data-theme="dark"] .etap-krok.ukonczony .etap-numer { color: #0b1a10; }
+:root[data-theme="dark"] .etap-znacznik.wymagany { color: #c4b5fd; }
+:root[data-theme="dark"] .etap-panel-opis { color: #9aa2b1; }
+
+:root[data-theme="dark"] .nota-wyjasnienie {
+  border-color: #24406e;
+  background: #101a2e;
+  color: #93c5fd;
+}
+:root[data-theme="dark"] .nota-gotowe {
+  border-color: #2f6b45;
+  background: #12241a;
+  color: #6ee7a8;
+}
+:root[data-theme="dark"] .znacznik-nazywo {
+  background: #14301f;
+  color: #6ee7a8;
+}
+
+/* themeified */
