@@ -81,7 +81,35 @@ const MARGINES = 28;
 const ZOOM_MIN = 0.5;
 const ZOOM_MAX = 8;
 const ZOOM_PODPISY = 3;
-const CZAS_PRZEJSCIA = 700;
+// =============================================================================
+//  CZAS PRZEJŚCIA PO PRZELICZENIU BAZY — JEDYNE POKRĘTŁO TEJ ANIMACJI
+//
+//  Zmiana tej jednej liczby przestraja całe przejście: krzywą, smugi i moment,
+//  w którym pętla klatek się zatrzymuje. Nic poza nią nie trzeba ruszać —
+//  KRYCIE_SMUGI_PELNA niżej skaluje się od niej, a pierścień ma własny czas
+//  (CZAS_PIERSCIENIA) i celowo NIE idzie za tą wartością.
+//
+//  NIE MA TU SPRĘŻYNY ANI WYKŁADNICZEGO WYGASANIA. Przejście ma twardy koniec:
+//  `post` dobiega do 1 i pętla się zatrzymuje. Dlatego wydłużenie nie grozi
+//  „ogonem, w którym nic się nie dzieje" samo z siebie — grozi nim KRZYWA, jeśli
+//  źle dobrana.
+// =============================================================================
+const CZAS_PRZEJSCIA = 4000;
+
+// Pierścień CELOWO NIE JEST WYDŁUŻANY razem z przejściem. To sygnał „układ się
+// przeliczył", czyli komunikat o ZDARZENIU, nie o procesie. Rozciągnięty na cztery
+// sekundy przestaje być błyskiem i zaczyna konkurować z ruchem punktów o uwagę —
+// a to punkty niosą tu informację. Zostaje przy mniej więcej sekundzie, tak jak
+// wyglądał, gdy całe przejście tyle trwało.
+const CZAS_PIERSCIENIA = 1100;
+
+// Długość odcinka smugi (w pikselach ekranu), przy której osiąga pełne krycie.
+// SKALOWANA OD CZASU PRZEJŚCIA, i to nie jest kosmetyka: smuga to odcinek między
+// pozycją poprzedniej a bieżącej klatki, więc przy przejściu dłuższym N razy jest
+// N razy krótsza. Przy 700 ms wartość 6 px dawała pełne smugi; przy 4000 ms te same
+// 6 px zbiłyby krycie do ułamka i smugi zniknęłyby dokładnie wtedy, gdy mają być
+// najlepiej widoczne. 6 * (700 / CZAS_PRZEJSCIA) trzyma je na tym samym poziomie.
+const SMUGA_PELNA = Math.max(0.5, 6 * (700 / CZAS_PRZEJSCIA));
 const CZAS_PODSWIETLENIA = 1200; // gaśnięcie podświetlenia nowej krawędzi
 // Wejście nowego punktu: rozjaśnienie z przezroczystości NA SWOIM MIEJSCU (12.9).
 // Świadomie NIE odsłaniamy partii po kolei — kolejność liczenia jest prawdziwa, ale
@@ -882,7 +910,8 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
         if (!c) continue;
         const [x0, y0] = t.doEkranu(sm.x0, sm.y0);
         const [x1, y1] = t.doEkranu(sm.x1, sm.y1);
-        const kr = krycieSmugi(Math.hypot(x1 - x0, y1 - y0));
+        // `pelna` przekazane, nie domyślne — patrz SMUGA_PELNA przy stałych.
+        const kr = krycieSmugi(Math.hypot(x1 - x0, y1 - y0), { pelna: SMUGA_PELNA });
         if (kr <= 0) continue;
         const kolor = kolory.get(c.documentId) || P.fallback;
         // Grupujemy po kolorze ORAZ po kryciu zaokrąglonym do setnych: bez tego
@@ -1306,6 +1335,14 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
       return;
     }
 
+    // ODCZYT W TRAKCIE PRZEJŚCIA GO NIE PRZERYWA — sprawdzone przy wydłużeniu do 4 s,
+    // bo przejście jest teraz DŁUŻSZE niż część odstępów odpytywania (5 s to niewiele
+    // więcej). Nowe dane montują ten efekt od nowa, ale `stare` to `pozycjeRef.current`,
+    // czyli pozycje POŚREDNIE z trwającego lotu — nowe przejście startuje więc z miejsca,
+    // w którym punkty właśnie są, i biegnie do nowego celu. To przecelowanie, nie skok.
+    // Widoczny koszt: przy odczycie w połowie lotu całość trwa dłużej niż CZAS_PRZEJSCIA,
+    // bo zegar rusza od zera. Świadomie — alternatywą byłoby ignorowanie świeższych
+    // danych albo skok do nich, a oba są gorsze.
     const od = new Map();
     for (const [cid, p] of cel) od.set(cid, stare.get(cid) || p);
     const start = performance.now();
@@ -1319,7 +1356,20 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
     let ePrev = 0;
     const krok = (teraz) => {
       const post = Math.min(1, (teraz - start) / CZAS_PRZEJSCIA);
-      const e = post < 0.5 ? 2 * post * post : 1 - Math.pow(-2 * post + 2, 2) / 2;
+      // easeInOutSine, NIE easeInOutQuad — i to jest zmiana wymuszona długością.
+      //
+      // POLICZONE, nie dobrane na oko (droga pokonana w pierwszej i ostatniej
+      // ćwiartce czasu, oraz największe tempo jako krotność średniej):
+      //   easeOutCubic   57,8% / 1,6%  — ostatnia sekunda praktycznie stoi
+      //   easeInOutCubic  6,3% / 6,3%  — max tempo 2,97x, ruch skupiony w środku
+      //   easeInOutQuad  12,5% / 12,5% — max tempo 1,99x (krzywa sprzed zmiany)
+      //   easeInOutSine  14,6% / 14,6% — max tempo 1,57x  <- ta
+      //
+      // Przy 700 ms kontrast tempa był zaletą: krótki ruch potrzebuje wyrazistego
+      // startu i wyhamowania. Przy 4000 ms liczy się co innego — RÓWNOMIERNOŚĆ,
+      // bo każda ćwiartka czasu musi nieść widoczny ruch. Sinus daje najwięcej
+      // drogi na krańcach i najniższe tempo szczytowe z wygładzonych krzywych.
+      const e = -(Math.cos(Math.PI * post) - 1) / 2;
       const biezace = new Map();
       // SMUGI I PIERSCIEN ZOSTAJA TAKZE PRZY prefers-reduced-motion — decyzja
       // wlasciciela produktu, uzasadnienie i moj kontrargument przy `mniejRuchu`.
@@ -1340,7 +1390,11 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
       ePrev = e;
       pozycjeRef.current = biezace;
       smugiRef.current = smugi.size ? smugi : null;
-      pierscienRef.current = srodek ? { srodek, post } : null;
+      // Pierścień ma WŁASNY postęp, liczony od CZAS_PIERSCIENIA, nie od postępu
+      // przejścia — uzasadnienie przy stałej. Gdy jego czas minie, znika, a punkty
+      // lecą dalej.
+      const postPierscienia = Math.min(1, (teraz - start) / CZAS_PIERSCIENIA);
+      pierscienRef.current = srodek && postPierscienia < 1 ? { srodek, post: postPierscienia } : null;
       rysuj();
       if (post < 1) {
         animRef.current = requestAnimationFrame(krok);
