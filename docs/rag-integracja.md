@@ -922,3 +922,39 @@ w żadnym spisie. Przy każdej pochodzenie, bo od niego zależy, czyj to dług.
     aplikacji, a nie tylko tej zakładki. Wymaga też decyzji o tym, co zrobić
     przy wyłączonym JavaScripcie i przy niedostępnym `localStorage`
     (tryb prywatny części przeglądarek rzuca przy odczycie).
+
+20. **Przejście przy przeliczeniu układu nie działa w widoku 3D — i nigdy nie działało.**
+
+    *Luka modułu RAG*, nie regresja. Przy przeliczeniu bazy rzutowania widok 2D
+    przeprowadza punkty na nowe pozycje sprężyną, ciągnąc za nimi smugi i rysując
+    pierścień od środka zbioru. W 3D nie ma z tego nic: punkty przeskakują.
+
+    **Mechanizm.** `rysuj2d` i `rysuj3d` to dwie osobne funkcje dzielące wyłącznie
+    jednolinijkowe rozgałęzienie (`MapaFragmentow.jsx:718-719`). Efekt przejścia
+    animuje `pozycjeRef.current` klatka po klatce, a odczytuje go **tylko 2D**:
+
+    ```js
+    // rysuj2d — pozycje POŚREDNIE z animacji
+    const pozycje = pozycjeRef.current;
+
+    // rysuj3d — pozycje DOCELOWE prosto z danych
+    for (const c of d.chunks) {
+      punkty.push({ …, x: (c.x - cx) / rozpietosc, … });
+    }
+    ```
+
+    `rysuj3d` nie dotyka `pozycjeRef` ani razu, więc punkty stoją tam zawsze na
+    współrzędnych końcowych — przeskok wynika z konstrukcji, nie z błędu w warunku.
+    Smugi (`smugiRef`) i pierścień (`pierscienRef`) są rysowane wyłącznie w `rysuj2d`;
+    w ciele `rysuj3d` te referencje nie występują.
+
+    **To NIE jest ta sama sprawa co kaskada i poświata**, które w 3D już działają
+    (runda „Efekty w widoku 3D"). Tamte dotyczyły pojedynczego punktu i zeszły na
+    kilkadziesiąt linii. Przejście wymaga, żeby `rysuj3d` czytał pozycje przez tę
+    samą warstwę co `rysuj2d`, a smugi i pierścień — rzutowania przestrzennego
+    (smuga to odcinek między dwiema pozycjami, więc oba końce trzeba przepuścić
+    przez `przygotujKlatke3d`; pierścień jest okręgiem na płaszczyźnie ekranu,
+    a w 3D musiałby leżeć w przestrzeni albo jawnie z niej wypaść).
+
+    **Odłożone świadomie** — bliżej przebudowy `rysuj3d` niż poprawki, a 12.8
+    nazywa 3D widokiem pokazowym, nie roboczym.
