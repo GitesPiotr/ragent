@@ -264,7 +264,18 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
       // Fragmenty, które pojawiły się od poprzedniego odczytu, dostają krótkie
       // podświetlenie. To NIE jest ozdobnik na timerze: znaczy "ten fragment właśnie
       // dostał współrzędne", czyli zdarzenie z pętli indeksowania (10.3).
-      if (poprzednie && poprzednie.projectionBuilt && jm.projectionBuilt) {
+      // TOŻSAMOŚĆ PUNKTU TO `id` FRAGMENTU — i to jedyny sensowny klucz. Współrzędne
+      // odpadają, bo przy przeliczeniu bazy zmieniają się wszystkie naraz i każdy punkt
+      // wyglądałby na nowy; pozycja w tablicy też, bo kolejność zależy od zapytania.
+      // `id` jest kluczem głównym rag_chunks i nie zmienia się przez całe życie fragmentu.
+      //
+      // WARUNEK NIE WYMAGA JUŻ `poprzednie.projectionBuilt` — i to jest naprawa.
+      // Wcześniej odczyt, w którym baza dopiero powstawała (poprzednio jej nie było,
+      // teraz jest), nie nadawał czasu urodzenia NIKOMU. A to jest dokładnie ta chwila,
+      // w której mapa pojawia się na ekranie: wszystkie punkty są wtedy nowe dla widza
+      // i właśnie wtedy nie błyskał żaden. Pierwsze wczytanie strony jest nadal
+      // wyłączone, bo tam `poprzednie` jest null — i słusznie, bo wtedy nic nie „doszło".
+      if (poprzednie && jm.projectionBuilt) {
         const stare = new Set(poprzednie.chunks.map((c) => c.id));
         const teraz = performance.now();
         // WSZYSTKIE NARAZ, BEZ KASKADY — i to jest różnica względem `dolaczFragmenty`.
@@ -335,7 +346,7 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
   // UCZCIWOŚĆ (12.9): nowy punkt od PIERWSZEJ klatki jest na swoich współrzędnych
   // i tylko rozjaśnia się z przezroczystości. Nie leci z losowej pozycji, nie "szuka
   // miejsca" — miejsce policzył PCA przed narysowaniem.
-  const dolaczFragmenty = useCallback((nowe) => {
+  const dolaczFragmenty = useCallback((nowe, dokumentyZOdpowiedzi) => {
     if (!nowe || !nowe.length) return;
     const teraz = performance.now();
     setDane((d) => {
@@ -348,7 +359,25 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
       // od poczatku i sie nie zmieniaja; rozsuwa sie wylacznie moment odsloniecia.
       const znaczniki = znacznikiKaskady(doDodania.map((c) => c.id), teraz, { kaskada: !mniejRuchu });
       for (const [cid, t] of znaczniki) swiezeRef.current.set(cid, t);
-      return { ...d, chunks: d.chunks.concat(doDodania), chunkCount: d.chunkCount + doDodania.length };
+      // LISTA DOKUMENTÓW IDZIE RAZEM Z PUNKTAMI — inaczej są szare.
+      //
+      // Kolor bierze się z POZYCJI dokumentu na tej liście (koloryDokumentow), a nie
+      // z samego `documentId`, który nowe punkty miały od zawsze. Dopóki lista
+      // pochodziła z ostatniego pełnego odczytu, świeżo wgranego dokumentu w niej
+      // nie było i `kolory.get(...)` oddawało undefined → kolor zastępczy.
+      //
+      // Podmieniamy CAŁĄ listę, nie doklejamy pojedynczego wpisu: kolor zależy od
+      // indeksu w kolejności `created_at`, więc dopisanie na koniec przemalowałoby
+      // dokumenty, gdyby doszedł taki o wcześniejszej dacie. Serwer przysyła listę
+      // policzoną tym samym zapytaniem co getMapData, więc indeksy się zgadzają.
+      const dokumenty = dokumentyZOdpowiedzi && dokumentyZOdpowiedzi.length ? dokumentyZOdpowiedzi : d.documents;
+
+      return {
+        ...d,
+        documents: dokumenty,
+        chunks: d.chunks.concat(doDodania),
+        chunkCount: d.chunkCount + doDodania.length,
+      };
     });
   }, [mniejRuchu]);
 
@@ -420,7 +449,7 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
         return;
       }
       if (json.newChunks && json.newChunks.length) {
-        dolaczFragmenty(json.newChunks);
+        dolaczFragmenty(json.newChunks, json.documents);
         return;
       }
       // Brak współrzędnych w tej partii znaczy „jeszcze poniżej progu" — wtedy
@@ -482,7 +511,19 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
           })
         );
         const suma = stany.reduce((a, b) => a + b, 0);
-        if (ostatnieDone !== null && suma !== ostatnieDone) await pobierz(true, { sasiedzi: false });
+        // Z SĄSIEDZTWEM — i to jest odwrócenie wcześniejszej decyzji, z podanym powodem.
+        //
+        // Tanie odpytywanie (bez neighbors=1) miało oszczędzać ~0,6 MB na odczyt, ale
+        // kosztowało coś, czego nie przewidziałem: nowe punkty przychodziły z PUSTĄ listą
+        // sąsiadów (patrz scalanie wyżej — `znane.get(c.id) || []`). Bez sąsiadów
+        // buildEdges nie tworzy dla nich ani jednej krawędzi, więc w oknie liczba
+        // połączeń stała w miejscu przez cały przebieg, a podświetlenie świeżej krawędzi
+        // nie miało czego rysować: `indeksRef.get(cid)` oddawało pustą listę.
+        //
+        // Oszczędność dotyczyła ścieżki, która JEST otwarta po to, żeby patrzeć na
+        // przyrost połączeń. Płacimy za odczyt, bo bez tego widok nie pokazuje tego,
+        // po co istnieje.
+        if (ostatnieDone !== null && suma !== ostatnieDone) await pobierz(true, { sasiedzi: true });
         ostatnieDone = suma;
       } catch {
         // cicho — to ścieżka zapasowa, nie ma prawa zasypać użytkownika błędami
