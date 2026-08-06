@@ -499,6 +499,18 @@
   padding: 24px 20px 48px;
 }
 
+/* TRYB OKNA (?okno=1) — BEZ max-width, BO TO ONO OGRANICZAŁO MAPĘ.
+   `.strona-szeroka` trzyma 1180px i w oknie na cały ekran zostawiałoby po
+   bokach puste pasy, a płótno miałoby dokładnie tyle samo miejsca co na
+   zwykłej stronie — czyli przycisk otwierałby większe okno z tą samą mapą.
+   Padding poziomy musi się zgadzać z REZERWA_POZIOMA w _lib/trybOkna.js
+   (2 x 20px): to jedyna wartość dzielona między arkusz a arytmetykę. */
+.strona-okno {
+  max-width: none;
+  margin: 0;
+  padding: 16px 20px 20px;
+}
+
 /* TŁO POD PŁÓTNEM, nie tło płótna — canvas jest przezroczysty i nigdy własnego
    tła nie malował (patrz komentarz nad PALETA w MapaFragmentow.jsx). Dlatego ta
    jedna wartość jest zmienną: to ona i paleta punktów muszą zmienić się razem,
@@ -742,6 +754,24 @@
 .mapa-pelny {
   margin-left: auto;
   font-size: 12px;
+}
+
+/* Przycisk „Otwórz w oknie ↗" stoi TUŻ ZA odnośnikiem „Pełny ekran →", dlatego
+   margin-left: auto zostaje na tamtym — ta para trzyma się razem przy prawej krawędzi.
+
+   ZOSTAJE PRZYCISKIEM, NIE UDAJE ODNOŚNIKA. Sąsiad nawiguje w tej samej karcie,
+   ten otwiera osobne okno — to akcja, nie przejście, i różnica ma być widoczna
+   przed kliknięciem, a nie dopiero po nim.
+
+   SELEKTOR JEST DWUCZŁONOWY CELOWO: `.panel button` (:113) ma specyficzność
+   (0,1,1) i samo `.mapa-okno` (0,1,0) przegrywa z nim każdą deklarację — pierwsze
+   podejście z `background: none` nie zadziałało wcale. Dołożenie `.mapa-belka`
+   wyrównuje wagę i pozwala zejść z domyślnych 8px/16px i 14px, które w belce
+   o rozmiarze 13px były o klasę za duże. */
+.mapa-belka .mapa-okno {
+  font-size: 12px;
+  padding: 3px 10px;
+  line-height: 1.4;
 }
 
 /* Legenda i sterowanie leżą na płótnie po przeciwnych rogach. W wąskiej kolumnie

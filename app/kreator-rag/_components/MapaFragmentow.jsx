@@ -6,6 +6,8 @@ import { useIndeksowanie } from '@/app/kreator-rag/_hooks/useIndeksowanie.js';
 import { komunikatBledu } from '@/app/kreator-rag/_lib/bledy.js';
 import { useMotyw } from '@/lib/hooks/useMotyw.js';
 import { useRedukcjaRuchu } from '@/lib/hooks/useRedukcjaRuchu.js';
+import { useRozmiarOkna } from '@/lib/hooks/useRozmiarOkna.js';
+import { wysokoscPlotnaWOknie, otworzOknoMapy, adresOknaMapy } from '@/app/kreator-rag/_lib/trybOkna.js';
 import {
   znacznikiKaskady,
   czasZapalania,
@@ -103,9 +105,31 @@ const STATUSY_W_TOKU = ['pending', 'extracting', 'chunking', 'chunked', 'embeddi
 // `onApi` dostaje `{ naPartie, odswiez }`. `naPartie` to DOKŁADNIE ten sam handler,
 // którego mapa używa dla własnej pętli — obsługa `newChunks` i `recalculated` istnieje
 // w jednym egzemplarzu, niezależnie od tego, kto uruchomił indeksowanie.
-export default function MapaFragmentow({ collectionId, osadzona = false, onApi }) {
+export default function MapaFragmentow({ collectionId, osadzona = false, trybOkna = false, onApi }) {
   const id = collectionId;
-  const wysokoscPlotna = osadzona ? WYSOKOSC_OSADZONA : WYSOKOSC;
+
+  // TRYB OKNA — TRZECI ROZMIAR PŁÓTNA, obok osadzonego i pełnej strony.
+  //
+  // Bez tego przycisk otwierałby okno na cały ekran, w którym mapa dalej ma
+  // 1180x560, bo tyle wynosi max-width `.strona-szeroka` i stała WYSOKOSC —
+  // czyli okno byłoby większe, a mapa nie.
+  //
+  // Wysokość liczy wysokoscPlotnaWOknie() z SAMEGO VIEWPORTU. Powód, dla którego
+  // nie ma tu żadnego clientHeight, stoi w komentarzu otwierającym trybOkna.js:
+  // płótno leży w kontenerze, więc mierzenie kontenera po to, by ustawić
+  // płótno, jest pętlą, w której mapa rośnie przy każdym przeliczeniu.
+  //
+  // SZEROKOŚCI TU NIE USTAWIAMY WCALE. Pierwsza wersja podawała ją obudowie
+  // jako `innerWidth - padding` i płótno wystawało poza `main` o szerokość
+  // bocznego paska nawigacji, którego viewport nie widzi (pomiar w trybOkna.js).
+  // Zostaje `width: 100%` z arkusza: szerokość dalej pochodzi z rozmiaru okna,
+  // tylko liczy ją układ, który jako jedyny wie o pasku.
+  const rozmiarOkna = useRozmiarOkna();
+  const wysokoscPlotna = trybOkna
+    ? wysokoscPlotnaWOknie(rozmiarOkna.wysokosc)
+    : osadzona
+      ? WYSOKOSC_OSADZONA
+      : WYSOKOSC;
 
   const [dane, setDane] = useState(null);
   const [dokumenty, setDokumenty] = useState([]);
@@ -120,6 +144,10 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
   const [pytanie, setPytanie] = useState('');
   const [szukanie, setSzukanie] = useState(false);
   const [trafienia, setTrafienia] = useState(null);
+
+  // Odmowa otwarcia okna przez przeglądarkę. Osobny stan, bo NIE jest błędem
+  // mapy i nie może wylądować w `blad` — mapa działa, tylko nie dostała okna.
+  const [oknoZablokowane, setOknoZablokowane] = useState(false);
 
   // --- Sesja 6b ---
   const [tryb, setTryb] = useState('punkty'); // 'punkty' | 'polaczenia'
@@ -1037,6 +1065,20 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
     return () => window.removeEventListener('resize', onResize);
   }, [rysuj]);
 
+  // PRZERYSOWANIE PO ZMIANIE WYMIARÓW PŁÓTNA — I DLACZEGO POWYŻSZY `resize` NIE WYSTARCZA.
+  //
+  // Nasłuch `resize` woła rysuj() NATYCHMIAST, czyli jeszcze przed renderem, w
+  // którym React podstawi nową wysokość na atrybut `style`. Ta klatka rysuje
+  // się więc w STARYCH wymiarach, a po podstawieniu nowych nikt już nie woła
+  // rysuj() ponownie — płótno zostawało rozciągnięte, z obrazem policzonym dla
+  // poprzedniego rozmiaru. Dopiero ten efekt zamyka kolejność: najpierw wymiar
+  // w DOM-ie, potem rysowanie.
+  //
+  // Poza trybem okna wysokość jest stała, więc efekt wykonuje się raz.
+  useEffect(() => {
+    rysuj();
+  }, [wysokoscPlotna, rysuj]);
+
   // Pętla klatek TYLKO wtedy, gdy jest co animować: obrót kamery w 3D (12.8, ruch
   // punktu patrzenia, nie danych) albo gasnące podświetlenia nowych krawędzi.
   // W spoczynku w 2D nie chodzi nic.
@@ -1274,6 +1316,17 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
     }
   }
 
+  // Otwarcie mapy w OSOBNYM OKNIE. Handler jest tu, a nie w otoczce strony, bo
+  // belka z odnośnikami należy do komponentu i to ona ma oba wyjścia obok siebie.
+  function otworzWOknie() {
+    const wynik = otworzOknoMapy(id, window.screen || {}, (a, n, c) => window.open(a, n, c));
+    // ODMOWA NIE MOŻE BYĆ CICHA. Blokery popupów są domyślnie włączone i to jest
+    // najzwyklejszy przypadek, nie awaria — więc zamiast martwego kliknięcia
+    // pokazujemy zdanie z zapasowym odnośnikiem otwierającym mapę w nowej karcie
+    // (nawigacja z <a target="_blank"> nie jest popupem i przez blokadę przechodzi).
+    setOknoZablokowane(!wynik.udane);
+  }
+
   const gotowa = dane && dane.projectionBuilt;
 
   return (
@@ -1295,6 +1348,18 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
           ) : null}
           {dane ? <span className={styles.zrodlo}>{dane.chunkCount} z wektorem{gotowa ? ` · ${krawedzie.length} połączeń` : ''}</span> : null}
           <Link href={`/kreator-rag/kolekcje/${id}/mapa`} className={styles["mapa-pelny"]}>Pełny ekran →</Link>
+          {/* DRUGIE WYJŚCIE, NIE ZAMIAST PIERWSZEGO. „Pełny ekran →" prowadzi pod
+              adres BEZ ?okno=1 i zostaje dokładnie tym, czym był — nawigacją w tej
+              samej karcie. Tutaj dochodzi osobne okno, bo to inna intencja: mapa
+              obok aplikacji, a nie zamiast niej. */}
+          <button
+            type="button"
+            className={styles["mapa-okno"]}
+            onClick={otworzWOknie}
+            title="Otwiera mapę w osobnym oknie, dopasowanym do rozmiaru ekranu"
+          >
+            Otwórz w oknie ↗
+          </button>
         </div>
       ) : dane ? (
         <p className={styles.podtytul}>
@@ -1303,6 +1368,23 @@ export default function MapaFragmentow({ collectionId, osadzona = false, onApi }
           {gotowa && dane.builtAt ? <> · baza z {new Date(dane.builtAt).toLocaleString('pl-PL')}</> : null}
           {indeksujeSie ? <> · <span style={{ color: 'var(--nieznane)' }}>trwa indeksowanie — mapa odświeża się sama</span></> : null}
         </p>
+      ) : null}
+
+      {/* ODMOWA OTWARCIA OKNA — WIDOCZNA, Z DROGĄ WYJŚCIA.
+          Przeglądarka blokuje popupy domyślnie i cofnięcie tego wymaga wejścia
+          w ustawienia witryny, więc samo „zablokowano" zostawiłoby użytkownika
+          bez ruchu. Odnośnik obok robi to samo w nowej karcie i przez blokadę
+          przechodzi, bo zwykła nawigacja popupem nie jest. */}
+      {oknoZablokowane ? (
+        <div className={styles.karta}>
+          <p className={styles.komunikat} style={{ color: 'var(--nieznane)' }}>
+            Przeglądarka zablokowała otwarcie osobnego okna. Zezwól tej stronie na
+            wyskakujące okna albo{' '}
+            <a href={adresOknaMapy(id)} target="_blank" rel="noopener noreferrer">
+              otwórz mapę w nowej karcie
+            </a>.
+          </p>
+        </div>
       ) : null}
 
       {/* Rozjazd bazy rzutowania po USUNIĘCIU fragmentów (12.4). Indeksowanie naprawia
