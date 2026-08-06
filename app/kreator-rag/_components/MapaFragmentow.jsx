@@ -9,6 +9,14 @@ import { useRedukcjaRuchu } from '@/lib/hooks/useRedukcjaRuchu.js';
 import { useRozmiarOkna } from '@/lib/hooks/useRozmiarOkna.js';
 import { wysokoscPlotnaWOknie, otworzOknoMapy, adresOknaMapy } from '@/app/kreator-rag/_lib/trybOkna.js';
 import {
+  czyIndeksowanieTrwa,
+  czyListaSieZmienila,
+  czyDomknac,
+  czyPrzeliczonoBaze,
+  PULS_DOKUMENTOW,
+  STATUSY_W_TOKU,
+} from '@/app/kreator-rag/_lib/podgladNaZywo.js';
+import {
   znacznikiKaskady,
   czasZapalania,
   fazaPunktu,
@@ -89,7 +97,9 @@ const CZUJNIK_ZYWEJ_MAPY = 45000;
 const KUBELKI_GLEBI = 10;
 const OBROT_NA_KLATKE = 0.0016;
 
-const STATUSY_W_TOKU = ['pending', 'extracting', 'chunking', 'chunked', 'embedding'];
+// STATUSY_W_TOKU mieszkają w _lib/podgladNaZywo.js razem z regułami, które ich
+// używają. Tu był drugi egzemplarz tej listy — dwie kopie rozjechałyby się przy
+// pierwszym nowym statusie, a to właśnie one decydują, czy podgląd w ogóle ruszy.
 
 // MapaFragmentow — cała mapa (dane, rysowanie, interakcja) w JEDNYM komponencie,
 // używanym w dwóch miejscach: na pełnej stronie /kolekcje/[id]/mapa i osadzona
@@ -215,7 +225,7 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
   const sciezki2dRef = useRef(null); // Map(kolor → Path2D) w przestrzeni świata
   const dane3dRef = useRef(null); // { sasiedzi, krawedzie } — TYLKO w pamięci
 
-  const indeksujeSie = dokumenty.some((d) => STATUSY_W_TOKU.includes(d.status) && d.chunkCount > 0);
+  const indeksujeSie = czyIndeksowanieTrwa(dokumenty);
 
   // --- pobranie danych ------------------------------------------------------------
   //
@@ -257,8 +267,23 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
       if (poprzednie && poprzednie.projectionBuilt && jm.projectionBuilt) {
         const stare = new Set(poprzednie.chunks.map((c) => c.id));
         const teraz = performance.now();
+        // WSZYSTKIE NARAZ, BEZ KASKADY — i to jest różnica względem `dolaczFragmenty`.
+        // Tam znamy partię, więc rozłożenie jej w czasie mówi coś prawdziwego o tym,
+        // ile fragmentów przyszło jednym żądaniem. Tutaj mamy tylko RÓŻNICĘ MIĘDZY
+        // DWOMA ODCZYTAMI, która może obejmować pół partii albo dwie i pół. Kaskada
+        // twierdziłaby o kolejności, której nie znamy (12.9). Poświata twierdzi
+        // wyłącznie „te są nowe" i tyle jest prawdą.
         for (const c of jm.chunks) if (!stare.has(c.id)) swiezeRef.current.set(c.id, teraz);
       }
+
+      // PRZELICZENIE BAZY POZNAJEMY PO builtAt, NIE PO `recalculated`. To drugie
+      // wraca w odpowiedzi /embed WYŁĄCZNIE do pętli, która prowadzi indeksowanie —
+      // mapa oglądana z drugiego okna nie prowadzi jej i nie miała skąd wziąć
+      // komunikatu. Zmierzone przed poprawką: nie pojawił się ani razu.
+      if (czyPrzeliczonoBaze(poprzednie, jm)) {
+        setKomunikat('Baza rzutowania została przeliczona — mapa przechodzi na nowe pozycje.');
+      }
+
       setDane(jm);
     } catch (err) {
       if (!cicho) setBlad('Nie udało się pobrać mapy: ' + (err && err.message ? err.message : 'nieznany błąd.'));
@@ -388,7 +413,9 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
       // przyrostowa lista nie wystarcza — dociągamy całość raz, a efekt useEffect niżej
       // animuje przejście na nowe pozycje, tak jak przy „Przelicz bazę".
       if (json.recalculated) {
-        setKomunikat('Baza rzutowania została przeliczona — mapa przechodzi na nowe pozycje.');
+        // Komunikat NIE JEST tu ustawiany — stawia go `pobierz` po zmianie `builtAt`,
+        // w jednym miejscu dla obu ścieżek. Wcześniej stał tylko tutaj i dlatego
+        // widziała go wyłącznie strona prowadząca indeksowanie.
         pobierz(true);
         return;
       }
@@ -464,6 +491,72 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
     return () => clearInterval(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [indeksujeSie, postepTutaj, dokumenty.length, pobierz]);
+
+  // =============================================================================
+  //  PULS LISTY DOKUMENTÓW — WYJŚCIE Z MARTWEGO STARTU
+  //
+  //  ZMIERZONE PRZED POPRAWKĄ: okno mapy otwarte PRZED wgraniem dokumentu nie
+  //  zauważało niczego przez 110 s, mimo czterech partii i przeliczenia bazy.
+  //  Nagłówek stał na 120 fragmentach, płótno nie przerysowało się ani razu,
+  //  znacznik „trwa indeksowanie" nie zaświecił.
+  //
+  //  Przyczyną była PĘTLA W WARUNKACH, nie błąd w żadnym z nich z osobna:
+  //  odpytywanie postępu startowało tylko przy `indeksujeSie`, `indeksujeSie`
+  //  liczyło się z listy dokumentów, a listę odświeżało wyłącznie to samo
+  //  odpytywanie. Żeby zauważyć nowy dokument, trzeba było już go znać.
+  //
+  //  Ten puls jest z tej pętli wyjęty: nie pyta o `indeksujeSie` i chodzi także
+  //  w spoczynku. Dlatego pyta o SAMĄ LISTĘ dokumentów (kilkaset bajtów), a nie
+  //  o mapę, i robi to co 10 s, nie co 5 — koszt ponosi każdy otwarty widok mapy,
+  //  więc ma być mały. Opóźnienie zauważenia i tak ginie przy pierwszej partii,
+  //  która idzie kilkanaście sekund.
+  //
+  //  ODCISK, NIE PODSTAWIANIE TABLICY: bez porównania każdy puls wstawiałby nowy
+  //  obiekt i przemontowywał efekty zależne od `dokumenty`, w tym odpytywanie
+  //  postępu — czyli puls psułby to, czemu ma służyć.
+  //
+  //  Osadzona mapa nie pulsuje: karmi ją rodzic, a dwa źródła tego samego stanu
+  //  to ta sama pułapka, o której mowa przy odpytywaniu wyżej.
+  // =============================================================================
+  useEffect(() => {
+    if (osadzona || postepTutaj) return;
+    const t = setInterval(async () => {
+      try {
+        const r = await fetch(`/api/rag/collections/${id}/documents`, { cache: 'no-store' });
+        const j = await r.json();
+        if (j.error) return;
+        const lista = j.documents || [];
+        setDokumenty((biezace) => (czyListaSieZmienila(biezace, lista) ? lista : biezace));
+      } catch {
+        // Puls pomocniczy — cisza, następny cykl spróbuje ponownie.
+      }
+    }, PULS_DOKUMENTOW);
+    return () => clearInterval(t);
+  }, [osadzona, postepTutaj, id]);
+
+  // =============================================================================
+  //  DOMKNIĘCIE — OSTATNIA PARTIA I PRZELICZONA BAZA
+  //
+  //  ZMIERZONE PRZED POPRAWKĄ: 30 s po zakończeniu indeksowania okno pokazywało
+  //  446 fragmentów zamiast 460 i mapę sprzed przeliczenia bazy. Powód: gdy
+  //  ostatnia partia wpadła do bazy, status dokumentu zmieniał się na „ready",
+  //  `indeksujeSie` stawało się fałszem i efekt odpytywania GASŁ, zanim zdążył
+  //  odczytać to, co właśnie się pojawiło. Widok zostawał na przedostatnim stanie.
+  //
+  //  Ten jeden odczyt idzie Z SĄSIEDZTWEM, w przeciwieństwie do odpytywania
+  //  w trakcie. Tam `neighbors=1` jest świadomie pomijane, bo to najdroższa część
+  //  odczytu i w trakcie nie ma sensu ciągnąć jej co pięć sekund — skutkiem było
+  //  jednak to, że po zakończeniu krawędzie zostawały niekompletne (zmierzone:
+  //  673 połączenia przed i po całym przebiegu, mimo 110 nowych fragmentów).
+  //  Domknięcie jest miejscem, w którym wolno zapłacić raz i mieć komplet.
+  // =============================================================================
+  const bylIndeksowanyRef = useRef(false);
+  useEffect(() => {
+    if (osadzona) return;
+    const bylo = bylIndeksowanyRef.current;
+    bylIndeksowanyRef.current = indeksujeSie;
+    if (czyDomknac(bylo, indeksujeSie)) pobierz(true, { sasiedzi: true });
+  }, [indeksujeSie, osadzona, pobierz]);
 
   // --- krawędzie 2D: liczone RAZ na zmianę danych, nie na klatkę (12.6) ------------
 
