@@ -923,38 +923,111 @@ w żadnym spisie. Przy każdej pochodzenie, bo od niego zależy, czyj to dług.
     przy wyłączonym JavaScripcie i przy niedostępnym `localStorage`
     (tryb prywatny części przeglądarek rzuca przy odczycie).
 
-20. **Przejście przy przeliczeniu układu nie działa w widoku 3D — i nigdy nie działało.**
+20. **Przejście przy przeliczeniu układu w 3D — BYŁO nienaprawione, jest naprawione.**
+    Zostawiam wpis, bo diagnoza tłumaczy, dlaczego to nie była regresja: `rysuj2d`
+    i `rysuj3d` to dwie osobne funkcje dzielące wyłącznie jednolinijkowe
+    rozgałęzienie, a efekt przejścia wypełnia `pozycjeRef.current`, który
+    **czytało tylko 2D**. Szczegóły stanu bieżącego w sekcji niżej.
 
-    *Luka modułu RAG*, nie regresja. Przy przeliczeniu bazy rzutowania widok 2D
-    przeprowadza punkty na nowe pozycje sprężyną, ciągnąc za nimi smugi i rysując
-    pierścień od środka zbioru. W 3D nie ma z tego nic: punkty przeskakują.
+## Mapa fragmentów — stan po wydłużeniu przejścia
 
-    **Mechanizm.** `rysuj2d` i `rysuj3d` to dwie osobne funkcje dzielące wyłącznie
-    jednolinijkowe rozgałęzienie (`MapaFragmentow.jsx:718-719`). Efekt przejścia
-    animuje `pozycjeRef.current` klatka po klatce, a odczytuje go **tylko 2D**:
+Zebrane z kilku rund, bo rozstrzygnięcia zapadały pojedynczo i łatwo je zgubić.
 
-    ```js
-    // rysuj2d — pozycje POŚREDNIE z animacji
-    const pozycje = pozycjeRef.current;
+### Dwie ścieżki rysowania, dwie kopie efektów
 
-    // rysuj3d — pozycje DOCELOWE prosto z danych
-    for (const c of d.chunks) {
-      punkty.push({ …, x: (c.x - cx) / rozpietosc, … });
-    }
-    ```
+`rysuj2d` (płaszczyzna) i `rysuj3d` (przestrzeń) nie dzielą **niczego** poza
+jednolinijkowym rozgałęzieniem w `rysuj()`. Każdy efekt istnieje więc w **dwóch
+kopiach** i dodanie czegokolwiek w jednej nie pojawia się w drugiej. Tak powstała
+luka, w której kaskada, poświata i świeże krawędzie działały wyłącznie w 2D —
+nie z decyzji, tylko z kolejności prac. Przy każdej kolejnej zmianie efektów
+trzeba sprawdzić obie funkcje.
 
-    `rysuj3d` nie dotyka `pozycjeRef` ani razu, więc punkty stoją tam zawsze na
-    współrzędnych końcowych — przeskok wynika z konstrukcji, nie z błędu w warunku.
-    Smugi (`smugiRef`) i pierścień (`pierscienRef`) są rysowane wyłącznie w `rysuj2d`;
-    w ciele `rysuj3d` te referencje nie występują.
+### `pozycjeRef` żyje w przestrzeni rzutu i ma trzy osie
 
-    **To NIE jest ta sama sprawa co kaskada i poświata**, które w 3D już działają
-    (runda „Efekty w widoku 3D"). Tamte dotyczyły pojedynczego punktu i zeszły na
-    kilkadziesiąt linii. Przejście wymaga, żeby `rysuj3d` czytał pozycje przez tę
-    samą warstwę co `rysuj2d`, a smugi i pierścień — rzutowania przestrzennego
-    (smuga to odcinek między dwiema pozycjami, więc oba końce trzeba przepuścić
-    przez `przygotujKlatke3d`; pierścień jest okręgiem na płaszczyźnie ekranu,
-    a w 3D musiałby leżeć w przestrzeni albo jawnie z niej wypaść).
+Efekt przejścia wypełnia `pozycjeRef.current` pozycjami **pośrednimi** — to jest
+jedyne źródło prawdy o tym, gdzie punkt jest w danej klatce. Współrzędne są
+w przestrzeni rzutu PCA (nie ekranowej), więc oba widoki mogą je czytać i same
+przeliczają na ekran. Trzecia oś doszła razem z naprawą 3D: bez niej punkt
+płynąłby po ekranie i jednocześnie skakał w głąb, bo `z` szłoby z danych
+docelowych. `rysuj3d` podaje te pozycje do `przygotujKlatke3d`, które liczy
+głębię i sortuje — dzięki temu punkt lecący w głąb **przechodzi między kubełkami
+w trakcie lotu**, zamiast zmieniać miejsce skokiem.
 
-    **Odłożone świadomie** — bliżej przebudowy `rysuj3d` niż poprawki, a 12.8
-    nazywa 3D widokiem pokazowym, nie roboczym.
+### `CZAS_PRZEJSCIA` — jedno pokrętło
+
+```js
+const CZAS_PRZEJSCIA = 4000;                                     // jedyna wartość do zmiany
+const CZAS_PIERSCIENIA = 1100;                                   // celowo NIE idzie za nią
+const SMUGA_PELNA = Math.max(0.5, 6 * (700 / CZAS_PRZEJSCIA));   // skaluje się sama
+```
+
+**Nie ma tu sprężyny ani progu wygasania** — `post` dobiega do 1 i pętla staje.
+Wydłużenie nie grozi więc skróceniem animacji; grozi złą krzywą. Przy 4 s
+`easeInOutQuad` zastąpiło `easeInOutSine`, bo liczy się równomierność tempa,
+nie kontrast: sinus daje 14,6% drogi w skrajnych ćwiartkach czasu przy tempie
+szczytowym 1,57× średniej (quad: 12,5% i 1,99×; `easeOutCubic` odpadło z 1,6%
+w ostatniej ćwiartce).
+
+**Smugi wymagają wzmocnienia przy każdym wydłużeniu.** Smuga to odcinek między
+dwiema klatkami, więc przy przejściu dłuższym N razy jest N razy krótsza.
+Zmierzone medianą krycia (300 px, 60 fps): 0,550 przy 700 ms → **0,128** przy
+4000 ms bez poprawki → 0,550 po przeskalowaniu progu. Dlatego `SMUGA_PELNA` jest
+liczona ze stałej, a nie wpisana.
+
+**Pierścień zostaje krótki świadomie.** To sygnał o zdarzeniu, nie o procesie;
+rozciągnięty na całe przejście konkurowałby z ruchem punktów o uwagę.
+
+### Odczyt w trakcie przejścia nie przerywa go
+
+Przejście trwa teraz tyle, co odstęp odpytywania (4 s wobec 5 s), więc zbieg jest
+normalny. Nowe dane montują efekt od nowa, ale punktem wyjścia jest
+`pozycjeRef.current`, czyli miejsce, w którym punkty właśnie są — to
+**przecelowanie, nie skok**. Koszt: przy odczycie w połowie lotu całość trwa
+dłużej niż `CZAS_PRZEJSCIA`, bo zegar rusza od zera.
+
+### Opóźnienie okna: `dokumenty.length` w zależnościach
+
+Dodanie dokumentu przemontowywało efekt odpytywania, co kasowało `ostatnieDone`
+do `null` — a pierwszy tick po resecie **nie pobiera**, tylko zapamiętuje licznik.
+Okno traciło cały cykl dokładnie wtedy, gdy dochodził drugi dokument, czyli
+w chwili, w której patrzy się na przeliczenie. Samo skreślenie zależności by to
+zepsuło (lista była domykana przy montowaniu), więc `wToku` liczy się teraz
+w ticku z refa. Ref wypełniany **w efekcie** — zapis w ciele komponentu łamie
+`react-hooks/refs`.
+
+### Kolor punktu zależy od listy dokumentów, nie od `documentId`
+
+`newChunks` niosły `documentId` od zawsze. Szare punkty brały się z czego innego:
+kolor wynika z **pozycji dokumentu na liście `documents`**, a dokładanie punktów
+tej listy nie ruszało. Serwer dosyła ją teraz razem z `newChunks`, tym samym
+zapytaniem co `getMapData` — te same indeksy, te same kolory. Listę podmienia się
+w całości, bo dopisanie na koniec przemalowałoby dokumenty przy wcześniejszej dacie.
+
+### Próg przeliczenia liczy serwer, raz na dokument
+
+`REBUILD_ZMIANA = 0.3` od `projection.chunkCount` z chwili budowy. Sprawdzenie
+zachodzi **wyłącznie przy `finished`**, czyli raz na dokument — to wymóg 12.4
+(„Nie sprawdzaj po każdej partii"), nie usterka. Jeden dokument to najwyżej jedno
+przeliczenie, niezależnie od tego, czy urósł o 30% czy o 500%. Dwie rzeczy, które
+to psuły i zostały naprawione: brak `maxDuration` na `/embed` (automat dostawał
+domyślny limit platformy, ręczne „Przelicz mapę" pięć minut) oraz cichy `catch {}`,
+przez który nieudane rzutowanie było nierozróżnialne od udanego.
+
+### Strażnik budowy: zapis warunkowy, nie blokada w pamięci
+
+Odkąd rzutowanie buduje także okno, dwa widoki mogą wejść w budowę naraz. Blokada
+w pamięci procesu tego nie załatwi, bo `docs/rag-SPEC.md:81` zakłada hosting
+serverless — dwa żądania trafiają na dwie instancje. Strażnik siedzi w bazie:
+zapis przechodzi tylko wtedy, gdy `updated_at` jest nadal ten, który widzieliśmy
+przed liczeniem. **Czego nie robi:** nie zapobiega podwójnemu liczeniu ani nie
+cofa `saveCoords` przegranego. Pełna wzajemność wymaga transakcji, której przez
+PostgREST nie mamy. Chroni to, co najgroźniejsze — rozjazd `projection`
+z zapisanymi współrzędnymi.
+
+### Czego nie da się zmierzyć narzędziem
+
+Wygląd animacji w ruchu. Karta sterowana przez automat jest dla przeglądarki
+`hidden`, a wtedy `requestAnimationFrame` jest zawieszony; obejście przez
+`setTimeout` też zawodzi, bo w ukrytych kartach jest throttlowany do ~1/s.
+Wszystkie liczby o krzywych i smugach są **policzone**, nie zaobserwowane.
+Potwierdzenie wymaga otwarcia okna mapy obok głównego, tak by oba były widoczne.
