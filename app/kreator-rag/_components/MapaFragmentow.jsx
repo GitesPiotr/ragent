@@ -986,6 +986,13 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
     const kolory = koloryDokumentow(d.documents, P);
     const zazn = trafieniaRef.current;
     const hover = hoverRef.current;
+    // Te same dwie wartości co w rysuj2d — do rundy „efekty w 3D" widok przestrzenny
+    // w ogóle ich nie czytał, więc kaskada, poświata i świeże krawędzie kończyły się
+    // na przełączniku 2D/3D. To nie była decyzja: SPEC 12.8 nie wspomina o efektach
+    // ani zakazująco, ani nakazująco, a komentarz przy pętli klatek traktował obrót
+    // 3D i gasnące podświetlenia jako dwa osobne powody animacji, nie jako parę.
+    const teraz = performance.now();
+    const swieze = swiezeAktywne(teraz);
     const { yaw, pitch } = obrotRef.current;
     const vp = d.viewport;
 
@@ -1066,36 +1073,122 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
       ctx.globalAlpha = 1;
     }
 
+    // ŚWIEŻE KRAWĘDZIE — odpowiednik bloku z rysuj2d, ale na indeksie 3D.
+    // Sąsiedztwo przestrzenne liczone jest osobno przy przełączeniu widoku
+    // (dane3dRef), bo w trzech wymiarach najbliżsi bywają inni niż w dwóch (12.8) —
+    // dlatego NIE można tu użyć `indeksRef`, który trzyma sąsiedztwo 2D.
+    // Rysowane PRZED punktami, tak jak wszystkie pozostałe krawędzie: linia ma
+    // podkreślać punkt, nie leżeć na nim.
+    if (swieze && trzy) {
+      const ekran = new Map(klatka.map((p) => [p.id, doEkranu(p)]));
+      ctx.lineWidth = 1.6;
+      for (const cid of swieze) {
+        const wiek = (teraz - swiezeRef.current.get(cid)) / CZAS_PODSWIETLENIA;
+        const krycie = Math.max(0, 1 - wiek) * 0.95;
+        if (krycie <= 0) continue;
+        ctx.globalAlpha = krycie;
+        ctx.strokeStyle = P.wyroznienie;
+        for (const e of indeks3d.get(cid) || []) {
+          const a = ekran.get(e.a);
+          const b = ekran.get(e.b);
+          if (!a || !b) continue;
+          ctx.beginPath();
+          ctx.moveTo(a[0], a[1]);
+          ctx.lineTo(b[0], b[1]);
+          ctx.stroke();
+        }
+      }
+      ctx.globalAlpha = 1;
+    }
+
     // Punkty rysowane OD NAJDALSZEGO (klatka jest już posortowana), w kubełkach
     // głębi: dalsze mniejsze i bledsze. Kubełkowanie zbija 3091 wypełnień do
     // kilkudziesięciu, zachowując efekt głębi wymagany przez 12.8.
     const kubelki = new Map();
     const wyroznione = [];
+    // Świeże punkty trzymamy OSOBNO, ale Z NUMEREM KUBEŁKA — nie po to, żeby je
+    // wyjąć z porządku głębi, tylko żeby wróciły do niego przy rysowaniu (niżej).
+    const swiezeWKubelkach = new Map();
     for (const p of klatka) {
       const [sx, sy] = doEkranu(p);
       if (sx < -20 || sx > W + 20 || sy < -20 || sy > H + 20) continue;
+
+      // KASKADA — dokładnie ta sama reguła co w 2D: punkt przed swoim znacznikiem
+      // nie jest rysowany w ogóle. Sprawdzamy PRZED przydziałem do kubełka, żeby
+      // niezapalony punkt nie trafił do wspólnej ścieżki, z której nie da się go już
+      // wyjąć. Współrzędne ma od początku — rozsuwa się wyłącznie moment odsłonięcia.
+      const faza = swieze && swieze.has(p.id)
+        ? fazaPunktu(swiezeRef.current.get(p.id), teraz, { poswiata: !mniejRuchu })
+        : FAZA_ZWYKLA;
+      if (!faza.widoczny) continue;
+
       const wyrozniony = (zazn && zazn.has(p.id)) || (sasiedziHover && sasiedziHover.has(p.id));
       if (wyrozniony) { wyroznione.push({ p, sx, sy }); continue; }
       const b = kubelekGlebi(p.skalaGlebi, minK, maxK, KUBELKI_GLEBI);
       const kolor = kolory.get(p.documentId) || P.fallback;
+      const r = (0.9 + 1.9 * (b / (KUBELKI_GLEBI - 1))) * Math.sqrt(zoom);
+
+      if (faza.swiezy) {
+        // Poświata zmienia alfę i promień, a w 3D alfa NIESIE GŁĘBIĘ — jedna wspólna
+        // wartość na całą ścieżkę kubełka. Świeży punkt musi więc iść własnym
+        // wypełnieniem. Takich punktów jest najwyżej tyle, ile liczy partia.
+        if (!swiezeWKubelkach.has(b)) swiezeWKubelkach.set(b, []);
+        swiezeWKubelkach.get(b).push({ sx, sy, kolor, r: r * faza.mnoznikPromienia, krycie: faza.krycie });
+        continue;
+      }
+
       const klucz = b + '|' + kolor;
       let g = kubelki.get(klucz);
       if (!g) { g = { bucket: b, kolor, sciezka: new Path2D() }; kubelki.set(klucz, g); }
-      const r = (0.9 + 1.9 * (b / (KUBELKI_GLEBI - 1))) * Math.sqrt(zoom);
       g.sciezka.moveTo(sx + r, sy);
       g.sciezka.arc(sx, sy, r, 0, Math.PI * 2);
     }
 
     const przygaszenie = zazn || hover ? 0.32 : 1;
+    const alfaGlebi = (bucket) => (0.45 + 0.5 * (bucket / (KUBELKI_GLEBI - 1))) * przygaszenie;
     const posortowane = [...kubelki.values()].sort((a, b) => a.bucket - b.bucket);
+
+    // ZASŁANIANIE ROZWIĄZANE PORZĄDKIEM, NIE WYJĄTKIEM.
+    //
+    // Świeży punkt nie jest rysowany „na wierzchu wszystkiego" — wraca dokładnie tam,
+    // gdzie należy według swojej głębi: po kubełkach dalszych od siebie, a przed
+    // bliższymi. Punkt bliski z poświatą zasłoni skupisko za sobą (bo naprawdę jest
+    // przed nim), ale punkt daleki NIE przebije się przez chmurę stojącą bliżej
+    // kamery. Bez tego przeplatania świeży punkt w głębi wyglądałby jak dziura
+    // wypalona w skupisku, które powinno go zasłaniać.
+    let ostatni = -1;
     for (const g of posortowane) {
       // Najdalszy kubelek mial 0,28 — na bialym tle znikal. Podnosimy dol zakresu,
       // zachowujac rozpietosc, ktora robi glebie (12.8).
-      ctx.globalAlpha = (0.45 + 0.5 * (g.bucket / (KUBELKI_GLEBI - 1))) * przygaszenie;
+      ctx.globalAlpha = alfaGlebi(g.bucket);
       ctx.fillStyle = g.kolor;
       ctx.fill(g.sciezka);
+
+      for (let b = ostatni + 1; b <= g.bucket; b += 1) rysujSwiezeZKubelka(b);
+      ostatni = g.bucket;
     }
+    // Kubełki, w których stoją WYŁĄCZNIE świeże punkty, nie mają własnej ścieżki,
+    // więc pętla wyżej by ich nie dotknęła.
+    for (let b = ostatni + 1; b < KUBELKI_GLEBI; b += 1) rysujSwiezeZKubelka(b);
     ctx.globalAlpha = 1;
+
+    function rysujSwiezeZKubelka(bucket) {
+      const lista = swiezeWKubelkach.get(bucket);
+      if (!lista) return;
+      // GŁĘBIA MNOŻY POŚWIATĘ, NIE ZASTĘPUJE JEJ. Punkt daleki jest bledszy, więc
+      // jego błysk też musi być bledszy — inaczej świeże punkty w głębi świeciłyby
+      // mocniej, niż same są widoczne, i alfa przestałaby znaczyć odległość (12.8).
+      // Cena: błysk w najdalszym kubełku jest wyraźnie słabszy niż na pierwszym planie.
+      // To świadomy wybór — 3D jest widokiem pokazowym, a zafałszowana głębia
+      // kosztowałaby więcej niż subtelniejszy efekt.
+      for (const s of lista) {
+        ctx.globalAlpha = alfaGlebi(bucket) * s.krycie;
+        ctx.fillStyle = s.kolor;
+        ctx.beginPath();
+        ctx.arc(s.sx, s.sy, s.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
 
     for (const { p, sx, sy } of wyroznione) {
       const r = 3.4 * Math.sqrt(zoom);
