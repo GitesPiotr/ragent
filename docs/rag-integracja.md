@@ -929,7 +929,7 @@ w żadnym spisie. Przy każdej pochodzenie, bo od niego zależy, czyj to dług.
     rozgałęzienie, a efekt przejścia wypełnia `pozycjeRef.current`, który
     **czytało tylko 2D**. Szczegóły stanu bieżącego w sekcji niżej.
 
-## Mapa fragmentów — stan po wydłużeniu przejścia
+## Mapa fragmentów — stan po naprawie błędnego koła w oknie
 
 Zebrane z kilku rund, bo rozstrzygnięcia zapadały pojedynczo i łatwo je zgubić.
 
@@ -1031,3 +1031,42 @@ Wygląd animacji w ruchu. Karta sterowana przez automat jest dla przeglądarki
 `setTimeout` też zawodzi, bo w ukrytych kartach jest throttlowany do ~1/s.
 Wszystkie liczby o krzywych i smugach są **policzone**, nie zaobserwowane.
 Potwierdzenie wymaga otwarcia okna mapy obok głównego, tak by oba były widoczne.
+
+### Wykrywanie przeliczenia bazy — kanał nie może zależeć od stanu, który opisuje
+
+Okno dowiadywało się o przeliczeniu wyłącznie z `GET /embed`, a ten jest odpytywany
+tylko dopóki `indeksujeSie`. **Przeliczenie zachodzi dokładnie w chwili, gdy ten
+warunek przestaje być prawdą** — serwer przelicza przy `finished`, a sekundę później
+status dokumentu robi się `ready` i brama zamyka jedyny kanał, którym nowa wartość
+miała dotrzeć. Zmierzone: serwer przeliczył w 66,2 s, okno zauważyło w 103,4 s,
+i to nie dzięki `builtAt`, tylko przez domknięcie po pulsie.
+
+`builtAt` mieszka teraz w `GET /documents`, czyli w odpowiedzi, którą pobiera puls.
+Puls **był bezwarunkowy od początku** — jego brama to `osadzona || postepTutaj`,
+bez `indeksujeSie` — więc niczego nie trzeba było zdejmować. Koszt: zero nowych
+żądań HTTP, jedno lekkie zapytanie `projection->>builtAt` po stronie bazy.
+
+Zapamiętać: `GET /collections/{id}` **nie jest** tanim źródłem `builtAt` — zwraca
+cały `projection` z `mean` i `components`, ponad cztery tysiące liczb.
+
+### Reguła weryfikacji: sprawdzaj ścieżkę, która zawiodła
+
+W tym cyklu **trzy razy** pomiar odpowiadał na inne pytanie, niż zadaliśmy, i za
+każdym razem naprawa wychodziła zielona, choć objaw zostawał:
+
+1. **Asymetria budowy** — mierzona na kolekcji, która **miała już zbudowane
+   rzutowanie**. Stan „brak rzutowania", w którym leżała usterka, nie wystąpił
+   w przebiegu ani razu.
+2. **Wykrywanie przeliczenia** — w przebiegu testowym okno **samo wywołało budowę**,
+   więc świeże dane przyszły razem z odpowiedzią. Ścieżka „okno ma tylko zauważyć
+   cudze przeliczenie" nie została uruchomiona.
+3. **`builtAt` w odpytywaniu** — jednorazowy przebieg dał 1,6 s opóźnienia, bo tick
+   trafił przypadkiem w wąskie okno między przeliczeniem a zgaśnięciem bramy.
+   Powtórzenie tego samego kodu dało 37,2 s. **Jednorazowy przebieg nie odróżnia
+   „działa" od „czasem trafia".**
+
+Praktycznie: zanim uznasz naprawę za potwierdzoną, sprawdź, **czy przebieg testowy
+przeszedł przez tę samą ścieżkę, która zawiodła u użytkownika**. Jeśli objaw wymagał
+warunku brzegowego (brak rzutowania, cudza budowa, zdarzenie na granicy dwóch pętli),
+przebieg musi ten warunek odtworzyć — inaczej mierzy ścieżkę, która i tak działała.
+Przy zjawiskach zależnych od zbiegu czasów jeden przebieg nie wystarcza.
