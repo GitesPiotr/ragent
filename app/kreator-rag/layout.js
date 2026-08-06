@@ -1,4 +1,6 @@
+import { Suspense } from "react";
 import { Sidebar } from "@/components/workspace/Sidebar";
+import { SidebarObszaru } from "@/components/workspace/SidebarObszaru";
 // Ten sam uklad co Projekty, Agenty i Baza wiedzy (sidebar + tresc) —
 // wspoldzielimy arkusz, zeby wszystkie zakladki wygladaly identycznie.
 import styles from "../projekty/layout.module.css";
@@ -24,7 +26,14 @@ import panel from "./kreator-rag.module.css";
 export default function KreatorRagLayout({ children }) {
   return (
     <div className={styles.shell}>
-      <Sidebar />
+      {/* TEN LAYOUT ZOSTAJE SERWEROWY — warunek na ?okno=1 siedzi w SidebarObszaru,
+          bo layouty nie widza search params (uzasadnienie w tamtym pliku).
+          FALLBACK TO PELNY <Sidebar />, NIE PUSTKA: trzy podstrony /kreator-rag sa
+          statyczne i prerenderuja sie z tym fallbackiem. Gdyby byla tu pustka,
+          sidebar doskakiwalby na nich po hydratacji przy kazdym wejsciu. */}
+      <Suspense fallback={<Sidebar />}>
+        <SidebarObszaru />
+      </Suspense>
       <main className={`${styles.content} ${panel.panel}`}>{children}</main>
     </div>
   );
