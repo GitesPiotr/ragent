@@ -143,6 +143,18 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
 
   const [dane, setDane] = useState(null);
   const [dokumenty, setDokumenty] = useState([]);
+  // Lista dokumentów W REFIE, żeby pętla odpytywania mogła czytać ją świeżą, nie
+  // domykać w chwili montowania. Bez tego usunięcie `dokumenty.length` z zależności
+  // efektu (patrz komentarz przy nim) sprawiłoby, że odpytywanie pyta w kółko
+  // o dokumenty znane przy starcie i nigdy nie zauważa nowego.
+  // Przypisanie w EFEKCIE, nie w ciele komponentu: zapis do refa podczas renderu
+  // łamie react-hooks/refs („Cannot access refs during render"), a ta reguła jest
+  // w projekcie pilnowana. Odpytywanie chodzi co 5 s, więc opóźnienie o jeden
+  // commit nie ma tu żadnego znaczenia.
+  const dokumentyRef = useRef([]);
+  useEffect(() => {
+    dokumentyRef.current = dokumenty;
+  }, [dokumenty]);
   const [kolekcja, setKolekcja] = useState(null);
   const [ladowanie, setLadowanie] = useState(true);
   const [blad, setBlad] = useState(null);
@@ -497,12 +509,16 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
     // Osadzona mapa NIGDY nie odpytuje: karmi ją rodzic przez onApi().naPartie.
     // Dwa niezależne źródła tego samego stanu to prosta droga do rozjazdu.
     if (osadzona || !indeksujeSie || postepTutaj) return;
-    const wToku = dokumenty.filter((d) => STATUSY_W_TOKU.includes(d.status) && d.chunkCount > 0);
-    if (!wToku.length) return;
 
     let ostatnieDone = null;
     const t = setInterval(async () => {
       try {
+        // Lista liczona W TICKU, nie przy montowaniu — dzięki temu efekt nie musi
+        // zależeć od `dokumenty.length` i przeżywa dodanie kolejnego dokumentu.
+        const wToku = dokumentyRef.current.filter(
+          (d) => STATUSY_W_TOKU.includes(d.status) && d.chunkCount > 0
+        );
+        if (!wToku.length) return;
         const stany = await Promise.all(
           wToku.map(async (d) => {
             const r = await fetch(`/api/rag/documents/${d.id}/embed`, { cache: 'no-store' });
@@ -530,8 +546,20 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
       }
     }, ODSTEP_ODSWIEZANIA);
     return () => clearInterval(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [indeksujeSie, postepTutaj, dokumenty.length, pobierz]);
+    // `dokumenty.length` USUNIĘTE Z ZALEŻNOŚCI — i to jest cała naprawa opóźnienia.
+    //
+    // Dodanie dokumentu zmieniało długość listy, co przemontowywało ten efekt.
+    // Przemontowanie kasuje `ostatnieDone` do `null`, a pierwszy tick po resecie
+    // NIE POBIERA — tylko zapamiętuje licznik. Okno traciło więc cały cykl (5 s)
+    // dokładnie wtedy, gdy dochodzi drugi dokument, czyli w chwili, w której
+    // patrzy się na przeliczenie układu. Lista jest teraz czytana z refa w ticku,
+    // więc efekt nie musi się przemontowywać, żeby zauważyć nowy dokument.
+    //
+    // Lista zależności jest po tej zmianie KOMPLETNA — `eslint-disable`, które stało
+    // tu wcześniej, przestało być potrzebne razem z `dokumenty.length`. `osadzona`
+    // dopisane, bo bez niego reguła zgłasza brak zależności, a wcześniej ukrywał to
+    // właśnie ten wyłącznik.
+  }, [indeksujeSie, postepTutaj, pobierz, osadzona]);
 
   // =============================================================================
   //  PULS LISTY DOKUMENTÓW — WYJŚCIE Z MARTWEGO STARTU
@@ -1034,17 +1062,39 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
     const cy = (vp.yMin + vp.yMax) / 2;
     const cz = ((vp.zMin || 0) + (vp.zMax || 0)) / 2;
 
+    // POZYCJE ANIMOWANE, NIE DOCELOWE — to cała naprawa przejścia w 3D.
+    //
+    // Do tej rundy pętla brała `c.x/c.y/c.z` prosto z danych, czyli współrzędne
+    // KOŃCOWE, podczas gdy rysuj2d czyta `pozycjeRef.current` wypełniane klatka po
+    // klatce przez efekt przejścia. Skutek: przy przeliczeniu bazy punkty w 2D
+    // przechodziły sprężyną, a w 3D przeskakiwały — nie z powodu błędu w warunku,
+    // tylko dlatego, że 3D nigdy nie patrzyło na tę mapę.
+    //
+    // SORTOWANIE PO GŁĘBI DZIAŁA NA TYCH SAMYCH ZASADACH i to jest jedyne miejsce,
+    // w którym zmiana źródła mogłaby dać wynik inny niż w 2D. Nie daje:
+    // przygotujKlatke3d liczy `glebia` z obrotu PODANYCH współrzędnych i sortuje po
+    // niej co klatkę (lib/mapview/przestrzen3d.js). Podanie pozycji pośrednich znaczy
+    // więc, że punkt lecący w głąb zmienia swoje miejsce w kolejności rysowania
+    // i przechodzi między kubełkami — czyli dokładnie to, co powinien robić.
+    // Nowego kosztu nie ma: sortowanie 600 punktów działo się i tak co klatkę.
+    //
+    // OŚ Z TEŻ MUSI BYĆ ANIMOWANA. `pozycjeRef` trzymał dotąd wyłącznie {x,y}, bo
+    // służył tylko 2D. Gdyby zostało po staremu, punkt płynąłby po ekranie i
+    // JEDNOCZEŚNIE skakał w głąb — wyglądałoby to gorzej niż czysty przeskok.
+    // Stąd trzecia oś w efekcie przejścia (patrz `cel`/`biezace` niżej).
+    const pozycjeAnim = pozycjeRef.current;
     const punkty = [];
     for (const c of d.chunks) {
+      const p = pozycjeAnim.get(c.id) || c;
       punkty.push({
         id: c.id,
         documentId: c.documentId,
         pageFrom: c.pageFrom,
         preview: c.preview,
         headingPath: c.headingPath,
-        x: (c.x - cx) / rozpietosc,
-        y: (c.y - cy) / rozpietosc,
-        z: ((c.z || 0) - cz) / rozpietosc,
+        x: (p.x - cx) / rozpietosc,
+        y: (p.y - cy) / rozpietosc,
+        z: ((p.z ?? c.z ?? 0) - cz) / rozpietosc,
       });
     }
 
@@ -1239,7 +1289,10 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
     daneRef.current = dane;
     if (!dane || !dane.projectionBuilt) { pozycjeRef.current = new Map(); return; }
 
-    const cel = new Map(dane.chunks.map((c) => [c.id, { x: c.x, y: c.y }]));
+    // TRZECIA OŚ JEST TU DLA WIDOKU 3D, nie dla 2D — rysuj2d jej nie czyta.
+    // Bez niej `pozycjeRef` niósłby tylko płaszczyznę i punkt w 3D płynąłby po
+    // ekranie, skacząc jednocześnie w głąb (sortowanie i kubełki liczą się z `z`).
+    const cel = new Map(dane.chunks.map((c) => [c.id, { x: c.x, y: c.y, z: c.z || 0 }]));
     const stare = pozycjeRef.current;
     let ruszone = 0;
     for (const [cid, p] of cel) {
@@ -1275,7 +1328,11 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
         const o = od.get(cid);
         const x = o.x + (p.x - o.x) * e;
         const y = o.y + (p.y - o.y) * e;
-        biezace.set(cid, { x, y });
+        // `z` interpolowane tą samą krzywą co x/y — inaczej głębia zmieniałaby się
+        // skokiem w środku płynnego lotu. Smugi zostają płaskie (x0,y0→x1,y1), bo
+        // rysuje je wyłącznie rysuj2d; rzutowanie ich końców w 3D to osobna praca.
+        const z = (o.z || 0) + ((p.z || 0) - (o.z || 0)) * e;
+        biezace.set(cid, { x, y, z });
         const x0 = o.x + (p.x - o.x) * ePrev;
         const y0 = o.y + (p.y - o.y) * ePrev;
         if (x0 !== x || y0 !== y) smugi.set(cid, { x0, y0, x1: x, y1: y });
