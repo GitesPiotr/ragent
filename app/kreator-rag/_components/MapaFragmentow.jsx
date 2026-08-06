@@ -599,6 +599,37 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
     if (czyDomknac(bylo, indeksujeSie)) pobierz(true, { sasiedzi: true });
   }, [indeksujeSie, osadzona, pobierz]);
 
+  // =============================================================================
+  //  OKNO TEŻ BUDUJE RZUTOWANIE (wariant A)
+  //
+  //  Zdanie „osie powstają raz, z całego zbioru" jest słuszne co do intencji, ale
+  //  widok osadzony i tak buduje przy końcu dokumentu — więc dotąd mieliśmy wariant
+  //  najgorszy z możliwych: jeden widok rysuje mapę, drugi w tej samej chwili
+  //  pokazuje „Rzutowanie policzy się po zakończeniu indeksowania". Zgodność obu
+  //  widoków jest ważniejsza niż oszczędność jednego przeliczenia.
+  //
+  //  RÓWNOLEGŁEJ BUDOWY PILNUJE BAZA, nie ten warunek. `budowanieRef` odsiewa tylko
+  //  drugie wywołanie z TEJ SAMEJ karty; dwa różne okna zatrzymuje dopiero zapis
+  //  warunkowy w buildCollectionProjection (patrz komentarz „STRAŻNIK" w map.js).
+  //  Odpowiedź `ubiegnietoNas` znaczy „mapa jest, ale zbudował ją ktoś inny" —
+  //  wtedy wystarczy odczyt.
+  const budowanieRef = useRef(false);
+  useEffect(() => {
+    if (osadzona || !dane || dane.projectionBuilt || !dane.canBuild || !indeksujeSie) return;
+    if (budowanieRef.current) return;
+    budowanieRef.current = true;
+    (async () => {
+      try {
+        await fetch(`/api/rag/collections/${id}/map/build`, { method: 'POST' });
+        await pobierz(true, { sasiedzi: true });
+      } catch {
+        // Budowa z okna jest ścieżką pomocniczą — przy porażce zostaje przycisk.
+      } finally {
+        budowanieRef.current = false;
+      }
+    })();
+  }, [osadzona, dane, indeksujeSie, id, pobierz]);
+
   // --- krawędzie 2D: liczone RAZ na zmianę danych, nie na klatkę (12.6) ------------
 
   // `paleta` w zaleznosciach, bo kolor krawedzi to SREDNIA kolorow obu koncow —
