@@ -251,6 +251,18 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
   const trafieniaRef = useRef(null);
   const hoverRef = useRef(null);
   const animRef = useRef(0);
+  // CEL I ZEGAR TRWAJĄCEGO PRZEJŚCIA — żyją MIĘDZY przemontowaniami efektu.
+  // Bez nich każdy odczyt w trakcie lotu zaczynał animację od nowa, a że krzywa
+  // ma płaski start, punkt tracił całą prędkość (zmierzone: 39,3 → 0 px/s w jednej
+  // klatce). To było widoczne jako zacięcie.
+  const celRef = useRef(null);
+  const startRef = useRef(0);
+  // Punkt WYJŚCIA trwającego lotu. Musi przeżyć przemontowanie razem z zegarem:
+  // `e` liczy się od `start`, więc gdyby `od` podmienić na pozycje pośrednie przy
+  // zachowanym zegarze, punkt przeskoczyłby do przodu o połowę pozostałej drogi.
+  // Zegar i punkt wyjścia są parą — albo oba stare, albo oba nowe.
+  const odRef = useRef(null);
+  const ePrevRef = useRef(0);
   const petlaRef = useRef(0);
   const przeciagRef = useRef(null);
   const swiezeRef = useRef(new Map()); // id fragmentu → czas pojawienia się
@@ -539,6 +551,10 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
     if (osadzona || !indeksujeSie || postepTutaj) return;
 
     let ostatnieDone = null;
+    // OSOBNY STAN DLA builtAt — nie wolno go łączyć z licznikiem. `done` wykrywa
+    // przyrost punktów, `builtAt` przeliczenie bazy; to dwa różne zdarzenia i każde
+    // musi móc samo wywołać odczyt.
+    let ostatnieBuiltAt = null;
     const t = setInterval(async () => {
       try {
         // Lista liczona W TICKU, nie przy montowaniu — dzięki temu efekt nie musi
@@ -551,10 +567,13 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
           wToku.map(async (d) => {
             const r = await fetch(`/api/rag/documents/${d.id}/embed`, { cache: 'no-store' });
             const j = await r.json();
-            return j.error ? 0 : j.done || 0;
+            return j.error ? { done: 0, builtAt: null } : { done: j.done || 0, builtAt: j.builtAt ?? null };
           })
         );
-        const suma = stany.reduce((a, b) => a + b, 0);
+        const suma = stany.reduce((a, b) => a + b.done, 0);
+        // Wszystkie dokumenty należą do tej samej kolekcji, więc `builtAt` jest jeden;
+        // bierzemy pierwszy niepusty.
+        const builtAt = stany.find((s) => s.builtAt)?.builtAt ?? null;
         // Z SĄSIEDZTWEM — i to jest odwrócenie wcześniejszej decyzji, z podanym powodem.
         //
         // Tanie odpytywanie (bez neighbors=1) miało oszczędzać ~0,6 MB na odczyt, ale
@@ -567,8 +586,22 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
         // Oszczędność dotyczyła ścieżki, która JEST otwarta po to, żeby patrzeć na
         // przyrost połączeń. Płacimy za odczyt, bo bez tego widok nie pokazuje tego,
         // po co istnieje.
-        if (ostatnieDone !== null && suma !== ostatnieDone) await pobierz(true, { sasiedzi: true });
+        // ODCZYT PRZY ZMIANIE LICZNIKA **ALBO** BAZY RZUTOWANIA.
+        //
+        // `builtAt` to warunek na to, o co pytamy wprost: czy układ został przeliczony.
+        // Licznik `done` jest tylko korelatem — rośnie przy nowych wektorach, ale
+        // milczy o przeliczeniu, przez co okno pokazywało stary układ do końca
+        // dokumentu (zmierzone: 111 s przy rzucie z 96 fragmentów).
+        //
+        // NIE POWODUJE ODCZYTU PRZY KAŻDYM TICKU: oba warunki porównują z poprzednią
+        // wartością, a `builtAt` zmienia się WYŁĄCZNIE przy przebudowie bazy — nie
+        // przy dokładaniu punktów istniejącym rzutem. Pierwszy tick po zamontowaniu
+        // tylko zapamiętuje oba stany, tak jak dotąd.
+        const zmianaLicznika = ostatnieDone !== null && suma !== ostatnieDone;
+        const zmianaBazy = ostatnieBuiltAt !== null && builtAt !== null && builtAt !== ostatnieBuiltAt;
+        if (zmianaLicznika || zmianaBazy) await pobierz(true, { sasiedzi: true });
         ostatnieDone = suma;
+        if (builtAt !== null) ostatnieBuiltAt = builtAt;
       } catch {
         // cicho — to ścieżka zapasowa, nie ma prawa zasypać użytkownika błędami
       }
@@ -617,6 +650,11 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
   // =============================================================================
   useEffect(() => {
     if (osadzona || postepTutaj) return;
+    // WYKRYWANIE PRZELICZENIA MIESZKA TUTAJ, nie w odpytywaniu postępu — bo ten
+    // chodzi tylko dopóki `indeksujeSie`, a baza przelicza się dokładnie wtedy, gdy
+    // ten warunek przestaje być prawdą. Puls jest bezwarunkowy, więc widzi zmianę
+    // także wtedy, gdy indeksowanie już się skończyło.
+    let ostatnieBuiltAt = null;
     const t = setInterval(async () => {
       try {
         const r = await fetch(`/api/rag/collections/${id}/documents`, { cache: 'no-store' });
@@ -624,12 +662,20 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
         if (j.error) return;
         const lista = j.documents || [];
         setDokumenty((biezace) => (czyListaSieZmienila(biezace, lista) ? lista : biezace));
+
+        // Pierwszy przebieg tylko zapamiętuje — inaczej każde wejście na mapę
+        // ciągnęłoby pełny odczyt bez powodu.
+        const builtAt = j.builtAt ?? null;
+        if (builtAt !== null && ostatnieBuiltAt !== null && builtAt !== ostatnieBuiltAt) {
+          await pobierz(true, { sasiedzi: true });
+        }
+        if (builtAt !== null) ostatnieBuiltAt = builtAt;
       } catch {
         // Puls pomocniczy — cisza, następny cykl spróbuje ponownie.
       }
     }, PULS_DOKUMENTOW);
     return () => clearInterval(t);
-  }, [osadzona, postepTutaj, id]);
+  }, [osadzona, postepTutaj, id, pobierz]);
 
   // =============================================================================
   //  DOMKNIĘCIE — OSTATNIA PARTIA I PRZELICZONA BAZA
@@ -1343,9 +1389,47 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
     // Widoczny koszt: przy odczycie w połowie lotu całość trwa dłużej niż CZAS_PRZEJSCIA,
     // bo zegar rusza od zera. Świadomie — alternatywą byłoby ignorowanie świeższych
     // danych albo skok do nich, a oba są gorsze.
+    // =============================================================================
+    //  ZEGAR NIE RUSZA OD ZERA, GDY CEL SIĘ NIE ZMIENIŁ
+    //
+    //  Odczyt w trakcie lotu montuje ten efekt na nowo. Dotąd każde takie
+    //  przemontowanie zerowało `start`, więc `post` wracał do zera — a `easeInOutSine`
+    //  ma tam ZEROWĄ POCHODNĄ (0,0002). Punkt lecący 39,3 px/s zatrzymywał się
+    //  w jednej klatce i rozpędzał od nowa przez ~200 ms. Dystans do celu przy tym
+    //  NIE ROSŁ (sprawdzone monotonicznie), więc to nie było cofnięcie, tylko
+    //  utrata prędkości — ale wyglądało jak zacięcie.
+    //
+    //  Przy odpytywaniu co 5 s i przejściu 4 s odczyt wypada w locie w ~80% przebiegów,
+    //  więc było to regułą, nie wyjątkiem.
+    //
+    //  PORÓWNUJEMY CELE, NIE DANE. Odczyt bez przeliczenia bazy przynosi te same
+    //  współrzędne dla znanych punktów (dochodzą najwyżej nowe), więc lot ma biec
+    //  dalej z zachowanym zegarem. Dopiero przeliczenie zmienia współrzędne
+    //  istniejących punktów i wtedy restart jest uzasadniony: cel naprawdę jest inny.
+    //  Nowe punkty nie liczą się do porównania — one nie mają skąd lecieć.
+    const poprzedniCel = celRef.current;
+    let celTenSam = false;
+    if (poprzedniCel) {
+      celTenSam = true;
+      for (const [cid, p] of cel) {
+        const q = poprzedniCel.get(cid);
+        if (q && (q.x !== p.x || q.y !== p.y || (q.z || 0) !== (p.z || 0))) { celTenSam = false; break; }
+      }
+    }
+    celRef.current = cel;
+    const start = celTenSam ? startRef.current : performance.now();
+    startRef.current = start;
+
+    // `od` idzie W PARZE Z ZEGAREM. Przy kontynuacji bierzemy pierwotny punkt wyjścia
+    // (dopisując tylko nowe punkty, które wcześniej nie leciały), przy restarcie —
+    // pozycje bieżące, bo to od nich zaczyna się nowy lot.
     const od = new Map();
-    for (const [cid, p] of cel) od.set(cid, stare.get(cid) || p);
-    const start = performance.now();
+    const poprzednieOd = celTenSam ? odRef.current : null;
+    for (const [cid, p] of cel) {
+      od.set(cid, (poprzednieOd && poprzednieOd.get(cid)) || stare.get(cid) || p);
+    }
+    odRef.current = od;
+
     const srodek = srodekZbioru(cel.values());
     cancelAnimationFrame(animRef.current);
 
@@ -1353,7 +1437,10 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
     // pozycja dla poprzedniego kroku easingu a pozycja dla biezacego, wiec gasnie
     // RUCHEM — przy easeInOutQuad ruch wyplaszcza sie na koncu, odcinki maleja do
     // zera i smugi znikaja w tej samej klatce, w ktorej nie ma juz czego pokazywac.
-    let ePrev = 0;
+    // ePrev TEŻ przeżywa przemontowanie przy kontynuacji. Zerowanie go dałoby
+    // w pierwszej klatce po odczycie smugę liczoną od e=0 do e=0,5 — czyli odcinek
+    // przez pół ekranu, mimo że punkt przesunął się o ułamek piksela.
+    let ePrev = celTenSam ? ePrevRef.current : 0;
     const krok = (teraz) => {
       const post = Math.min(1, (teraz - start) / CZAS_PRZEJSCIA);
       // easeInOutSine, NIE easeInOutQuad — i to jest zmiana wymuszona długością.
@@ -1388,6 +1475,7 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
         if (x0 !== x || y0 !== y) smugi.set(cid, { x0, y0, x1: x, y1: y });
       }
       ePrev = e;
+      ePrevRef.current = e;
       pozycjeRef.current = biezace;
       smugiRef.current = smugi.size ? smugi : null;
       // Pierścień ma WŁASNY postęp, liczony od CZAS_PIERSCIENIA, nie od postępu
@@ -1402,6 +1490,12 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
         // Sprzatanie razem z koncem ruchu, nie po osobnym czasie.
         smugiRef.current = null;
         pierscienRef.current = null;
+        // Zegar, punkt wyjścia i ePrev tracą ważność wraz z końcem lotu — bez tego
+        // NASTĘPNE przeliczenie odziedziczyłoby zużyty zegar i zostało uznane za
+        // kontynuację, czyli pojawiłoby się bez animacji.
+        celRef.current = null;
+        odRef.current = null;
+        ePrevRef.current = 0;
         rysuj();
       }
     };
