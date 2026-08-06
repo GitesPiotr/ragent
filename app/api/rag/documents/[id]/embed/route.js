@@ -8,6 +8,18 @@ import { embedNextBatch, getEmbedProgress } from '@/lib/rag/documents.js';
 
 export const dynamic = 'force-dynamic';
 
+// LIMIT CZASU TAKI SAM JAK PRZY RECZNYM PRZELICZENIU — i to jest naprawa, nie ozdoba.
+//
+// Ostatnia partia dokumentu robi WIECEJ niz policzenie wektorow: po niej idzie
+// refreshProjectionAfterIndexing, czyli pelne PCA calej kolekcji plus zapis
+// wspolrzednych. Zmierzone lokalnie na 560 fragmentach: sama ta partia trwala 9,1 s.
+// /map/build (przycisk „Przelicz mape") deklaruje maxDuration = 300, a ta trasa
+// nie deklarowala nic — czyli automatyczne przeliczenie dostawalo domyslny limit
+// platformy (na Vercel 10-15 s), a reczne piec minut. Przy kilkuset fragmentach
+// automat konczyl sie ubiciem funkcji PO zapisaniu statusu `ready`, wiec `finished`
+// nigdy juz nie wracalo i baza zostawala nieaktualna na zawsze.
+export const maxDuration = 300;
+
 export async function POST(request, { params }) {
   try {
     const { id } = await params;

@@ -264,7 +264,18 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
       // Fragmenty, które pojawiły się od poprzedniego odczytu, dostają krótkie
       // podświetlenie. To NIE jest ozdobnik na timerze: znaczy "ten fragment właśnie
       // dostał współrzędne", czyli zdarzenie z pętli indeksowania (10.3).
-      if (poprzednie && poprzednie.projectionBuilt && jm.projectionBuilt) {
+      // TOŻSAMOŚĆ PUNKTU TO `id` FRAGMENTU — i to jedyny sensowny klucz. Współrzędne
+      // odpadają, bo przy przeliczeniu bazy zmieniają się wszystkie naraz i każdy punkt
+      // wyglądałby na nowy; pozycja w tablicy też, bo kolejność zależy od zapytania.
+      // `id` jest kluczem głównym rag_chunks i nie zmienia się przez całe życie fragmentu.
+      //
+      // WARUNEK NIE WYMAGA JUŻ `poprzednie.projectionBuilt` — i to jest naprawa.
+      // Wcześniej odczyt, w którym baza dopiero powstawała (poprzednio jej nie było,
+      // teraz jest), nie nadawał czasu urodzenia NIKOMU. A to jest dokładnie ta chwila,
+      // w której mapa pojawia się na ekranie: wszystkie punkty są wtedy nowe dla widza
+      // i właśnie wtedy nie błyskał żaden. Pierwsze wczytanie strony jest nadal
+      // wyłączone, bo tam `poprzednie` jest null — i słusznie, bo wtedy nic nie „doszło".
+      if (poprzednie && jm.projectionBuilt) {
         const stare = new Set(poprzednie.chunks.map((c) => c.id));
         const teraz = performance.now();
         // WSZYSTKIE NARAZ, BEZ KASKADY — i to jest różnica względem `dolaczFragmenty`.
@@ -335,7 +346,7 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
   // UCZCIWOŚĆ (12.9): nowy punkt od PIERWSZEJ klatki jest na swoich współrzędnych
   // i tylko rozjaśnia się z przezroczystości. Nie leci z losowej pozycji, nie "szuka
   // miejsca" — miejsce policzył PCA przed narysowaniem.
-  const dolaczFragmenty = useCallback((nowe) => {
+  const dolaczFragmenty = useCallback((nowe, dokumentyZOdpowiedzi) => {
     if (!nowe || !nowe.length) return;
     const teraz = performance.now();
     setDane((d) => {
@@ -348,7 +359,25 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
       // od poczatku i sie nie zmieniaja; rozsuwa sie wylacznie moment odsloniecia.
       const znaczniki = znacznikiKaskady(doDodania.map((c) => c.id), teraz, { kaskada: !mniejRuchu });
       for (const [cid, t] of znaczniki) swiezeRef.current.set(cid, t);
-      return { ...d, chunks: d.chunks.concat(doDodania), chunkCount: d.chunkCount + doDodania.length };
+      // LISTA DOKUMENTÓW IDZIE RAZEM Z PUNKTAMI — inaczej są szare.
+      //
+      // Kolor bierze się z POZYCJI dokumentu na tej liście (koloryDokumentow), a nie
+      // z samego `documentId`, który nowe punkty miały od zawsze. Dopóki lista
+      // pochodziła z ostatniego pełnego odczytu, świeżo wgranego dokumentu w niej
+      // nie było i `kolory.get(...)` oddawało undefined → kolor zastępczy.
+      //
+      // Podmieniamy CAŁĄ listę, nie doklejamy pojedynczego wpisu: kolor zależy od
+      // indeksu w kolejności `created_at`, więc dopisanie na koniec przemalowałoby
+      // dokumenty, gdyby doszedł taki o wcześniejszej dacie. Serwer przysyła listę
+      // policzoną tym samym zapytaniem co getMapData, więc indeksy się zgadzają.
+      const dokumenty = dokumentyZOdpowiedzi && dokumentyZOdpowiedzi.length ? dokumentyZOdpowiedzi : d.documents;
+
+      return {
+        ...d,
+        documents: dokumenty,
+        chunks: d.chunks.concat(doDodania),
+        chunkCount: d.chunkCount + doDodania.length,
+      };
     });
   }, [mniejRuchu]);
 
@@ -420,7 +449,7 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
         return;
       }
       if (json.newChunks && json.newChunks.length) {
-        dolaczFragmenty(json.newChunks);
+        dolaczFragmenty(json.newChunks, json.documents);
         return;
       }
       // Brak współrzędnych w tej partii znaczy „jeszcze poniżej progu" — wtedy
@@ -482,7 +511,19 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
           })
         );
         const suma = stany.reduce((a, b) => a + b, 0);
-        if (ostatnieDone !== null && suma !== ostatnieDone) await pobierz(true, { sasiedzi: false });
+        // Z SĄSIEDZTWEM — i to jest odwrócenie wcześniejszej decyzji, z podanym powodem.
+        //
+        // Tanie odpytywanie (bez neighbors=1) miało oszczędzać ~0,6 MB na odczyt, ale
+        // kosztowało coś, czego nie przewidziałem: nowe punkty przychodziły z PUSTĄ listą
+        // sąsiadów (patrz scalanie wyżej — `znane.get(c.id) || []`). Bez sąsiadów
+        // buildEdges nie tworzy dla nich ani jednej krawędzi, więc w oknie liczba
+        // połączeń stała w miejscu przez cały przebieg, a podświetlenie świeżej krawędzi
+        // nie miało czego rysować: `indeksRef.get(cid)` oddawało pustą listę.
+        //
+        // Oszczędność dotyczyła ścieżki, która JEST otwarta po to, żeby patrzeć na
+        // przyrost połączeń. Płacimy za odczyt, bo bez tego widok nie pokazuje tego,
+        // po co istnieje.
+        if (ostatnieDone !== null && suma !== ostatnieDone) await pobierz(true, { sasiedzi: true });
         ostatnieDone = suma;
       } catch {
         // cicho — to ścieżka zapasowa, nie ma prawa zasypać użytkownika błędami
@@ -557,6 +598,37 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
     bylIndeksowanyRef.current = indeksujeSie;
     if (czyDomknac(bylo, indeksujeSie)) pobierz(true, { sasiedzi: true });
   }, [indeksujeSie, osadzona, pobierz]);
+
+  // =============================================================================
+  //  OKNO TEŻ BUDUJE RZUTOWANIE (wariant A)
+  //
+  //  Zdanie „osie powstają raz, z całego zbioru" jest słuszne co do intencji, ale
+  //  widok osadzony i tak buduje przy końcu dokumentu — więc dotąd mieliśmy wariant
+  //  najgorszy z możliwych: jeden widok rysuje mapę, drugi w tej samej chwili
+  //  pokazuje „Rzutowanie policzy się po zakończeniu indeksowania". Zgodność obu
+  //  widoków jest ważniejsza niż oszczędność jednego przeliczenia.
+  //
+  //  RÓWNOLEGŁEJ BUDOWY PILNUJE BAZA, nie ten warunek. `budowanieRef` odsiewa tylko
+  //  drugie wywołanie z TEJ SAMEJ karty; dwa różne okna zatrzymuje dopiero zapis
+  //  warunkowy w buildCollectionProjection (patrz komentarz „STRAŻNIK" w map.js).
+  //  Odpowiedź `ubiegnietoNas` znaczy „mapa jest, ale zbudował ją ktoś inny" —
+  //  wtedy wystarczy odczyt.
+  const budowanieRef = useRef(false);
+  useEffect(() => {
+    if (osadzona || !dane || dane.projectionBuilt || !dane.canBuild || !indeksujeSie) return;
+    if (budowanieRef.current) return;
+    budowanieRef.current = true;
+    (async () => {
+      try {
+        await fetch(`/api/rag/collections/${id}/map/build`, { method: 'POST' });
+        await pobierz(true, { sasiedzi: true });
+      } catch {
+        // Budowa z okna jest ścieżką pomocniczą — przy porażce zostaje przycisk.
+      } finally {
+        budowanieRef.current = false;
+      }
+    })();
+  }, [osadzona, dane, indeksujeSie, id, pobierz]);
 
   // --- krawędzie 2D: liczone RAZ na zmianę danych, nie na klatkę (12.6) ------------
 
@@ -945,6 +1017,13 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
     const kolory = koloryDokumentow(d.documents, P);
     const zazn = trafieniaRef.current;
     const hover = hoverRef.current;
+    // Te same dwie wartości co w rysuj2d — do rundy „efekty w 3D" widok przestrzenny
+    // w ogóle ich nie czytał, więc kaskada, poświata i świeże krawędzie kończyły się
+    // na przełączniku 2D/3D. To nie była decyzja: SPEC 12.8 nie wspomina o efektach
+    // ani zakazująco, ani nakazująco, a komentarz przy pętli klatek traktował obrót
+    // 3D i gasnące podświetlenia jako dwa osobne powody animacji, nie jako parę.
+    const teraz = performance.now();
+    const swieze = swiezeAktywne(teraz);
     const { yaw, pitch } = obrotRef.current;
     const vp = d.viewport;
 
@@ -1025,36 +1104,122 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
       ctx.globalAlpha = 1;
     }
 
+    // ŚWIEŻE KRAWĘDZIE — odpowiednik bloku z rysuj2d, ale na indeksie 3D.
+    // Sąsiedztwo przestrzenne liczone jest osobno przy przełączeniu widoku
+    // (dane3dRef), bo w trzech wymiarach najbliżsi bywają inni niż w dwóch (12.8) —
+    // dlatego NIE można tu użyć `indeksRef`, który trzyma sąsiedztwo 2D.
+    // Rysowane PRZED punktami, tak jak wszystkie pozostałe krawędzie: linia ma
+    // podkreślać punkt, nie leżeć na nim.
+    if (swieze && trzy) {
+      const ekran = new Map(klatka.map((p) => [p.id, doEkranu(p)]));
+      ctx.lineWidth = 1.6;
+      for (const cid of swieze) {
+        const wiek = (teraz - swiezeRef.current.get(cid)) / CZAS_PODSWIETLENIA;
+        const krycie = Math.max(0, 1 - wiek) * 0.95;
+        if (krycie <= 0) continue;
+        ctx.globalAlpha = krycie;
+        ctx.strokeStyle = P.wyroznienie;
+        for (const e of indeks3d.get(cid) || []) {
+          const a = ekran.get(e.a);
+          const b = ekran.get(e.b);
+          if (!a || !b) continue;
+          ctx.beginPath();
+          ctx.moveTo(a[0], a[1]);
+          ctx.lineTo(b[0], b[1]);
+          ctx.stroke();
+        }
+      }
+      ctx.globalAlpha = 1;
+    }
+
     // Punkty rysowane OD NAJDALSZEGO (klatka jest już posortowana), w kubełkach
     // głębi: dalsze mniejsze i bledsze. Kubełkowanie zbija 3091 wypełnień do
     // kilkudziesięciu, zachowując efekt głębi wymagany przez 12.8.
     const kubelki = new Map();
     const wyroznione = [];
+    // Świeże punkty trzymamy OSOBNO, ale Z NUMEREM KUBEŁKA — nie po to, żeby je
+    // wyjąć z porządku głębi, tylko żeby wróciły do niego przy rysowaniu (niżej).
+    const swiezeWKubelkach = new Map();
     for (const p of klatka) {
       const [sx, sy] = doEkranu(p);
       if (sx < -20 || sx > W + 20 || sy < -20 || sy > H + 20) continue;
+
+      // KASKADA — dokładnie ta sama reguła co w 2D: punkt przed swoim znacznikiem
+      // nie jest rysowany w ogóle. Sprawdzamy PRZED przydziałem do kubełka, żeby
+      // niezapalony punkt nie trafił do wspólnej ścieżki, z której nie da się go już
+      // wyjąć. Współrzędne ma od początku — rozsuwa się wyłącznie moment odsłonięcia.
+      const faza = swieze && swieze.has(p.id)
+        ? fazaPunktu(swiezeRef.current.get(p.id), teraz, { poswiata: !mniejRuchu })
+        : FAZA_ZWYKLA;
+      if (!faza.widoczny) continue;
+
       const wyrozniony = (zazn && zazn.has(p.id)) || (sasiedziHover && sasiedziHover.has(p.id));
       if (wyrozniony) { wyroznione.push({ p, sx, sy }); continue; }
       const b = kubelekGlebi(p.skalaGlebi, minK, maxK, KUBELKI_GLEBI);
       const kolor = kolory.get(p.documentId) || P.fallback;
+      const r = (0.9 + 1.9 * (b / (KUBELKI_GLEBI - 1))) * Math.sqrt(zoom);
+
+      if (faza.swiezy) {
+        // Poświata zmienia alfę i promień, a w 3D alfa NIESIE GŁĘBIĘ — jedna wspólna
+        // wartość na całą ścieżkę kubełka. Świeży punkt musi więc iść własnym
+        // wypełnieniem. Takich punktów jest najwyżej tyle, ile liczy partia.
+        if (!swiezeWKubelkach.has(b)) swiezeWKubelkach.set(b, []);
+        swiezeWKubelkach.get(b).push({ sx, sy, kolor, r: r * faza.mnoznikPromienia, krycie: faza.krycie });
+        continue;
+      }
+
       const klucz = b + '|' + kolor;
       let g = kubelki.get(klucz);
       if (!g) { g = { bucket: b, kolor, sciezka: new Path2D() }; kubelki.set(klucz, g); }
-      const r = (0.9 + 1.9 * (b / (KUBELKI_GLEBI - 1))) * Math.sqrt(zoom);
       g.sciezka.moveTo(sx + r, sy);
       g.sciezka.arc(sx, sy, r, 0, Math.PI * 2);
     }
 
     const przygaszenie = zazn || hover ? 0.32 : 1;
+    const alfaGlebi = (bucket) => (0.45 + 0.5 * (bucket / (KUBELKI_GLEBI - 1))) * przygaszenie;
     const posortowane = [...kubelki.values()].sort((a, b) => a.bucket - b.bucket);
+
+    // ZASŁANIANIE ROZWIĄZANE PORZĄDKIEM, NIE WYJĄTKIEM.
+    //
+    // Świeży punkt nie jest rysowany „na wierzchu wszystkiego" — wraca dokładnie tam,
+    // gdzie należy według swojej głębi: po kubełkach dalszych od siebie, a przed
+    // bliższymi. Punkt bliski z poświatą zasłoni skupisko za sobą (bo naprawdę jest
+    // przed nim), ale punkt daleki NIE przebije się przez chmurę stojącą bliżej
+    // kamery. Bez tego przeplatania świeży punkt w głębi wyglądałby jak dziura
+    // wypalona w skupisku, które powinno go zasłaniać.
+    let ostatni = -1;
     for (const g of posortowane) {
       // Najdalszy kubelek mial 0,28 — na bialym tle znikal. Podnosimy dol zakresu,
       // zachowujac rozpietosc, ktora robi glebie (12.8).
-      ctx.globalAlpha = (0.45 + 0.5 * (g.bucket / (KUBELKI_GLEBI - 1))) * przygaszenie;
+      ctx.globalAlpha = alfaGlebi(g.bucket);
       ctx.fillStyle = g.kolor;
       ctx.fill(g.sciezka);
+
+      for (let b = ostatni + 1; b <= g.bucket; b += 1) rysujSwiezeZKubelka(b);
+      ostatni = g.bucket;
     }
+    // Kubełki, w których stoją WYŁĄCZNIE świeże punkty, nie mają własnej ścieżki,
+    // więc pętla wyżej by ich nie dotknęła.
+    for (let b = ostatni + 1; b < KUBELKI_GLEBI; b += 1) rysujSwiezeZKubelka(b);
     ctx.globalAlpha = 1;
+
+    function rysujSwiezeZKubelka(bucket) {
+      const lista = swiezeWKubelkach.get(bucket);
+      if (!lista) return;
+      // GŁĘBIA MNOŻY POŚWIATĘ, NIE ZASTĘPUJE JEJ. Punkt daleki jest bledszy, więc
+      // jego błysk też musi być bledszy — inaczej świeże punkty w głębi świeciłyby
+      // mocniej, niż same są widoczne, i alfa przestałaby znaczyć odległość (12.8).
+      // Cena: błysk w najdalszym kubełku jest wyraźnie słabszy niż na pierwszym planie.
+      // To świadomy wybór — 3D jest widokiem pokazowym, a zafałszowana głębia
+      // kosztowałaby więcej niż subtelniejszy efekt.
+      for (const s of lista) {
+        ctx.globalAlpha = alfaGlebi(bucket) * s.krycie;
+        ctx.fillStyle = s.kolor;
+        ctx.beginPath();
+        ctx.arc(s.sx, s.sy, s.r, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
 
     for (const { p, sx, sy } of wyroznione) {
       const r = 3.4 * Math.sqrt(zoom);
