@@ -452,9 +452,11 @@ export default function SettingsPage() {
           ℹ️
         </span>
         <p className={styles.bannerText}>
-          Ustawienia są w trakcie rozwoju. Obecnie zapisują się lokalnie w tej
-          przeglądarce. Po dodaniu logowania będą powiązane z Twoim kontem,
-          pojawi się też sekcja Konto i zarządzanie kluczami API.
+          Sekcja Modele językowe zapisuje się na Twoim koncie. Pozostałe
+          ustawienia zapisują się lokalnie w tej przeglądarce i są wspólne dla
+          wszystkich kont zalogowanych na tym komputerze — powiązanie ich
+          z kontem jest w przygotowaniu, podobnie jak zmiana hasła
+          i zarządzanie kluczami API.
         </p>
       </div>
 

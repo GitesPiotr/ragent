@@ -22,7 +22,8 @@
 //  a przypisanie wskazuje model wlasnie usuniety — i odwrotnie, zaleznie
 //  od kolejnosci, ktorej klient nie ma powodu znac.
 //
-//  UI TEGO JESZCZE NIE UZYWA. Rundy 5 i 6 — patrz naglowek migracji 020.
+//  UI UZYWA TEJ TRASY (od 1fd8a7a): odczyt lib/settings/DopuszczoneContext.js:82,
+//  zapis app/ustawienia/_modele/ModeleJezykowe.js:611 -> DopuszczoneContext.js:145.
 // =============================================================================
 
 import { NextResponse } from "next/server";
