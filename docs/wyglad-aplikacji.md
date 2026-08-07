@@ -929,9 +929,12 @@ Karty stałe (1-3) idą na górze, dodawalne w środku, `test` zawsze ostatnia
 | `.body code` | :92-97 | `padding: 1px 5px` · `border-radius: 4px` · `background: #ede9fe` · `font-size: 12.5px` |
 
 Pasek pojawia się tylko wtedy, gdy pojęcie o danym `id` istnieje
-(`ConceptBar.js:26` — przy braku zwraca `null`). Źródła: pliki `knowledge/*.md`
-dla `persona`, `model`, `temperature`, `rules`, `tools` (lib/knowledge/concepts.js:6-12)
-oraz `lib/knowledge/extraConcepts.js` dla `knowledgeBase`, `rag`, `qa`, `io`, `test`.
+(`ConceptBar.js` — przy braku zwraca `null`). Źródło jest jedno: pliki
+`knowledge/*.md` dla wszystkich dziesięciu pojęć — `persona`, `model`,
+`temperature`, `rules`, `knowledgeBase`, `rag`, `qa`, `tools`, `io`, `test`
+(lista w `lib/knowledge/concepts.js`). Moduł `lib/knowledge/extraConcepts.js`,
+który trzymał pięć ostatnich, został usunięty razem z ich przeniesieniem
+do plików.
 
 ---
 

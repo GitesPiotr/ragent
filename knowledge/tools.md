@@ -1,31 +1,40 @@
 # Narzędzia
 
 ## Definicja
-Narzędzia to **zewnętrzne zdolności, które agent może wywołać, żeby zrobić coś, czego sam model nie potrafi** — np. wykonać obliczenia, pobrać dane, wyszukać informacje, połączyć się z innym systemem (integracja) albo sięgnąć do źródła wiedzy (RAG — wyszukanie potrzebnych fragmentów w bazie wiedzy przed wygenerowaniem odpowiedzi).
+Narzędzia to **zdolności, które agent może wywołać w trakcie rozmowy, żeby zrobić coś, czego sam model nie potrafi** — policzyć, sprawdzić bieżącą datę, poszukać informacji w internecie albo zajrzeć do Twoich dokumentów. Agent **sam decyduje**, kiedy po narzędzie sięgnąć; Ty decydujesz tylko, które ma do dyspozycji.
 
 ## Po co to
-Sam model zna tylko to, na czym został wytrenowany — nie ma dostępu do Twoich danych ani do aktualnych informacji ze świata, a jego „pamięć" w rozmowie (okno kontekstu) jest ograniczona. Narzędzia dają agentowi to, czego modelowi brakuje: **aktualne dane, konkretną wiedzę i możliwość działania w środowisku**. Dzięki nim agent może realnie wykonywać zadania, a nie tylko generować tekst — bo najbardziej autonomiczna forma AI potrafi podejmować działania zgodne ze swoimi instrukcjami dzięki integracji z różnymi narzędziami.
+Model zna wyłącznie to, na czym został wytrenowany. Nie wie, który dziś mamy dzień, nie zna Twoich dokumentów, a rachunki „liczy" tak samo, jak pisze zdania — zgadując najbardziej prawdopodobny ciąg znaków. Narzędzia zamykają tę lukę: dają agentowi **pewny wynik zamiast prawdopodobnego**, dostęp do aktualnych informacji i do Twojej wiedzy.
+
+## Jakie narzędzia są w tej aplikacji
+W karcie **Narzędzia** włączasz je przełącznikami. Są trzy:
+
+- **Kalkulator** — liczy działania matematyczne zamiast zgadywać wynik (mnożenie, dzielenie, procenty, potęgi, pierwiastki). Włącz go zawsze, gdy agent ma podawać kwoty, ilości albo cokolwiek policzonego. Model bez kalkulatora potrafi podać liczbę, która wygląda poprawnie i poprawna nie jest.
+- **Data / czas** — zwraca bieżącą datę i godzinę (czas serwera). Potrzebne przy terminach, dniach tygodnia, wyliczaniu „ile zostało do…". Bez tego narzędzia agent nie ma pojęcia, kiedy z nim rozmawiasz.
+- **Wyszukiwanie w internecie** — agent sięga po aktualne informacje z sieci i podaje źródła. Pod jednym przełącznikiem działają **dwa mechanizmy**, wybierane automatycznie po modelu agenta: dla modeli Claude wyszukiwanie odbywa się po stronie dostawcy (Anthropic), a dla modeli lokalnych (Ollama) — przez wyszukiwarkę uruchomioną po stronie serwera. Dla ciebie to jedno ustawienie; różnica dotyczy tylko kosztu i tego, co trzeba mieć skonfigurowane. **Wyszukiwanie nie działa dla modeli z OpenRoutera i OpenAI** — przy takim modelu przełącznik jest wyszarzony.
+
+Czwarte narzędzie ma **własną kartę**, obok Bazy wiedzy:
+
+- **Przeszukiwanie dokumentów (RAG)** — agent przeszukuje wskazaną kolekcję Twoich dokumentów i dostaje z niej tylko te fragmenty, które pasują do pytania, razem z nazwą pliku i sekcją. Nie leży w „Narzędziach", bo to nie jest narzędzie pokroju kalkulatora, tylko drugie źródło wiedzy agenta — dlatego stoi przy Bazie wiedzy, od której różni się sposobem działania. **Całą rzecz opisuje osobne pojęcie „RAG (wyszukiwanie w dokumentach)"** — tam jest różnica wobec Bazy wiedzy, rzecz o kolekcjach i typowe błędy.
 
 ## Jak decydować, jakie narzędzia dać agentowi
-- **Czy agent potrzebuje dostępu do wiedzy/danych?** Tak — gdy pełni rolę analityka, doradcy lub odpowiada na podstawie faktów. Nie — gdy wykonuje zadania rutynowe, wcześniej zdefiniowane, albo pracuje na danych już przygotowanych przez inny krok/agenta.
-- **Dawaj tylko to, co potrzebne.** Nadmiar źródeł i narzędzi zwiększa „szum" i obniża jakość odpowiedzi — agent musi przeszukiwać więcej, niż trzeba.
-- **Uważaj na narzędzia podatne na błędy.** Wg materiałów wyszukiwanie w sieci (również „deep search") wykazuje **wysoki poziom halucynacji** — nie traktuj go jako pewnego źródła prawdy.
-- **Dbaj o jakość źródeł.** Zasada „Garbage In – Garbage Out": jeśli dane wejściowe są słabe, wynik też będzie słaby. Źródła powinny być aktualne, spójne, kompletne i „czyste".
-
-## Przykłady (jak to wygląda w praktyce)
-Poniższe to tylko **ilustracje** pojęcia, nie jego istota:
-- **Źródła wiedzy / RAG:** pliki PDF w bazie wiedzy (na etapie *proof of concept* najłatwiejsze do przetworzenia), linki do zasobów (intranet, SharePoint), dokumenty osadzone w prompcie, bazy danych i API dla danych dynamicznych.
-- **Platforma GeneratorGPT:** dodanie pliku do analizy, łączenie tekstu z wielu kroków, logika warunkowa (instrukcje „jeśli…"), eksport wyniku do PDF.
-- **Integracje no-code:** Make / n8n, poczta e-mail, kalendarz, arkusze Google, Google Docs, Slack — agent pobiera dane ze źródeł i rozsyła wyniki.
+- **Zacznij od pytania: czego agent nie potrafi sam?** Jeśli ma liczyć — kalkulator. Jeśli ma odpowiadać na podstawie Twoich dokumentów — Baza wiedzy albo RAG. Jeśli ma znać dzisiejszą datę — data/czas.
+- **Dawaj tylko to, co potrzebne.** Każde zbędne narzędzie to dodatkowy wybór, przed którym staje model przy każdym pytaniu — i szansa, że sięgnie po niewłaściwe. Nadmiar źródeł i narzędzi zwiększa „szum" i obniża jakość odpowiedzi.
+- **Uważaj na wyszukiwanie w sieci.** Wyszukiwanie (również „deep search") wykazuje **wysoki poziom halucynacji** — nie traktuj go jako pewnego źródła prawdy. Do rzeczy, które muszą się zgadzać, lepsze są Twoje własne dokumenty.
+- **Dbaj o jakość źródeł.** Zasada „Garbage In – Garbage Out": jeśli dane wejściowe są słabe, wynik też będzie słaby. Dokumenty, które dajesz agentowi, powinny być aktualne, spójne i kompletne.
+- **Powiedz w zasadach, kiedy narzędzia używać.** Samo włączenie przełącznika nie zmusza agenta do sięgnięcia po narzędzie. Zasada w rodzaju „każdy wynik liczbowy licz kalkulatorem, nigdy w pamięci" bardzo pomaga.
 
 ## Typowe błędy
-- **Za dużo źródeł/narzędzi** → szum i gorsze odpowiedzi (agent przetwarza niepotrzebne informacje).
-- **Poleganie na narzędziach o wysokim ryzyku halucynacji** (wyszukiwanie w sieci / deep search) jako na źródle prawdy.
-- **Słabej jakości, nieaktualne lub sprzeczne dane** w podłączonych źródłach.
-- **Włączanie narzędzi, których agent nie potrzebuje** → więcej narzędzi to większe zamieszanie i koszt; agent gubi się, po które sięgnąć.
-- **Zbyt ogólny lub niejasny opis narzędzia** — model nie wie, kiedy po nie sięgnąć, więc używa go w złym momencie albo wcale.
-- **Oczekiwanie, że agent użyje narzędzia, którego mu nie daliśmy** (np. liczenie na wyszukiwanie w sieci, gdy narzędzie web jest wyłączone).
-- **Brak myślenia o błędach narzędzia** — gdy narzędzie zwróci błąd albo dziwny wynik, agent powinien sobie z tym poradzić, a nie się zaciąć.
+- **Za dużo narzędzi naraz** → agent gubi się, po które sięgnąć, a odpowiedzi robią się gorsze.
+- **Oczekiwanie, że agent użyje narzędzia, którego mu nie daliśmy** — np. liczenie na to, że sprawdzi coś w internecie, gdy wyszukiwanie jest wyłączone. Agent wtedy nie powie „nie mam narzędzia", tylko odpowie z własnej wiedzy.
+- **Poleganie na wyszukiwaniu w sieci jak na źródle prawdy** — patrz wyżej: to narzędzie o wysokim ryzyku halucynacji.
+- **Włączone przeszukiwanie dokumentów bez wskazanej kolekcji** — agent nie ma czego przeszukać i przy każdym pytaniu powie, że nie ma dostępu do dokumentów. Wygląda na włączone, działa jak wyłączone.
+- **Słabej jakości albo nieaktualne dokumenty** w podłączonych źródłach — agent zacytuje stary cennik równie pewnie jak nowy.
 
 ## Krótki przykład
-Agent do obsługi zapytań e-mail: **odczytuje** treść wiadomości (integracja z pocztą), **wyszukuje** odpowiedź w firmowej bazie wiedzy z plików PDF (RAG), **przygotowuje** odpowiedź i **wysyła** ją do klienta (integracja). Model sam nie zna treści maila ani firmowych dokumentów — wykonać to zadanie pozwalają mu dopiero narzędzia.
+**Agent „Asystent ofertowy"** ma włączony **Kalkulator** i **Przeszukiwanie dokumentów** ze wskazaną kolekcją „Cenniki".
+
+Pytanie: *„Ile wyjdzie 12 sztuk z oferty jesiennej?"*
+Agent najpierw **przeszukuje kolekcję** i znajduje cenę jednostkową we właściwym cenniku, potem **liczy kalkulatorem** 12 × tę cenę, a na końcu podaje wynik razem z nazwą pliku, z którego wziął cenę.
+
+Bez tych dwóch narzędzi ten sam agent zgadłby cenę z ogólnej wiedzy i pomnożył ją w pamięci — dając odpowiedź, która brzmi tak samo pewnie, a bywa nieprawdziwa w obu składnikach.

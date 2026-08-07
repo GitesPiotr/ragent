@@ -19,7 +19,15 @@ const FIELD_LABELS = {
   rules: "Zasady",
   tools: "Narzędzia",
 };
-const TOOL_LABELS = { calculator: "kalkulator", datetime: "data/czas" };
+// Prowadzenie proponuje tylko kalkulator i date/czas (patrz lib/mentor/prompt.js),
+// ale mentor ZNA juz z wiedzy takze wyszukiwanie w internecie — wiec ekstraktor
+// potrafi je czasem wypisac. Etykieta jest tu po to, zeby karta propozycji
+// pokazala wtedy nazwe z UI, a nie surowe „web_search".
+const TOOL_LABELS = {
+  calculator: "kalkulator",
+  datetime: "data/czas",
+  web_search: "wyszukiwanie w internecie",
+};
 
 // Podglad proponowanej wartosci dla danego pola.
 function ProposalValue({ proposal }) {
