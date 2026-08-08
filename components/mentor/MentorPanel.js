@@ -11,6 +11,8 @@ import { useMentorLayout } from "./MentorLayoutContext";
 import { useCreatorFocus } from "@/components/creator/CreatorFocusContext";
 import { useSettings } from "@/lib/settings/SettingsContext";
 import { RAG_TOOL_ID, getParameter } from "@/lib/creator/parameters";
+import { wyjsciaDlaWiadomosci, RODZAJ, STYL } from "@/lib/mentor/wyjscia";
+import { modelSupportsTemperature } from "@/lib/config/models";
 import styles from "./MentorPanel.module.css";
 
 // Czytelne etykiety pol i narzedzi (do kart propozycji).
@@ -130,6 +132,9 @@ export function MentorPanel() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const messagesRef = useRef(null);
+  // Pole rozmowy — wyjscie „Chcę to zmienić" stawia na nim ognisko, zamiast
+  // wysylac za uzytkownika zdanie, ktorego jeszcze nie ulozyl.
+  const inputRef = useRef(null);
 
   // KROK PERSONA (tylko ten krok) — ktora sciezke wybral user:
   // null = jeszcze nie wybral (pokazujemy dwa przyciski)
@@ -420,52 +425,6 @@ export function MentorPanel() {
     }
   }
 
-  // --- KROK PERSONA, ŚCIEŻKA B ("Poproś o propozycję") — dotychczasowy przebieg.
-  function askMentorForPersona() {
-    if (loading) return;
-    setPersonaPath("propose");
-    const next = [
-      ...messages,
-      {
-        role: "user",
-        content: "Poproszę o propozycję osobowości — zaproponuj mi ją.",
-        ukryta: true,
-      },
-    ];
-    setMessages(next);
-    runGuided(next, agent);
-  }
-
-  // --- WYJŚCIE Z PĘTLI OCENIANIA: mentor pisze personę ZA użytkownika,
-  // ale na podstawie TEGO, co użytkownik już napisał, i swoich własnych uwag.
-  //
-  // IDZIE TRYBEM `guided`, NIE `persona-feedback` — i to nie jest oszczędność,
-  // tylko jedyna droga. persona-feedback jest jednoetapowy WLASNIE DLATEGO, ze
-  // jego propozycja jest znana serwerowi z gory (to tekst uzytkownika). Tutaj
-  // propozycja ma byc tekstem MENTORA, a jedynym mechanizmem, ktory zamienia
-  // proze mentora na propozycje pola, jest dwuetapowe handleGuided
-  // (proza + ekstraktor ze schematem).
-  //
-  // Kontekstu nie trzeba nigdzie doklejac: toApiMessages wysyla CALA rozmowe,
-  // a w niej siedzi i opis uzytkownika, i wszystkie dotychczasowe oceny.
-  // Dlatego im dluzej ktos poprawial, tym lepsza jest ta propozycja.
-  function askMentorFromDraft() {
-    if (loading) return;
-    setPersonaPath("propose");
-    setEdycjaOpisu(false);
-    const next = [
-      ...messages,
-      {
-        role: "user",
-        content:
-          "Na podstawie mojego opisu i Twoich dotychczasowych uwag napisz gotową osobowość — nie pytaj mnie już o nic, tylko zaproponuj pełny opis.",
-        ukryta: true,
-      },
-    ];
-    setMessages(next);
-    runGuided(next, agent);
-  }
-
   // Przejecie CUDZEGO tekstu do wlasnej edycji — dziala w obie strony:
   // wlasny opis wraca do poprawki, a gotowa propozycja mentora daje sie
   // przerobic, zamiast byc do wziecia albo odrzucenia w calosci.
@@ -532,7 +491,11 @@ export function MentorPanel() {
   }
 
   // SEDNO: akceptacja propozycji -> wpisanie pol do kreatora (stan).
-  function acceptProposal(index) {
+  //
+  // `trescTury` pozwala powiedziec mentorowi, DLACZEGO wartosc zostala przyjeta.
+  // „Zaakceptuj" i „Nie wiem — zdecyduj za mnie" robia z danymi to samo, ale
+  // znacza co innego: drugie prosi jeszcze o uzasadnienie wyboru.
+  function acceptProposal(index, trescTury) {
     const proposal = messages[index]?.proposal;
     if (!proposal || loading) return;
 
@@ -562,7 +525,7 @@ export function MentorPanel() {
       ...marked,
       {
         role: "user",
-        content: "Akceptuję tę wartość, przejdźmy dalej.",
+        content: trescTury || "Akceptuję tę wartość, przejdźmy dalej.",
         ukryta: true,
       },
     ];
@@ -577,30 +540,115 @@ export function MentorPanel() {
     -1,
   );
 
-  // Czy pokazac dwa przyciski wyboru sciezki (tylko krok persony, przed wyborem).
-  function showsPersonaChoice(m, i) {
-    return (
-      i === lastAssistantIndex &&
-      mode === "guided" &&
-      personaPath === null &&
-      m.step === "persona" &&
-      !m.proposal &&
-      !loading
-    );
+  // =========================================================================
+  //  CO UZYTKOWNIK MOZE ZROBIC POD TA WYPOWIEDZIA.
+  //
+  //  Do tej rundy byly na to DWA osobne mechanizmy (przyciski karty propozycji
+  //  i dwa bloki persony), a wiekszosc krokow nie miala zadnego: mentor pytal
+  //  „akceptujesz, czy chcesz zmienic?", a pod spodem stal jeden przycisk.
+  //
+  //  Teraz jest jedno pytanie i jedna odpowiedz. KTORE wyjscia — rozstrzyga
+  //  lib/mentor/wyjscia.js (sytuacja: krok + czy jest propozycja).
+  //  POD KTORA wiadomoscia i KIEDY — zostaje tutaj, bo to sprawa panelu:
+  //  tylko pod ostatnia wypowiedzia mentora, tylko w prowadzeniu i nie w trakcie
+  //  czekania na odpowiedz.
+  // =========================================================================
+  function wyjsciaPod(m, i) {
+    if (i !== lastAssistantIndex || mode !== "guided" || loading) return [];
+    return wyjsciaDlaWiadomosci({
+      krok: m.step,
+      propozycja: m.proposal,
+      zastosowana: Boolean(m.applied),
+      personaPath,
+      edycjaOpisu,
+      // Model, ktory sam dobiera losowosc, nie zostawia w kroku temperatury
+      // zadnej decyzji — a przyciski obiecywalyby, ze jakas jest.
+      temperaturaDostepna: modelSupportsTemperature(agent.provider, agent.model),
+    });
   }
 
-  // Czy pokazac TRZY WYJSCIA pod ocena wlasnego opisu. Warunek `!edycjaOpisu`
-  // rozdziela dwa stany tej samej sciezki: uzytkownik albo pisze (pole na dole),
-  // albo wybiera, co dalej (te przyciski) — nigdy oba naraz.
-  function showsPersonaExits(m, i) {
+  // Jedno wykonanie dla wszystkich wyjsc. Trzy rodzaje, kazdy z implementacja
+  // TUTAJ — dlatego tabela w wyjscia.js nie moze obiecac niczego, czego panel
+  // nie zrobi.
+  function wykonajWyjscie(w, index) {
+    if (loading) return;
+    const propozycja = messages[index]?.proposal;
+
+    if (w.rodzaj === RODZAJ.AKCEPTUJ) {
+      acceptProposal(index, w.tresc);
+      return;
+    }
+    if (w.rodzaj === RODZAJ.WPISZ) {
+      if (w.pole === "opis") {
+        przejmijDoEdycji(w.przejmijWartosc ? propozycja?.value : undefined);
+        return;
+      }
+      // Pole rozmowy: NIE wysylamy nic za uzytkownika. „Chcę to zmienić" nie
+      // niesie tresci zmiany — tylko on ja zna. Zadaniem wyjscia jest
+      // pokazac, GDZIE ja napisac, a nie zgadnac, co chcial powiedziec.
+      requestAnimationFrame(() => inputRef.current?.focus());
+      return;
+    }
+    if (w.rodzaj === RODZAJ.POWIEDZ) {
+      // Skrot do napisania tego samego recznie — stad ukryta tura uzytkownika.
+      //
+      // WSZYSTKO IDZIE TRYBEM `guided`, TAKZE PROSBA O GOTOWA PERSONE — i to
+      // nie jest oszczednosc, tylko jedyna droga. `persona-feedback` jest
+      // jednoetapowy WLASNIE DLATEGO, ze jego propozycja jest znana serwerowi
+      // z gory (to tekst uzytkownika); tutaj propozycja ma byc tekstem MENTORA,
+      // a proze zamienia w propozycje pola tylko dwuetapowe handleGuided.
+      //
+      // Kontekstu nie trzeba nigdzie doklejac: toApiMessages wysyla CALA
+      // rozmowe, wiec im dluzej ktos poprawial opis, tym lepsza jest odpowiedz.
+      if (w.przelaczNaPropozycje) {
+        setPersonaPath("propose");
+        setEdycjaOpisu(false);
+      }
+      const next = [
+        ...messages,
+        { role: "user", content: w.tresc, ukryta: true },
+      ];
+      setMessages(next);
+      runGuided(next, agent);
+    }
+  }
+
+  // Renderer bloku decyzji — jedyne miejsce, w ktorym wyjscia zamieniaja sie
+  // w przyciski. Styl bierze sie z tabeli, nie z rodzaju akcji: ta sama akcja
+  // wyglada inaczej jako rownorzedny wybor i jako droga glowna pod karta.
+  function BlokWyjsc({ wyjscia, index }) {
+    if (wyjscia.length === 0) return null;
     return (
-      i === lastAssistantIndex &&
-      mode === "guided" &&
-      personaPath === "self" &&
-      !edycjaOpisu &&
-      m.proposal?.wlasny &&
-      !m.applied &&
-      !loading
+      <div className={styles.pathChoice}>
+        {wyjscia.map((w) =>
+          w.styl === STYL.KAFEL ? (
+            <button
+              key={w.id}
+              type="button"
+              className={styles.pathButton}
+              disabled={loading}
+              onClick={() => wykonajWyjscie(w, index)}
+            >
+              <span className={styles.pathTitle}>{w.tytul}</span>
+              {w.opis && <span className={styles.pathDesc}>{w.opis}</span>}
+            </button>
+          ) : (
+            <button
+              key={w.id}
+              type="button"
+              className={
+                w.styl === STYL.GLOWNY
+                  ? styles.acceptButton
+                  : styles.secondaryButton
+              }
+              disabled={loading}
+              onClick={() => wykonajWyjscie(w, index)}
+            >
+              {w.tytul}
+            </button>
+          ),
+        )}
+      </div>
     );
   }
 
@@ -745,116 +793,24 @@ export function MentorPanel() {
                             <div className={styles.proposalBody}>
                               <ProposalValue proposal={m.proposal} />
                             </div>
-                            {m.applied ? (
+                            {/* KARTA POKAZUJE, CO MENTOR PROPONUJE — i tyle.
+                                Wszystkie przyciski stoją pod nią, w jednym
+                                bloku decyzji, żeby „co proponuję" i „co możesz
+                                zrobić" nie były wymieszane. */}
+                            {m.applied && (
                               <div className={styles.appliedBadge}>
                                 ✓ Wpisano do kreatora
                               </div>
-                            ) : (
-                              <>
-                                <button
-                                  type="button"
-                                  className={styles.acceptButton}
-                                  disabled={loading}
-                                  onClick={() => acceptProposal(i)}
-                                >
-                                  Zaakceptuj i wpisz do kreatora
-                                </button>
-                                {/* Gotowa persona nie jest do wzięcia albo
-                                    odrzucenia w całości: tu wchodzi do pola
-                                    edycji i można ją przerobić od razu. */}
-                                {m.proposal.field === "persona" && (
-                                  <button
-                                    type="button"
-                                    className={styles.secondaryButton}
-                                    disabled={loading}
-                                    onClick={() =>
-                                      przejmijDoEdycji(m.proposal.value)
-                                    }
-                                  >
-                                    Popraw ten opis samodzielnie
-                                  </button>
-                                )}
-                              </>
                             )}
                           </div>
                         )}
 
-                        {/* TRZY WYJŚCIA PO OCENIE WŁASNEGO OPISU.
-                            Bez nich ścieżka „Opisz sam" kończyła się poleceniem
-                            „napisz lepiej" — jedyną czynnością dostępną komuś,
-                            kto właśnie dlatego przyszedł po pomoc. */}
-                        {showsPersonaExits(m, i) && (
-                          <div className={styles.pathChoice}>
-                            <button
-                              type="button"
-                              className={styles.pathButton}
-                              onClick={() => przejmijDoEdycji()}
-                            >
-                              <span className={styles.pathTitle}>
-                                Popraw swój opis samodzielnie
-                              </span>
-                              <span className={styles.pathDesc}>
-                                Wrócisz do swojego tekstu i poprosisz o kolejną ocenę.
-                              </span>
-                            </button>
-                            <button
-                              type="button"
-                              className={styles.pathButton}
-                              onClick={askMentorFromDraft}
-                            >
-                              <span className={styles.pathTitle}>
-                                Mentor zaproponuje osobowość na podstawie mojego opisu
-                              </span>
-                              <span className={styles.pathDesc}>
-                                Napisze gotowy opis, korzystając z Twojego tekstu
-                                i wszystkich swoich uwag.
-                              </span>
-                            </button>
-                            <button
-                              type="button"
-                              className={styles.pathButton}
-                              onClick={() => acceptProposal(i)}
-                            >
-                              <span className={styles.pathTitle}>
-                                Akceptuję obecny opis
-                              </span>
-                              <span className={styles.pathDesc}>
-                                Wpisze Twój tekst do kreatora i przejdzie do
-                                następnego kroku.
-                              </span>
-                            </button>
-                          </div>
-                        )}
-
-                        {/* KROK PERSONA — wybór jednej z dwóch ścieżek */}
-                        {showsPersonaChoice(m, i) && (
-                          <div className={styles.pathChoice}>
-                            <button
-                              type="button"
-                              className={styles.pathButton}
-                              onClick={() => przejmijDoEdycji()}
-                            >
-                              <span className={styles.pathTitle}>
-                                Opisz sam
-                              </span>
-                              <span className={styles.pathDesc}>
-                                Napisz własny opis — mentor da Ci feedback.
-                              </span>
-                            </button>
-                            <button
-                              type="button"
-                              className={styles.pathButton}
-                              onClick={askMentorForPersona}
-                            >
-                              <span className={styles.pathTitle}>
-                                Poproś mentora o propozycję
-                              </span>
-                              <span className={styles.pathDesc}>
-                                Mentor dopyta o kontekst i napisze personę za Ciebie.
-                              </span>
-                            </button>
-                          </div>
-                        )}
+                        {/* BLOK DECYZJI — jedyne miejsce z akcjami pod
+                            wypowiedzią mentora. Które wyjścia się tu pojawią,
+                            rozstrzyga lib/mentor/wyjscia.js; ten kod tylko je
+                            renderuje. Wcześniej stały tu dwa osobne bloki
+                            persony, a reszta kroków nie miała żadnego. */}
+                        <BlokWyjsc wyjscia={wyjsciaPod(m, i)} index={i} />
                       </div>
                     ) : null,
                   )
@@ -927,6 +883,7 @@ export function MentorPanel() {
               ) : (
               <div className={styles.inputRow}>
                 <textarea
+                  ref={inputRef}
                   className={styles.input}
                   value={input}
                   placeholder={
