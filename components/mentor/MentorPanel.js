@@ -583,9 +583,17 @@ export function MentorPanel() {
                                 </>
                               )}
                             </div>
-                            <div className={styles.proposalBody}>
-                              <ProposalValue proposal={m.proposal} />
-                            </div>
+                            {/* PODGLĄD TYLKO DLA PROPOZYCJI MENTORA.
+                                Przy własnym opisie pokazywałby tekst, który
+                                stoi kilkadziesiąt pikseli niżej, w polu edycji
+                                (personaDraft nie jest czyszczony po feedbacku).
+                                Ta kopia zajmowała cały widok pod odpowiedzią
+                                i to przez nią ocena zostawała nad krawędzią. */}
+                            {!m.proposal.wlasny && (
+                              <div className={styles.proposalBody}>
+                                <ProposalValue proposal={m.proposal} />
+                              </div>
+                            )}
                             {m.applied ? (
                               <div className={styles.appliedBadge}>
                                 ✓ Wpisano do kreatora
