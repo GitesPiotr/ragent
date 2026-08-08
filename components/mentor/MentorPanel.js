@@ -131,6 +131,9 @@ export function MentorPanel() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const messagesRef = useRef(null);
+  // Pole rozmowy — wyjscie „Chcę to zmienić" stawia na nim ognisko, zamiast
+  // wysylac za uzytkownika zdanie, ktorego jeszcze nie ulozyl.
+  const inputRef = useRef(null);
 
   // KROK PERSONA (tylko ten krok) — ktora sciezke wybral user:
   // null = jeszcze nie wybral (pokazujemy dwa przyciski)
@@ -487,7 +490,11 @@ export function MentorPanel() {
   }
 
   // SEDNO: akceptacja propozycji -> wpisanie pol do kreatora (stan).
-  function acceptProposal(index) {
+  //
+  // `trescTury` pozwala powiedziec mentorowi, DLACZEGO wartosc zostala przyjeta.
+  // „Zaakceptuj" i „Nie wiem — zdecyduj za mnie" robia z danymi to samo, ale
+  // znacza co innego: drugie prosi jeszcze o uzasadnienie wyboru.
+  function acceptProposal(index, trescTury) {
     const proposal = messages[index]?.proposal;
     if (!proposal || loading) return;
 
@@ -517,7 +524,7 @@ export function MentorPanel() {
       ...marked,
       {
         role: "user",
-        content: "Akceptuję tę wartość, przejdźmy dalej.",
+        content: trescTury || "Akceptuję tę wartość, przejdźmy dalej.",
         ukryta: true,
       },
     ];
@@ -564,13 +571,18 @@ export function MentorPanel() {
     const propozycja = messages[index]?.proposal;
 
     if (w.rodzaj === RODZAJ.AKCEPTUJ) {
-      acceptProposal(index);
+      acceptProposal(index, w.tresc);
       return;
     }
     if (w.rodzaj === RODZAJ.WPISZ) {
       if (w.pole === "opis") {
         przejmijDoEdycji(w.przejmijWartosc ? propozycja?.value : undefined);
+        return;
       }
+      // Pole rozmowy: NIE wysylamy nic za uzytkownika. „Chcę to zmienić" nie
+      // niesie tresci zmiany — tylko on ja zna. Zadaniem wyjscia jest
+      // pokazac, GDZIE ja napisac, a nie zgadnac, co chcial powiedziec.
+      requestAnimationFrame(() => inputRef.current?.focus());
       return;
     }
     if (w.rodzaj === RODZAJ.POWIEDZ) {
@@ -867,6 +879,7 @@ export function MentorPanel() {
               ) : (
               <div className={styles.inputRow}>
                 <textarea
+                  ref={inputRef}
                   className={styles.input}
                   value={input}
                   placeholder={

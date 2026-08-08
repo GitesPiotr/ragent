@@ -204,9 +204,10 @@
 /* Drugie wyjście z karty propozycji („Popraw ten opis samodzielnie").
    Wyraźnie słabsze niż .acceptButton — akceptacja zostaje domyślną drogą,
    a przejęcie do edycji jest alternatywą dla tych, którzy chcą coś zmienić. */
+/* Odstępy daje kontener (.pathChoice ma gap), więc własnego marginesu ten
+   przycisk nie potrzebuje — inaczej odstępy w bloku decyzji byłyby nierówne. */
 .secondaryButton {
   display: block; /* pod przyciskiem akceptacji, nie obok — panel bywa wąski */
-  margin-top: 8px;
   padding: 7px 12px;
   border: 1px solid #c4b5fd;
   border-radius: 8px;
