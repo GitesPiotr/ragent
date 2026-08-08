@@ -207,6 +207,43 @@
   color: #15803d;
 }
 
+/* KONIEC PROWADZENIA — podsumowanie z przypomnieniem o zapisie.
+   Konwencja .proposalCard, ale PEŁNA ramka i zieleń zamiast kreskowanego
+   fioletu: to nie jest kolejna propozycja do rozważenia, tylko domknięcie
+   rozmowy i jedyne miejsce, w którym pada zdanie o „Zapisz". */
+.summaryCard {
+  align-self: stretch;
+  padding: 12px 14px;
+  border: 1px solid #86efac;
+  border-radius: 10px;
+  background: #f0fdf4;
+}
+
+.summaryHead {
+  font-size: 14px;
+  font-weight: 700;
+  color: #15803d;
+  margin-bottom: 6px;
+}
+
+.summaryText {
+  margin: 0 0 8px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #1f2937;
+}
+
+.summaryWarn {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #92400e;
+  background: #fffbeb;
+  border-left: 3px solid #f59e0b;
+  padding: 8px 10px;
+  border-radius: 0 6px 6px 0;
+}
+
 /* KROK PERSONA — wybór ścieżki (dwa przyciski pod wypowiedzią mentora) */
 .pathChoice {
   align-self: flex-start;

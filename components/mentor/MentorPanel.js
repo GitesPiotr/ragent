@@ -9,6 +9,7 @@ import {
 } from "@/lib/state/actions";
 import { useMentorLayout } from "./MentorLayoutContext";
 import { useSettings } from "@/lib/settings/SettingsContext";
+import { RAG_TOOL_ID } from "@/lib/creator/parameters";
 import styles from "./MentorPanel.module.css";
 
 // Czytelne etykiety pol i narzedzi (do kart propozycji).
@@ -100,6 +101,32 @@ export function MentorPanel() {
     });
   }
 
+  // PRZEWIJA DO POCZATKU OSTATNIEJ WYPOWIEDZI, NIE NA SAMO DNO.
+  //
+  // Roznica jest cala usterka feedbacku persony: ocena opisu ma kilkanascie
+  // linii, a pod nia stoi karta z wlasnym tekstem uzytkownika. Przewiniecie na
+  // dno stawialo mu przed oczami te karte, a ocene zostawialo nad krawiedzia —
+  // wygladalo to tak, jakby mentor oddal jego tekst bez slowa komentarza.
+  //
+  // Liczone z getBoundingClientRect obu elementow, a nie z offsetTop: kontener
+  // .messages nie ma position: relative, wiec offsetParent dymka to nie on
+  // i offsetTop mierzylby odleglosc od czegos innego niz obszar przewijania.
+  function scrollToLastMessage() {
+    requestAnimationFrame(() => {
+      const el = messagesRef.current;
+      if (!el) return;
+      const nodes = el.querySelectorAll("[data-mentor-msg]");
+      const last = nodes[nodes.length - 1];
+      if (!last) {
+        el.scrollTop = el.scrollHeight;
+        return;
+      }
+      const delta =
+        last.getBoundingClientRect().top - el.getBoundingClientRect().top;
+      el.scrollTop += delta - 8; // 8px oddechu nad pierwsza linia
+    });
+  }
+
   function resetConversation() {
     setMessages([]);
     setError(null);
@@ -113,9 +140,13 @@ export function MentorPanel() {
     setMode(m);
     if (m === "guided") {
       // Tryb prowadzenia startuje sam - mentor zaczyna od persony.
+      //
+      // `ukryta` — patrz komentarz przy renderze listy wiadomosci: ta tura
+      // jedzie do modelu, ale nie pokazuje sie na ekranie jako slowa „Ty".
       const kickoff = {
         role: "user",
         content: "Zacznijmy — poprowadź mnie krok po kroku.",
+        ukryta: true,
       };
       setMessages([kickoff]);
       runGuided([kickoff], agent);
@@ -271,13 +302,16 @@ export function MentorPanel() {
         },
       ]);
       dispatch(setLastEvent({ type: "mentor-reply" }));
+      // POCZATEK OCENY, nie dno panelu — to jest cala poprawka tej sciezki.
+      scrollToLastMessage();
     } catch (e) {
       setError(e.message);
       dispatch(setLastEvent({ type: "mentor-error", message: e.message }));
+      // Blad stoi POD rozmowa, wiec tu przewijamy jak dotad — na dol.
+      scrollToBottom();
     } finally {
       setLoading(false);
       dispatch(setActivity("idle"));
-      scrollToBottom();
     }
   }
 
@@ -290,10 +324,29 @@ export function MentorPanel() {
       {
         role: "user",
         content: "Poproszę o propozycję osobowości — zaproponuj mi ją.",
+        ukryta: true,
       },
     ];
     setMessages(next);
     runGuided(next, agent);
+  }
+
+  // NARZEDZIA I RAG DZIELA JEDNA KOLUMNE (agents.tools), ALE MAJA OSOBNE KARTY.
+  //
+  // Mentor prowadzi przez RAG (krok sz-esty), a zaraz potem przez narzedzia —
+  // i propozycja narzedzi jest PELNA LISTA, ktora podstawia sie w miejsce
+  // dotychczasowej. Bez tego scalenia akceptacja narzedzi kasowala 'rag_search'
+  // wpisany krok wczesniej: wyszukiwanie w dokumentach gaslo po cichu, a przy
+  // agencie zostawala osierocona kolekcja. Mentor nie zarzadza tym przelacznikiem
+  // (ekstraktor nie ma go nawet w schemacie), wiec nie ma prawa go zdejmowac.
+  //
+  // Ta sama zasada, co przy zdejmowaniu karty w kreatorze —
+  // MasterDetailCreator.js: usuniecie jednej sekcji nie rusza ustawien drugiej.
+  function zachowajRag(field, value) {
+    if (field !== "tools") return value;
+    const teraz = Array.isArray(agent.tools) ? agent.tools : [];
+    if (!teraz.includes(RAG_TOOL_ID) || value.includes(RAG_TOOL_ID)) return value;
+    return [...value, RAG_TOOL_ID];
   }
 
   // SEDNO: akceptacja propozycji -> wpisanie pola do kreatora (stan).
@@ -301,8 +354,19 @@ export function MentorPanel() {
     const proposal = messages[index]?.proposal;
     if (!proposal || loading) return;
 
+    const value = zachowajRag(proposal.field, proposal.value);
+
     // 1) Wpisz wartosc do state.agent (widoczne od razu w kreatorze).
-    dispatch(updateAgentField(proposal.field, proposal.value));
+    dispatch(updateAgentField(proposal.field, value));
+
+    // MODEL IDZIE RAZEM Z DOSTAWCA — tak samo jak przy recznej zmianie w karcie
+    // „Model AI" (ModelSection.changeProvider). Sam model bez dostawcy dawal
+    // agenta z modelem np. OpenAI wysylanym do Anthropic; blad widac bylo
+    // dopiero przy pierwszej rozmowie, wiec na pokazie — u agenta, nie u mentora.
+    if (proposal.field === "model" && proposal.provider) {
+      dispatch(updateAgentField("provider", proposal.provider));
+    }
+
     dispatch(setLastEvent({ type: "mentor-set-field", field: proposal.field }));
 
     // Persona zaakceptowana (obiema sciezkami) -> konczymy specjalny krok
@@ -315,10 +379,19 @@ export function MentorPanel() {
     );
 
     // 3) Poinformuj mentora, ze przechodzimy dalej - z JUZ zaktualizowanym stanem.
-    const nextAgent = { ...agent, [proposal.field]: proposal.value };
+    //    Ten sam komplet pol, ktory poszedl do dispatchow wyzej: mentor ma
+    //    zobaczyc stan, ktory za chwile zobaczy uzytkownik w kreatorze.
+    const nextAgent = { ...agent, [proposal.field]: value };
+    if (proposal.field === "model" && proposal.provider) {
+      nextAgent.provider = proposal.provider;
+    }
     const next = [
       ...marked,
-      { role: "user", content: "Akceptuję tę wartość, przejdźmy dalej." },
+      {
+        role: "user",
+        content: "Akceptuję tę wartość, przejdźmy dalej.",
+        ukryta: true,
+      },
     ];
     setMessages(next);
     runGuided(next, nextAgent);
@@ -342,6 +415,30 @@ export function MentorPanel() {
       !loading
     );
   }
+
+  // WIADOMOSCI, KTORE UZYTKOWNIK MA ZOBACZYC.
+  //
+  // Trzy tury w roli „user" nie pochodza od niego: start prowadzenia,
+  // prosba o propozycje persony i potwierdzenie akceptacji. Model MUSI je
+  // dostac (bez nich nie wie, ze ma zaczac, zaproponowac albo isc dalej), ale
+  // na ekranie stawaly jako jego slowa — laik na pokazie widzial, jak aplikacja
+  // pisze za niego. Filtr jest tutaj i tylko tutaj: toApiMessages zostaje bez
+  // zmian, wiec historia idaca do mentora jest dalej pelna.
+  const widoczne = messages.filter((m) => m.content && !m.ukryta);
+
+  // KONIEC PROWADZENIA — dwa wyzwalacze, bo jeden nie wystarcza.
+  //
+  // `step: "done"` zalezy od tego, czy EKSTRAKTOR je wypisze — to zachowanie
+  // modelu, nie kodu, wiec samo w sobie nie jest gwarancja. Drugi wyzwalacz
+  // jest twardy: narzedzia to ostatni krok, wiec zaakceptowana propozycja
+  // narzedzi znaczy, ze kreator jest wypelniony do konca.
+  const guidedFinished =
+    mode === "guided" &&
+    messages.some(
+      (m) =>
+        m.step === "done" ||
+        (m.applied && m.proposal?.field === "tools"),
+    );
 
   function onKeyDown(e) {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -418,12 +515,12 @@ export function MentorPanel() {
           {mode !== null && (
             <>
               <div className={styles.messages} ref={messagesRef}>
-                {messages.filter((m) => m.content).length === 0 && !loading ? (
+                {widoczne.length === 0 && !loading ? (
                   <p className={styles.empty}>Zaraz zaczynamy…</p>
                 ) : (
                   messages.map((m, i) =>
-                    m.content ? (
-                      <div key={i} className={styles.msgWrap}>
+                    m.content && !m.ukryta ? (
+                      <div key={i} className={styles.msgWrap} data-mentor-msg>
                         <div
                           className={`${styles.message} ${
                             m.role === "user" ? styles.user : styles.mentor
@@ -435,15 +532,25 @@ export function MentorPanel() {
                           {m.content}
                         </div>
 
-                        {/* Karta propozycji do wpisania w kreator */}
+                        {/* Karta wartości do wpisania w kreator.
+                            Dwa warianty, bo to dwie różne rzeczy: propozycja
+                            mentora ORAZ własny opis użytkownika oddany mu do
+                            wpisania (ścieżka „Opisz sam" — patrz `wlasny`
+                            w app/api/mentor/route.js). */}
                         {m.role === "assistant" && m.proposal && (
                           <div className={styles.proposalCard}>
                             <div className={styles.proposalHead}>
-                              Propozycja do pola:{" "}
-                              <strong>
-                                {FIELD_LABELS[m.proposal.field] ||
-                                  m.proposal.field}
-                              </strong>
+                              {m.proposal.wlasny ? (
+                                <strong>Twój opis — wpisz do kreatora</strong>
+                              ) : (
+                                <>
+                                  Propozycja do pola:{" "}
+                                  <strong>
+                                    {FIELD_LABELS[m.proposal.field] ||
+                                      m.proposal.field}
+                                  </strong>
+                                </>
+                              )}
                             </div>
                             <div className={styles.proposalBody}>
                               <ProposalValue proposal={m.proposal} />
@@ -459,7 +566,9 @@ export function MentorPanel() {
                                 disabled={loading}
                                 onClick={() => acceptProposal(i)}
                               >
-                                Zaakceptuj i wpisz do kreatora
+                                {m.proposal.wlasny
+                                  ? "Wpisz mój opis do kreatora"
+                                  : "Zaakceptuj i wpisz do kreatora"}
                               </button>
                             )}
                           </div>
@@ -497,6 +606,28 @@ export function MentorPanel() {
                       </div>
                     ) : null,
                   )
+                )}
+
+                {/* KONIEC PROWADZENIA — jedyne miejsce, w ktorym pada prawda
+                    o zapisie. Mentor pisze WYLACZNIE do stanu strony; do bazy
+                    trafia dopiero „Zapisz" w nagłówku kreatora. Bez tego zdania
+                    prowadzenie kończyło się gratulacjami, a odświeżenie strony
+                    kasowało całą pracę. */}
+                {guidedFinished && !loading && (
+                  <div className={styles.summaryCard}>
+                    <div className={styles.summaryHead}>
+                      ✅ Agent gotowy
+                    </div>
+                    <p className={styles.summaryText}>
+                      Przeszliśmy wszystkie kroki. Możesz jeszcze dopracować
+                      każde ustawienie ręcznie w kreatorze.
+                    </p>
+                    <p className={styles.summaryWarn}>
+                      <strong>Kliknij „Zapisz"</strong> u góry kreatora — wartości
+                      wpisane w tej rozmowie są na razie tylko na ekranie i znikną
+                      po odświeżeniu strony.
+                    </p>
+                  </div>
                 )}
 
                 {loading && (
