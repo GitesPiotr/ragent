@@ -101,29 +101,57 @@ export function MentorPanel() {
     });
   }
 
-  // PRZEWIJA DO POCZATKU OSTATNIEJ WYPOWIEDZI, NIE NA SAMO DNO.
+  // PRZEWIJA DO POCZATKU WSKAZANEJ WYPOWIEDZI, NIE NA SAMO DNO.
   //
   // Roznica jest cala usterka feedbacku persony: ocena opisu ma kilkanascie
   // linii, a pod nia stoi karta z wlasnym tekstem uzytkownika. Przewiniecie na
   // dno stawialo mu przed oczami te karte, a ocene zostawialo nad krawiedzia —
   // wygladalo to tak, jakby mentor oddal jego tekst bez slowa komentarza.
   //
-  // Liczone z getBoundingClientRect obu elementow, a nie z offsetTop: kontener
-  // .messages nie ma position: relative, wiec offsetParent dymka to nie on
-  // i offsetTop mierzylby odleglosc od czegos innego niz obszar przewijania.
-  function scrollToLastMessage() {
+  // =========================================================================
+  //  JEDNA KLATKA NIE WYSTARCZA — SPRAWDZONE W PRZEGLADARCE.
+  //
+  //  Pomiar w pierwszej klatce po odpowiedzi trafia w uklad, ktorego jeszcze
+  //  nie ma w koncowej postaci: aktualizacja przychodzi z funkcji async, wiec
+  //  commit Reacta potrafi wypasc PO najblizszej klatce, a nawet po nim pod
+  //  wypowiedzia dochodzi karta propozycji i przesuwa wszystko ponizej.
+  //  Przewiniecie policzone przed tym wzrostem konczylo sie na dole odpowiedzi.
+  //
+  //  Dlatego pomiar jest POWTARZANY az do ustalenia sie wyniku, a nie zrobiony
+  //  raz. Wolno to zrobic, bo korekta jest WZGLEDNA (roznica dwoch
+  //  getBoundingClientRect doklejona do scrollTop): gdy uklad juz stoi, kolejna
+  //  korekta wychodzi zerowa i petla gasnie sama. Budzet klatek zamyka
+  //  przypadek, w ktorym wypowiedz jest za krotka, zeby dalo sie ja wypchnac
+  //  na gore kontenera — wtedy scrollTop dobija do maksimum i roznica nigdy
+  //  nie zejdzie do zera.
+  //
+  //  getBoundingClientRect, a nie offsetTop: kontener .messages nie ma
+  //  position: relative, wiec offsetParent dymka to nie on — offsetTop
+  //  mierzylby odleglosc od czegos innego niz obszar przewijania.
+  // =========================================================================
+  const ODDECH = 8; // px zapasu nad pierwsza linia wypowiedzi
+
+  function scrollToMessage(index, klatki = 8) {
     requestAnimationFrame(() => {
       const el = messagesRef.current;
       if (!el) return;
-      const nodes = el.querySelectorAll("[data-mentor-msg]");
-      const last = nodes[nodes.length - 1];
-      if (!last) {
-        el.scrollTop = el.scrollHeight;
+
+      const node = el.querySelector(`[data-mentor-msg="${index}"]`);
+      // Wiadomosci nie ma jeszcze w DOM — czekamy, zamiast przewijac
+      // gdziekolwiek. Bledny cel jest gorszy niz jedna klatka zwloki.
+      if (!node) {
+        if (klatki > 0) scrollToMessage(index, klatki - 1);
         return;
       }
+
       const delta =
-        last.getBoundingClientRect().top - el.getBoundingClientRect().top;
-      el.scrollTop += delta - 8; // 8px oddechu nad pierwsza linia
+        node.getBoundingClientRect().top -
+        el.getBoundingClientRect().top -
+        ODDECH;
+      if (Math.abs(delta) < 1) return; // juz na miejscu
+
+      el.scrollTop += delta;
+      if (klatki > 0) scrollToMessage(index, klatki - 1);
     });
   }
 
@@ -303,7 +331,10 @@ export function MentorPanel() {
       ]);
       dispatch(setLastEvent({ type: "mentor-reply" }));
       // POCZATEK OCENY, nie dno panelu — to jest cala poprawka tej sciezki.
-      scrollToLastMessage();
+      // Indeks WPROST (ocena ląduje na koncu `next`), a nie „ostatni dymek
+      // w DOM": w chwili pomiaru ostatnim dymkiem bywa jeszcze opis
+      // uzytkownika sprzed odpowiedzi.
+      scrollToMessage(next.length);
     } catch (e) {
       setError(e.message);
       dispatch(setLastEvent({ type: "mentor-error", message: e.message }));
@@ -520,7 +551,7 @@ export function MentorPanel() {
                 ) : (
                   messages.map((m, i) =>
                     m.content && !m.ukryta ? (
-                      <div key={i} className={styles.msgWrap} data-mentor-msg>
+                      <div key={i} className={styles.msgWrap} data-mentor-msg={i}>
                         <div
                           className={`${styles.message} ${
                             m.role === "user" ? styles.user : styles.mentor
