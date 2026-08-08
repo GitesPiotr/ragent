@@ -20,6 +20,8 @@ const FIELD_LABELS = {
   temperature: "Temperatura",
   rules: "Zasady",
   tools: "Narzędzia",
+  knowledgeBase: "Baza wiedzy",
+  rag: "RAG — przeszukiwana kolekcja",
 };
 // Prowadzenie proponuje tylko kalkulator i date/czas (patrz lib/mentor/prompt.js),
 // ale mentor ZNA juz z wiedzy takze wyszukiwanie w internecie — wiec ekstraktor
@@ -34,6 +36,24 @@ const TOOL_LABELS = {
 // Podglad proponowanej wartosci dla danego pola.
 function ProposalValue({ proposal }) {
   const { field, value } = proposal;
+
+  // PLIKI I KOLEKCJE POKAZUJEMY NAZWAMI, NIE IDENTYFIKATORAMI.
+  // `value` to UUID-y z konta — dla laika ciag bez znaczenia, a to jedyna
+  // rzecz, ktora zobaczy przed klinieciem „Zaakceptuj". Nazwy dokleja trasa
+  // (`etykiety`), bo tylko ona ma swieza liste z bazy.
+  if (field === "knowledgeBase" || field === "rag") {
+    const nazwy = Array.isArray(proposal.etykiety) ? proposal.etykiety : [];
+    if (nazwy.length === 0) return <span>—</span>;
+    if (nazwy.length === 1) return <span>{nazwy[0]}</span>;
+    return (
+      <ul className={styles.proposalList}>
+        {nazwy.map((n, i) => (
+          <li key={i}>{n}</li>
+        ))}
+      </ul>
+    );
+  }
+
   if (field === "rules") {
     return (
       <ul className={styles.proposalList}>
@@ -467,29 +487,60 @@ export function MentorPanel() {
   //
   // Ta sama zasada, co przy zdejmowaniu karty w kreatorze —
   // MasterDetailCreator.js: usuniecie jednej sekcji nie rusza ustawien drugiej.
-  function zachowajRag(field, value) {
-    if (field !== "tools") return value;
+  function zachowajRag(value) {
     const teraz = Array.isArray(agent.tools) ? agent.tools : [];
     if (!teraz.includes(RAG_TOOL_ID) || value.includes(RAG_TOOL_ID)) return value;
     return [...value, RAG_TOOL_ID];
   }
 
-  // SEDNO: akceptacja propozycji -> wpisanie pola do kreatora (stan).
+  // =========================================================================
+  //  PROPOZYCJA -> KOMPLET POL AGENTA. Nazwa pola w propozycji NIE ZAWSZE jest
+  //  nazwa kolumny, a POLOWA propozycji ustawia PARE pol — i to nie jest
+  //  wygoda, tylko warunek poprawnosci. Kazda z tych par opisuje jeden stan:
+  //   • model bez dostawcy  -> model jednego dostawcy wyslany do drugiego,
+  //   • pliki bez trybu     -> zaznaczone pliki przy „nie korzysta",
+  //   • kolekcja bez tools  -> wskazana kolekcja i wylaczone wyszukiwanie.
+  //  Dwa ostatnie to dokladnie ta „⚠ NIESPÓJNOŚĆ", ktora mentor sam wytyka
+  //  uzytkownikowi w renderAgentSettings — nie wolno mu jej samemu tworzyc.
+  //
+  //  Jedna funkcja zamiast rozsypanych if-ow, bo ten sam komplet potrzebny jest
+  //  DWA RAZY: do dispatchow i do `nextAgent` (stan, ktory zaraz zobaczy
+  //  mentor). Gdyby powstawal osobno w obu miejscach, mogly by sie rozjechac.
+  // =========================================================================
+  function polaZPropozycji(proposal) {
+    const { field, value } = proposal;
+
+    if (field === "model") {
+      return proposal.provider
+        ? { model: value, provider: proposal.provider }
+        : { model: value };
+    }
+    if (field === "tools") {
+      return { tools: zachowajRag(value) };
+    }
+    if (field === "knowledgeBase") {
+      return { knowledge_file_ids: value, knowledge_mode: "selected" };
+    }
+    if (field === "rag") {
+      const teraz = Array.isArray(agent.tools) ? agent.tools : [];
+      return {
+        rag_collection_id: value,
+        tools: teraz.includes(RAG_TOOL_ID) ? teraz : [...teraz, RAG_TOOL_ID],
+      };
+    }
+    return { [field]: value };
+  }
+
+  // SEDNO: akceptacja propozycji -> wpisanie pol do kreatora (stan).
   function acceptProposal(index) {
     const proposal = messages[index]?.proposal;
     if (!proposal || loading) return;
 
-    const value = zachowajRag(proposal.field, proposal.value);
+    const zmiany = polaZPropozycji(proposal);
 
-    // 1) Wpisz wartosc do state.agent (widoczne od razu w kreatorze).
-    dispatch(updateAgentField(proposal.field, value));
-
-    // MODEL IDZIE RAZEM Z DOSTAWCA — tak samo jak przy recznej zmianie w karcie
-    // „Model AI" (ModelSection.changeProvider). Sam model bez dostawcy dawal
-    // agenta z modelem np. OpenAI wysylanym do Anthropic; blad widac bylo
-    // dopiero przy pierwszej rozmowie, wiec na pokazie — u agenta, nie u mentora.
-    if (proposal.field === "model" && proposal.provider) {
-      dispatch(updateAgentField("provider", proposal.provider));
+    // 1) Wpisz wartosci do state.agent (widoczne od razu w kreatorze).
+    for (const [pole, wartosc] of Object.entries(zmiany)) {
+      dispatch(updateAgentField(pole, wartosc));
     }
 
     dispatch(setLastEvent({ type: "mentor-set-field", field: proposal.field }));
@@ -504,12 +555,9 @@ export function MentorPanel() {
     );
 
     // 3) Poinformuj mentora, ze przechodzimy dalej - z JUZ zaktualizowanym stanem.
-    //    Ten sam komplet pol, ktory poszedl do dispatchow wyzej: mentor ma
-    //    zobaczyc stan, ktory za chwile zobaczy uzytkownik w kreatorze.
-    const nextAgent = { ...agent, [proposal.field]: value };
-    if (proposal.field === "model" && proposal.provider) {
-      nextAgent.provider = proposal.provider;
-    }
+    //    TEN SAM obiekt `zmiany`, ktory poszedl do dispatchow wyzej: mentor ma
+    //    zobaczyc dokladnie to, co za chwile zobaczy uzytkownik w kreatorze.
+    const nextAgent = { ...agent, ...zmiany };
     const next = [
       ...marked,
       {
