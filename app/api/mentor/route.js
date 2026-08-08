@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { sendChat } from "@/lib/providers";
 import { fetchOllamaModels } from "@/lib/providers/ollama";
-import { modelSupportsTemperature } from "@/lib/config/models";
+import { modelSupportsTemperature, KLUCZ_DOSTAWCY } from "@/lib/config/models";
 import { loadKnowledge } from "@/lib/mentor/knowledge";
 import { MENTOR_PROVIDER, MENTOR_MODEL } from "@/lib/config/mentor";
 import { wczytajModeleKonta } from "@/lib/settings/dopuszczoneServer";
@@ -241,6 +241,20 @@ async function handleReactive(agent, messages, model) {
 //  te dwie odpowiedzi moglyby sie rozjechac — dokladnie ta pulapka, przed
 //  ktora ostrzega naglowek powyzej.
 // =============================================================================
+//
+//  KLUCZ DOSTAWCY CZYTAMY TUTAJ, Z `process.env` — I TO JEST CALY ODCZYT.
+//  Trasa jest kodem serwerowym w tym samym procesie, w ktorym siedza zmienne
+//  srodowiskowe, wiec to siegniecie do pamieci, a nie zapytanie. Trasa
+//  /api/providers/status robi doslownie to samo `Boolean(process.env...)`,
+//  tylko dla przegladarki — wolanie jej stad byloby tym samym odczytem
+//  przepuszczonym przez HTTP.
+function brakKluczaDostawcy(provider) {
+  const nazwa = KLUCZ_DOSTAWCY[provider];
+  // Ollama (nazwa === null) klucza nie potrzebuje — nigdy nie oznaczamy.
+  if (!nazwa) return null;
+  return process.env[nazwa] ? null : nazwa;
+}
+
 async function buildAvailableModelsText(ollamaUrl, dopuszczone) {
   const { models: ollamaModels, error } = await fetchOllamaModels(ollamaUrl);
 
@@ -249,7 +263,7 @@ async function buildAvailableModelsText(ollamaUrl, dopuszczone) {
     { provider: "openai", modele: listaModeli(dopuszczone, "openai").modele },
     { provider: "openrouter", modele: listaModeli(dopuszczone, "openrouter").modele },
     { provider: "ollama", modele: modeleOllamy(dopuszczone, ollamaModels).modele },
-  ];
+  ].map((g) => ({ ...g, brakKlucza: brakKluczaDostawcy(g.provider) }));
 
   // Powod „niedostepnosci" lokalnych rozroznia dwie sytuacje, bo mentor
   // dostaje to zdanie jako uzasadnienie: demon nie odpowiedzial (error)
@@ -260,8 +274,10 @@ async function buildAvailableModelsText(ollamaUrl, dopuszczone) {
       ? "żaden model lokalny nie jest włączony na koncie"
       : null);
 
-  const katalog = grupy.flatMap(({ provider, modele }) =>
-    modele.map((m) => ({ provider, id: m.id })),
+  // Katalog niesie `brakKlucza` dalej, bo propozycje odsiewa normalizeProposal,
+  // a zdanie w prompcie jest tylko prosba — model potrafi ja zignorowac.
+  const katalog = grupy.flatMap(({ provider, modele, brakKlucza }) =>
+    modele.map((m) => ({ provider, id: m.id, brakKlucza })),
   );
 
   return {
@@ -310,6 +326,11 @@ function normalizeProposal(parsed, katalog) {
     // kreatora jako „claude-haiku-4-5".
     const trafienie = dopasujModel(katalog, parsed.proposalText);
     if (!trafienie) return null;
+    // MODEL BEZ KLUCZA NIE JEST PROPOZYCJA. Instrukcja w prompcie mowi
+    // mentorowi, zeby go nie proponowal, ale instrukcja jest prosba — karta
+    // z przyciskiem „Zaakceptuj" byla by obietnica agenta, ktory nie ruszy.
+    // Mentor moze taki model wymienic w prozie i powiedziec, czego brakuje.
+    if (trafienie.brakKlucza) return null;
     return { field: "model", value: trafienie.id, provider: trafienie.provider };
   }
   // persona — wartosc tekstowa.
