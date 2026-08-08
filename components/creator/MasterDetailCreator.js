@@ -47,8 +47,8 @@ export function MasterDetailCreator({
   const { state, dispatch } = useAppState();
   const agent = state.agent;
 
-  // Ktore parametry DODAWALNE sa obecnie na liscie. Karty stale sa zawsze.
-  // Start: te, dla ktorych agent ma juz dane w bazie (zasady / narzedzia).
+  // Ktore parametry DODAWALNE uzytkownik dolozyl RECZNIE w tej sesji.
+  // Start: te, dla ktorych agent mial juz dane przy wejsciu na strone.
   const [addedIds, setAddedIds] = useState(() => initialAddedParameters(agent));
 
   // Aktywny parametr w prawej kolumnie; null = ekran "Wybierz parametr".
@@ -57,13 +57,37 @@ export function MasterDetailCreator({
   // Edycja nazwy agenta w naglowku.
   const [editingName, setEditingName] = useState(false);
 
+  // =========================================================================
+  //  KARTA Z DANYMI JEST WIDOCZNA ZAWSZE — TAKZE GDY DANE PRZYSZLY Z ZEWNATRZ.
+  //
+  //  addedIds powstaja RAZ, w inicjalizatorze useState, i od tej chwili zmienia
+  //  je wylacznie klikniecie „+ Dodaj parametr" albo „×". Mentor wpisuje
+  //  wartosc wprost do state.agent (updateAgentField), wiec kreator o niej
+  //  nie wiedzial: zasady byly w agencie, a karty „Zasady" nie bylo na liscie
+  //  i trzeba ja bylo dodac recznie — po wartosc, ktora juz tam siedziala.
+  //
+  //  Odpowiedz na pytanie „ktory parametr ma dane" ZOSTAJE W JEDNYM MIEJSCU
+  //  (initialAddedParameters). Zmienia sie tylko to, ze pytamy o nia przy
+  //  KAZDYM renderze, a nie raz na wejsciu, i sumujemy z tym, co uzytkownik
+  //  dolozyl recznie. To czysta derywacja — nie ma drugiego stanu, ktory
+  //  moglby sie rozjechac z pierwszym.
+  //
+  //  USUWANIE KARTY DZIALA DALEJ, bo removeParameter czysci takze DANE
+  //  (nizej). Po wyczyszczeniu initialAddedParameters przestaje ten parametr
+  //  zwracac, wiec karta nie odrasta w kolejnym renderze.
+  // =========================================================================
+  const zDanymi = initialAddedParameters(agent);
+  const widoczneAdd = [...new Set([...addedIds, ...zDanymi])];
+
   // Karty stale na gorze, dodane w srodku, a "Test agenta" (pinBottom)
   // na samym koncu — jako podsumowanie calej konfiguracji.
   const topFixed = FIXED_PARAMETER_IDS.filter((id) => !getParameter(id)?.pinBottom);
   const bottomFixed = FIXED_PARAMETER_IDS.filter((id) => getParameter(id)?.pinBottom);
-  const visibleIds = [...topFixed, ...addedIds, ...bottomFixed];
+  const visibleIds = [...topFixed, ...widoczneAdd, ...bottomFixed];
+  // Z OKNA „+ Dodaj parametr" znika takze karta widoczna z powodu danych —
+  // inaczej aplikacja proponowalaby dodanie czegos, co juz stoi na liscie.
   const availableToAdd = PARAMETERS.filter(
-    (p) => !p.fixed && !addedIds.includes(p.id),
+    (p) => !p.fixed && !widoczneAdd.includes(p.id),
   );
 
   function addParameter(id) {
