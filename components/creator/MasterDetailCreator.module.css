@@ -177,6 +177,26 @@
   box-shadow: 0 0 0 1px #7c3aed inset;
 }
 
+/* KARTA, O KTOREJ MOWI WLASNIE MENTOR.
+   Inny sygnal niz .cardActive („patrzysz na to"), bo to inna informacja:
+   „mentor o tym opowiada". Zwykle wystepuja razem — wtedy obwodka aktywnej
+   karty zostaje, a ten pasek dochodzi z boku i mowi, skad sie tu wzieles.
+   Bursztyn, nie fiolet, zeby dwa sygnaly dalo sie rozroznic na raz. */
+.cardMentor {
+  border-color: #f59e0b;
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.18);
+}
+
+.cardMentor::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 3px;
+  background: #f59e0b;
+}
+
 .cardButton {
   flex: 1;
   display: flex;

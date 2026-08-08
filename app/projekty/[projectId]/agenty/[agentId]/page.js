@@ -10,6 +10,7 @@ import { dbAgentToState, isSameConfig } from "@/lib/data/agentMapping";
 import { useResizablePanel } from "@/lib/hooks/useResizablePanel";
 import { useSettings } from "@/lib/settings/SettingsContext";
 import { MentorLayoutContext } from "@/components/mentor/MentorLayoutContext";
+import { CreatorFocusContext } from "@/components/creator/CreatorFocusContext";
 import { MasterDetailCreator } from "@/components/creator/MasterDetailCreator";
 import { MentorPanel } from "@/components/mentor/MentorPanel";
 import { BackButton } from "@/components/workspace/BackButton";
@@ -118,6 +119,23 @@ export default function AgentEditorPage() {
     window.addEventListener("beforeunload", onBeforeUnload);
     return () => window.removeEventListener("beforeunload", onBeforeUnload);
   }, [hasUnsavedChanges]);
+
+  // ---------- OGNISKO KREATORA (ktora karta jest otwarta) ----------
+  // Stan mieszka TUTAJ, a nie w MasterDetailCreator, bo potrzebuja go dwa
+  // rodzenstwa: kreator (renderuje kartę) i mentor (ma wiedziec, na co user
+  // patrzy). Ten sam powod, dla ktorego wyzej mieszka mentorOpen.
+  // Szczegoly i odrzucone warianty: components/creator/CreatorFocusContext.js.
+  const [activeId, setActiveId] = useState("persona");
+
+  // Krok prowadzenia, o ktorym mentor wlasnie mowi (null poza prowadzeniem).
+  // Kreator pokazuje na ten czas odpowiadajaca mu karte — patrz komentarz
+  // przy `widoczneAdd` w MasterDetailCreator.
+  const [krokMentora, setKrokMentora] = useState(null);
+
+  const creatorFocus = useMemo(
+    () => ({ activeId, setActiveId, krokMentora, setKrokMentora }),
+    [activeId, krokMentora],
+  );
 
   // ---------- LAYOUT MENTORA (przesuwalna, dwuetapowa granica) ----------
   // Panel mentora otwiera/zamyka sie tutaj (stan podniesiony), zeby strona
@@ -236,6 +254,7 @@ export default function AgentEditorPage() {
 
   return (
     <MentorLayoutContext.Provider value={mentorLayout}>
+      <CreatorFocusContext.Provider value={creatorFocus}>
       <div
         className={`${styles.page} ${mentorResizing ? styles.pageResizing : ""}`}
         ref={pageElRef}
@@ -266,6 +285,9 @@ export default function AgentEditorPage() {
               saveStatus={saveStatus}
               hasUnsavedChanges={hasUnsavedChanges}
               saveError={saveError}
+              activeId={activeId}
+              setActiveId={setActiveId}
+              krokMentora={krokMentora}
             />
           )}
         </main>
@@ -273,6 +295,7 @@ export default function AgentEditorPage() {
         <MentorPanel />
         <DebugPanel />
       </div>
+      </CreatorFocusContext.Provider>
     </MentorLayoutContext.Provider>
   );
 }

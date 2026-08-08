@@ -38,11 +38,18 @@ const SECTION_COMPONENTS = {
   test: TestSection,
 };
 
+// activeId/setActiveId przychodza ZE STRONY, a nie z lokalnego useState.
+// Ta sama informacja jest potrzebna mentorowi (musi wiedziec, na co patrzy
+// uzytkownik), a mentor jest rodzenstwem kreatora, nie jego dzieckiem —
+// patrz components/creator/CreatorFocusContext.js.
 export function MasterDetailCreator({
   onSave,
   saveStatus = "idle",
   hasUnsavedChanges = false,
   saveError = null,
+  activeId,
+  setActiveId,
+  krokMentora = null,
 }) {
   const { state, dispatch } = useAppState();
   const agent = state.agent;
@@ -51,8 +58,8 @@ export function MasterDetailCreator({
   // Start: te, dla ktorych agent mial juz dane przy wejsciu na strone.
   const [addedIds, setAddedIds] = useState(() => initialAddedParameters(agent));
 
-  // Aktywny parametr w prawej kolumnie; null = ekran "Wybierz parametr".
-  const [activeId, setActiveId] = useState("persona");
+  // Aktywny parametr w prawej kolumnie (null = ekran "Wybierz parametr")
+  // przychodzi propsem ze strony — patrz komentarz przy sygnaturze.
 
   // Edycja nazwy agenta w naglowku.
   const [editingName, setEditingName] = useState(false);
@@ -76,8 +83,36 @@ export function MasterDetailCreator({
   //  (nizej). Po wyczyszczeniu initialAddedParameters przestaje ten parametr
   //  zwracac, wiec karta nie odrasta w kolejnym renderze.
   // =========================================================================
+  //  KARTA OMAWIANA PRZEZ MENTORA — TRZECIE ZRODLO WIDOCZNOSCI, NIETRWALE.
+  //
+  //  Gdy prowadzenie mowi o danym kroku, odpowiadajaca mu karta ma stac przed
+  //  oczami, nawet jesli uzytkownik nigdy jej nie dodal. Wymagane zachowanie
+  //  brzmi: „karta pokazana na czas omawiania znika po przejsciu dalej TYLKO
+  //  wtedy, gdy nic w niej nie ustawilem".
+  //
+  //  I TO WYCHODZI STAD ZA DARMO, bez ani jednego dodatkowego stanu.
+  //  `krokMentora` jest jeden i zmienia sie z krokiem, wiec poprzednia karta
+  //  wypada z sumy sama. Jesli w miedzyczasie cos w niej ustawiono, wpada do
+  //  `zDanymi` — a to zrodlo jest trwale. Nie ma czego sprzatac, nie ma
+  //  useEffect i nie ma stanu, ktory moglby sie rozjechac z danymi agenta.
+  //
+  //  IDENTYFIKATORY KROKOW I KART SA TE SAME (persona, model, temperature,
+  //  knowledgeBase, rag, tools, rules — GUIDED_STEPS w lib/mentor/prompt.js),
+  //  wiec nie ma tablicy mapujacej. getParameter odsiewa kroki bez karty
+  //  („done") i wartosci spoza rejestru.
+  //
+  //  KARTY STALE ODPADAJA TUTAJ, i to nie jest drobiazg: persona, model
+  //  i temperatura sa juz w `topFixed`, wiec dopisanie ich do tej listy
+  //  pokazaloby JE DWA RAZY — z powtorzonym kluczem Reacta. Trzy pierwsze
+  //  kroki prowadzenia to dokladnie te trzy karty, wiec trafiloby sie to
+  //  przy pierwszej rozmowie.
   const zDanymi = initialAddedParameters(agent);
-  const widoczneAdd = [...new Set([...addedIds, ...zDanymi])];
+  const paramMentora = krokMentora ? getParameter(krokMentora) : null;
+  const kartaMentora =
+    paramMentora && !paramMentora.fixed ? paramMentora.id : null;
+  const widoczneAdd = [
+    ...new Set([...addedIds, ...zDanymi, ...(kartaMentora ? [kartaMentora] : [])]),
+  ];
 
   // Karty stale na gorze, dodane w srodku, a "Test agenta" (pinBottom)
   // na samym koncu — jako podsumowanie calej konfiguracji.
@@ -231,11 +266,18 @@ export function MasterDetailCreator({
               const param = getParameter(id);
               if (!param) return null;
               const isActive = activeId === id;
+              // Karta, o ktorej mentor wlasnie mowi. Osobne oznaczenie od
+              // `cardActive`, bo to dwie rozne rzeczy: „patrzysz na to"
+              // i „mentor o tym opowiada". Zwykle pokrywaja sie, ale
+              // uzytkownik moze w trakcie klikac gdzie indziej.
+              const omawiana = krokMentora === id;
 
               return (
                 <div
                   key={id}
-                  className={`${styles.card} ${isActive ? styles.cardActive : ""}`}
+                  className={`${styles.card} ${isActive ? styles.cardActive : ""} ${
+                    omawiana ? styles.cardMentor : ""
+                  }`}
                 >
                   <button
                     type="button"

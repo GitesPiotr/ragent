@@ -4,6 +4,10 @@ import { sendChat } from "@/lib/providers";
 import { fetchOllamaModels } from "@/lib/providers/ollama";
 import { modelSupportsTemperature, KLUCZ_DOSTAWCY } from "@/lib/config/models";
 import { loadKnowledge } from "@/lib/mentor/knowledge";
+import { getParameter } from "@/lib/creator/parameters";
+import { createClient } from "@/lib/supabase/server";
+import { listCollections } from "@/lib/rag/collections";
+import { listaPlikowServer } from "@/lib/knowledge/magazynServer";
 import { MENTOR_PROVIDER, MENTOR_MODEL } from "@/lib/config/mentor";
 import { wczytajModeleKonta } from "@/lib/settings/dopuszczoneServer";
 import {
@@ -83,6 +87,12 @@ export async function POST(request) {
   }
 
   const { agent, messages, mode, personaDraft } = body || {};
+
+  // KARTA OTWARTA W KREATORZE — z przegladarki, wiec NIEZAUFANA.
+  // Sprawdzamy ja wobec rejestru parametrow zamiast wpuszczac do promptu
+  // dowolny string: `getParameter` zwraca null dla nieznanego id, a null
+  // znaczy tu dokladnie to samo, co brak pola — „nie wiem, gdzie stoi".
+  const aktywnaKarta = getParameter(body?.aktywnaKarta) || null;
 
   if (!Array.isArray(messages) || messages.length === 0) {
     return NextResponse.json(
@@ -166,9 +176,16 @@ export async function POST(request) {
     );
   }
   if (mode === "guided") {
-    return handleGuided(agent || {}, messages, mentorModel, ollamaUrl, dopuszczone);
+    return handleGuided(
+      agent || {},
+      messages,
+      mentorModel,
+      ollamaUrl,
+      dopuszczone,
+      aktywnaKarta,
+    );
   }
-  return handleReactive(agent || {}, messages, mentorModel);
+  return handleReactive(agent || {}, messages, mentorModel, aktywnaKarta);
 }
 
 // --- KROK PERSONA, ŚCIEŻKA A ("Opisz sam") — tryb OCENIAJĄCY.
@@ -204,10 +221,10 @@ async function handlePersonaFeedback(agent, messages, draft, model, runda) {
 }
 
 // --- Tryb reaktywny ("Zapytaj mentora") — BEZ ZMIAN wzgledem poprzedniej sesji.
-async function handleReactive(agent, messages, model) {
+async function handleReactive(agent, messages, model, aktywnaKarta) {
   try {
     const knowledge = await loadKnowledge();
-    const system = buildMentorSystem(knowledge, agent);
+    const system = buildMentorSystem(knowledge, agent, aktywnaKarta);
 
     const { text } = await sendChat({
       provider: MENTOR_PROVIDER,
@@ -304,15 +321,164 @@ async function buildAvailableModelsText(ollamaUrl, dopuszczone) {
   };
 }
 
+// =============================================================================
+//  ZASOBY KONTA W PROMPCIE — PLIKI MAGAZYNU I KOLEKCJE RAG.
+//
+//  Kroki „baza wiedzy" i „RAG" byly dotad wylacznie objasniajace, bo mentor
+//  nie dostawal ANI JEDNEJ nazwy: mowil „wgraj i wybierz", a wybor uzytkownik
+//  robil sam. Prowadzenie przestawalo prowadzic dokladnie tam, gdzie laik
+//  potrzebuje go najbardziej.
+//
+//  DWA ODCZYTY, ALE ZERO NOWYCH ZAPYTAN. Kolekcje idą tą samą funkcją, ktorej
+//  uzywa GET /api/rag/collections (listCollections + klient sesji) — jedna
+//  implementacja, dwoch wolajacych. Pliki maja blizniaka opisanego
+//  w lib/knowledge/magazynServer.js (rozni sie transportem, nie znaczeniem).
+//
+//  IDENTYFIKATOR IDZIE OBOK NAZWY, tak jak przy modelach. Mentor mowi
+//  o pliku po nazwie, ale w etapie 4 bedzie musial wskazac go identyfikatorem
+//  — a wtedy ma go przepisac z tej listy, nie wymyslic.
+//
+//  BLAD ODCZYTU NIE PRZERYWA PROWADZENIA. Rozmowa o bazie wiedzy bez listy
+//  plikow jest gorsza, ale dziala; rozmowa przerwana czerwonym paskiem nie
+//  dziala wcale. Dlatego kazda galaz ma tekst zastepczy, ktory mowi mentorowi
+//  wprost, ze listy NIE MA — inaczej milczenie zinterpretowalby jako „pusto".
+// =============================================================================
+const OPIS_STATUSU_PLIKU = {
+  ready: "tekst wczytany",
+  no_text: "BRAK TEKSTU — agent nic z tego pliku nie odczyta",
+  error: "błąd odczytu — plik nie nadaje się do użycia",
+};
+
+//  ZWRACA TAKZE SAME POZYCJE, nie tylko tekst — z tego samego powodu, dla
+//  ktorego robi to buildAvailableModelsText: propozycja mentora wraca jako
+//  goly identyfikator i trzeba go sprawdzic wobec TEJ SAMEJ listy, ktora
+//  mentor widzial. Drugi odczyt dalby okno, w ktorym lista do promptu i lista
+//  do walidacji sa z dwoch roznych chwil.
+async function buildZasobyKontaText() {
+  // KLIENT SESJI, NIE service_role — i to jest cala izolacja tego bloku.
+  // Ta sama droga, ktora mentor ma juz przy modelach konta
+  // (lib/settings/dopuszczoneServer.js): createClient z lib/supabase/server.
+  // Klient na service_role omija RLS i wypisalby mentorowi pliki oraz
+  // kolekcje WSZYSTKICH kont.
+  //
+  // Nie siegam po app/api/rag/_lib/klientSesji.js, mimo ze robi to samo:
+  // ten helper jest opisany jako „jedyne zrodlo klienta dla tras
+  // w app/api/rag/", a mentor tam nie stoi.
+  const client = await createClient().catch(() => null);
+  if (!client) {
+    return {
+      text: "Nie udało się ustalić sesji użytkownika — nie znasz jego plików ani kolekcji. Nie zgaduj żadnych nazw; poproś, żeby wybrał je sam w kreatorze.",
+      pliki: [],
+      kolekcje: [],
+    };
+  }
+
+  const [plikiWynik, kolekcjeWynik] = await Promise.allSettled([
+    listaPlikowServer(client),
+    listCollections({}, { client }),
+  ]);
+
+  const lines = [];
+  let pozycjePlikow = [];
+  let pozycjeKolekcji = [];
+
+  if (plikiWynik.status !== "fulfilled") {
+    lines.push(
+      "PLIKI W MAGAZYNIE: nie udało się ich odczytać — nie wymieniaj żadnych nazw plików.",
+    );
+  } else {
+    const { pliki, wszystkich } = plikiWynik.value;
+    pozycjePlikow = pliki;
+    if (pliki.length === 0) {
+      lines.push(
+        "PLIKI W MAGAZYNIE: brak — użytkownik nie wgrał jeszcze ani jednego dokumentu.",
+      );
+    } else {
+      const ile =
+        wszystkich > pliki.length
+          ? `${pliki.length} najnowszych z ${wszystkich}`
+          : `${pliki.length}`;
+      lines.push(`PLIKI W MAGAZYNIE (${ile}):`);
+      for (const p of pliki) {
+        const status = OPIS_STATUSU_PLIKU[p.status] || `status: ${p.status}`;
+        lines.push(`- ${p.id} („${p.file_name}") — ${status}`);
+      }
+    }
+  }
+
+  if (kolekcjeWynik.status !== "fulfilled") {
+    lines.push(
+      "KOLEKCJE RAG: nie udało się ich odczytać — nie wymieniaj żadnych nazw kolekcji.",
+    );
+  } else {
+    const kolekcje = kolekcjeWynik.value || [];
+    pozycjeKolekcji = kolekcje;
+    if (kolekcje.length === 0) {
+      lines.push(
+        "KOLEKCJE RAG: brak — użytkownik nie założył jeszcze żadnej kolekcji.",
+      );
+    } else {
+      lines.push(`KOLEKCJE RAG (${kolekcje.length}):`);
+      for (const k of kolekcje) {
+        lines.push(`- ${k.id} („${k.name}")`);
+      }
+    }
+  }
+
+  return {
+    text: lines.join("\n"),
+    pliki: pozycjePlikow,
+    kolekcje: pozycjeKolekcji,
+  };
+}
+
 // Zamienia surowa odpowiedz JSON mentora na znormalizowana propozycje pola.
 //
 // KAZDY BEZPIECZNIK TUTAJ ODPOWIADA NA TO SAMO PYTANIE: czy z tej propozycji
 // da sie COKOLWIEK WPISAC. Karta propozycji ma jeden przycisk i on NADPISUJE
 // pole kreatora — wiec propozycja, ktora niesie pustke, nie jest propozycja,
 // tylko kasowaniem cudzych ustawien pod przyciskiem „Zaakceptuj".
-function normalizeProposal(parsed, katalog) {
+function normalizeProposal(parsed, katalog, zasoby) {
   const field = parsed.proposalField;
   if (!field || field === "none") return null;
+
+  // --- PLIKI BAZY WIEDZY ---------------------------------------------------
+  // Wartoscia sa UUID-y z konta uzytkownika, wiec sprawdzamy je wobec TEJ
+  // SAMEJ listy, ktora mentor widzial w prompcie. Identyfikator spoza listy
+  // znaczy, ze model go wymyslil albo przepisal z bledem — jedno i drugie
+  // wpisaloby do agenta wskazanie donikad.
+  //
+  // PLIKI BEZ TEKSTU ODPADAJA. Zaznaczenie skanu bez warstwy tekstowej
+  // wyglada jak wiedza, a nie daje agentowi ani jednego znaku — to ta sama
+  // klasa stanu, co „wlaczone, a dziala jak wylaczone".
+  if (field === "knowledgeBase") {
+    const dostepne = new Map(
+      (zasoby?.pliki || [])
+        .filter((p) => p.status === "ready")
+        .map((p) => [p.id, p.file_name]),
+    );
+    const proponowane = Array.isArray(parsed.proposalList)
+      ? parsed.proposalList.filter((id) => dostepne.has(id))
+      : [];
+    if (proponowane.length === 0) return null;
+    return {
+      field: "knowledgeBase",
+      value: proponowane,
+      // Nazwy do pokazania na karcie. UUID w interfejsie nie mowi laikowi nic
+      // — a to jest jedyna rzecz, ktora zobaczy przed klinieciem „Zaakceptuj".
+      etykiety: proponowane.map((id) => dostepne.get(id)),
+    };
+  }
+
+  // --- KOLEKCJA RAG --------------------------------------------------------
+  // Jedna kolekcja, wiec tekst, nie lista. Ta sama zasada: identyfikator musi
+  // pochodzic z listy pokazanej mentorowi.
+  if (field === "rag") {
+    const id = (parsed.proposalText || "").trim();
+    const trafiona = (zasoby?.kolekcje || []).find((k) => k.id === id);
+    if (!trafiona) return null;
+    return { field: "rag", value: trafiona.id, etykiety: [trafiona.name] };
+  }
 
   if (field === "temperature") {
     const value = parsed.proposalNumber;
@@ -358,17 +524,30 @@ function normalizeProposal(parsed, katalog) {
 // --- Tryb prowadzenia ("Przeprowadź mnie krok po kroku") — DWA ETAPY.
 // Etap 1: proza mentora BEZ structured output (nie psuje długiej prozy).
 // Etap 2: sama propozycja pola ZE structured output (krótkie, czyste dane).
-async function handleGuided(agent, messages, model, ollamaUrl, dopuszczone) {
+async function handleGuided(
+  agent,
+  messages,
+  model,
+  ollamaUrl,
+  dopuszczone,
+  aktywnaKarta,
+) {
   try {
     const knowledge = await loadKnowledge();
-    const { text: availableModelsText, katalog } =
-      await buildAvailableModelsText(ollamaUrl, dopuszczone);
+    // Modele i zasoby konta rownolegle — to dwa niezalezne odczyty, a stoja
+    // przed KAZDYM wywolaniem prowadzenia.
+    const [{ text: availableModelsText, katalog }, zasoby] = await Promise.all([
+      buildAvailableModelsText(ollamaUrl, dopuszczone),
+      buildZasobyKontaText(),
+    ]);
 
     // --- Etap 1: czysta proza (zwykły tekst, jak tryb reaktywny) ---
     const proseSystem = buildGuidedProseSystem(
       knowledge,
       agent,
       availableModelsText,
+      aktywnaKarta,
+      zasoby.text,
     );
     const { text: prose } = await sendChat({
       provider: MENTOR_PROVIDER,
@@ -379,7 +558,13 @@ async function handleGuided(agent, messages, model, ollamaUrl, dopuszczone) {
 
     // --- Etap 2: propozycja pola na podstawie prozy z etapu 1 ---
     // Dokładamy wypowiedź mentora jako turę assistant, a potem prosbę o ekstrakcję.
-    const proposalSystem = buildGuidedProposalSystem(agent, availableModelsText);
+    // Ekstraktor dostaje TE SAMA liste zasobow co proza — inaczej nie mialby
+    // skad przepisac identyfikatora pliku ani kolekcji.
+    const proposalSystem = buildGuidedProposalSystem(
+      agent,
+      availableModelsText,
+      zasoby.text,
+    );
     const proposalMessages = [
       ...messages,
       { role: "assistant", content: prose },
@@ -409,7 +594,7 @@ async function handleGuided(agent, messages, model, ollamaUrl, dopuszczone) {
     return NextResponse.json({
       message: prose,
       step: parsed.step || null,
-      proposal: normalizeProposal(parsed, katalog),
+      proposal: normalizeProposal(parsed, katalog, zasoby),
     });
   } catch (error) {
     const { status, message } = mapError(error);
