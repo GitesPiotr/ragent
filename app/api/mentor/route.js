@@ -5,6 +5,9 @@ import { fetchOllamaModels } from "@/lib/providers/ollama";
 import { modelSupportsTemperature, KLUCZ_DOSTAWCY } from "@/lib/config/models";
 import { loadKnowledge } from "@/lib/mentor/knowledge";
 import { getParameter } from "@/lib/creator/parameters";
+import { createClient } from "@/lib/supabase/server";
+import { listCollections } from "@/lib/rag/collections";
+import { listaPlikowServer } from "@/lib/knowledge/magazynServer";
 import { MENTOR_PROVIDER, MENTOR_MODEL } from "@/lib/config/mentor";
 import { wczytajModeleKonta } from "@/lib/settings/dopuszczoneServer";
 import {
@@ -318,6 +321,100 @@ async function buildAvailableModelsText(ollamaUrl, dopuszczone) {
   };
 }
 
+// =============================================================================
+//  ZASOBY KONTA W PROMPCIE — PLIKI MAGAZYNU I KOLEKCJE RAG.
+//
+//  Kroki „baza wiedzy" i „RAG" byly dotad wylacznie objasniajace, bo mentor
+//  nie dostawal ANI JEDNEJ nazwy: mowil „wgraj i wybierz", a wybor uzytkownik
+//  robil sam. Prowadzenie przestawalo prowadzic dokladnie tam, gdzie laik
+//  potrzebuje go najbardziej.
+//
+//  DWA ODCZYTY, ALE ZERO NOWYCH ZAPYTAN. Kolekcje idą tą samą funkcją, ktorej
+//  uzywa GET /api/rag/collections (listCollections + klient sesji) — jedna
+//  implementacja, dwoch wolajacych. Pliki maja blizniaka opisanego
+//  w lib/knowledge/magazynServer.js (rozni sie transportem, nie znaczeniem).
+//
+//  IDENTYFIKATOR IDZIE OBOK NAZWY, tak jak przy modelach. Mentor mowi
+//  o pliku po nazwie, ale w etapie 4 bedzie musial wskazac go identyfikatorem
+//  — a wtedy ma go przepisac z tej listy, nie wymyslic.
+//
+//  BLAD ODCZYTU NIE PRZERYWA PROWADZENIA. Rozmowa o bazie wiedzy bez listy
+//  plikow jest gorsza, ale dziala; rozmowa przerwana czerwonym paskiem nie
+//  dziala wcale. Dlatego kazda galaz ma tekst zastepczy, ktory mowi mentorowi
+//  wprost, ze listy NIE MA — inaczej milczenie zinterpretowalby jako „pusto".
+// =============================================================================
+const OPIS_STATUSU_PLIKU = {
+  ready: "tekst wczytany",
+  no_text: "BRAK TEKSTU — agent nic z tego pliku nie odczyta",
+  error: "błąd odczytu — plik nie nadaje się do użycia",
+};
+
+async function buildZasobyKontaText() {
+  // KLIENT SESJI, NIE service_role — i to jest cala izolacja tego bloku.
+  // Ta sama droga, ktora mentor ma juz przy modelach konta
+  // (lib/settings/dopuszczoneServer.js): createClient z lib/supabase/server.
+  // Klient na service_role omija RLS i wypisalby mentorowi pliki oraz
+  // kolekcje WSZYSTKICH kont.
+  //
+  // Nie siegam po app/api/rag/_lib/klientSesji.js, mimo ze robi to samo:
+  // ten helper jest opisany jako „jedyne zrodlo klienta dla tras
+  // w app/api/rag/", a mentor tam nie stoi.
+  const client = await createClient().catch(() => null);
+  if (!client) {
+    return "Nie udało się ustalić sesji użytkownika — nie znasz jego plików ani kolekcji. Nie zgaduj żadnych nazw; poproś, żeby wybrał je sam w kreatorze.";
+  }
+
+  const [plikiWynik, kolekcjeWynik] = await Promise.allSettled([
+    listaPlikowServer(client),
+    listCollections({}, { client }),
+  ]);
+
+  const lines = [];
+
+  if (plikiWynik.status !== "fulfilled") {
+    lines.push(
+      "PLIKI W MAGAZYNIE: nie udało się ich odczytać — nie wymieniaj żadnych nazw plików.",
+    );
+  } else {
+    const { pliki, wszystkich } = plikiWynik.value;
+    if (pliki.length === 0) {
+      lines.push(
+        "PLIKI W MAGAZYNIE: brak — użytkownik nie wgrał jeszcze ani jednego dokumentu.",
+      );
+    } else {
+      const ile =
+        wszystkich > pliki.length
+          ? `${pliki.length} najnowszych z ${wszystkich}`
+          : `${pliki.length}`;
+      lines.push(`PLIKI W MAGAZYNIE (${ile}):`);
+      for (const p of pliki) {
+        const status = OPIS_STATUSU_PLIKU[p.status] || `status: ${p.status}`;
+        lines.push(`- ${p.id} („${p.file_name}") — ${status}`);
+      }
+    }
+  }
+
+  if (kolekcjeWynik.status !== "fulfilled") {
+    lines.push(
+      "KOLEKCJE RAG: nie udało się ich odczytać — nie wymieniaj żadnych nazw kolekcji.",
+    );
+  } else {
+    const kolekcje = kolekcjeWynik.value || [];
+    if (kolekcje.length === 0) {
+      lines.push(
+        "KOLEKCJE RAG: brak — użytkownik nie założył jeszcze żadnej kolekcji.",
+      );
+    } else {
+      lines.push(`KOLEKCJE RAG (${kolekcje.length}):`);
+      for (const k of kolekcje) {
+        lines.push(`- ${k.id} („${k.name}")`);
+      }
+    }
+  }
+
+  return lines.join("\n");
+}
+
 // Zamienia surowa odpowiedz JSON mentora na znormalizowana propozycje pola.
 //
 // KAZDY BEZPIECZNIK TUTAJ ODPOWIADA NA TO SAMO PYTANIE: czy z tej propozycji
@@ -382,8 +479,13 @@ async function handleGuided(
 ) {
   try {
     const knowledge = await loadKnowledge();
-    const { text: availableModelsText, katalog } =
-      await buildAvailableModelsText(ollamaUrl, dopuszczone);
+    // Modele i zasoby konta rownolegle — to dwa niezalezne odczyty, a stoja
+    // przed KAZDYM wywolaniem prowadzenia.
+    const [{ text: availableModelsText, katalog }, zasobyKontaText] =
+      await Promise.all([
+        buildAvailableModelsText(ollamaUrl, dopuszczone),
+        buildZasobyKontaText(),
+      ]);
 
     // --- Etap 1: czysta proza (zwykły tekst, jak tryb reaktywny) ---
     const proseSystem = buildGuidedProseSystem(
@@ -391,6 +493,7 @@ async function handleGuided(
       agent,
       availableModelsText,
       aktywnaKarta,
+      zasobyKontaText,
     );
     const { text: prose } = await sendChat({
       provider: MENTOR_PROVIDER,
