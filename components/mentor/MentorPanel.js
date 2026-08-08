@@ -535,14 +535,19 @@ export function MentorPanel() {
   //
   // `step: "done"` zalezy od tego, czy EKSTRAKTOR je wypisze — to zachowanie
   // modelu, nie kodu, wiec samo w sobie nie jest gwarancja. Drugi wyzwalacz
-  // jest twardy: narzedzia to ostatni krok, wiec zaakceptowana propozycja
-  // narzedzi znaczy, ze kreator jest wypelniony do konca.
+  // jest twardy: zaakceptowana propozycja OSTATNIEGO kroku znaczy, ze kreator
+  // jest wypelniony do konca.
+  //
+  // OSTATNIM KROKIEM SA ZASADY, NIE NARZEDZIA (GUIDED_STEPS w lib/mentor/
+  // prompt.js). To jedyne miejsce w kodzie, ktore zna POZYCJE kroku, a nie
+  // sama nazwe — przy zmianie kolejnosci prowadzenia trzeba je poprawic razem
+  // z tamta lista, inaczej podsumowanie wyskakuje o krok za wczesnie.
   const guidedFinished =
     mode === "guided" &&
     messages.some(
       (m) =>
         m.step === "done" ||
-        (m.applied && m.proposal?.field === "tools"),
+        (m.applied && m.proposal?.field === "rules"),
     );
 
   function onKeyDown(e) {
