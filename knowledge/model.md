@@ -1,49 +1,37 @@
 # Model (LLM)
 
-> **Źródło: materiały AIDEAS 2025.** Zasady wyboru modelu są aktualne; konkretne nazwy i wersje modeli oraz ceny mogły się zmienić — zweryfikuj bieżące wersje u dostawcy.
-
 ## Definicja
-Model językowy (LLM, *Large Language Model*) to **„mózg" agenta** — przetwarza dane, analizuje kontekst, rozumie intencje użytkownika i formułuje odpowiedzi. Ważne: **agent ≠ tylko model** — model to jeden z jego elementów.
+Model językowy (LLM, *Large Language Model*) to **„mózg" agenta** — przetwarza dane, analizuje kontekst, rozumie intencje użytkownika i formułuje odpowiedzi. Ważne: **agent ≠ tylko model** — model to jeden z jego elementów. Ta sama persona, te same zasady i te same dokumenty dadzą różny efekt na różnych modelach.
 
 ## Po co to
-Wybór modelu przekłada się bezpośrednio na jakość odpowiedzi, koszty działania i to, jak trudne zadania agent udźwignie. Dobrze dobrany model = lepszy efekt przy rozsądnym koszcie.
+Wybór modelu przekłada się bezpośrednio na trzy rzeczy naraz: **jakość odpowiedzi, koszt działania i to, jak trudne zadania agent udźwignie**. Dobrze dobrany model = lepszy efekt przy rozsądnym koszcie. Źle dobrany objawia się albo przepalonym budżetem przy prostych zadaniach, albo agentem, który gubi wątek przy trudnych.
 
-## Jak o tym decydować w praktyce
-**Modele mini vs. standardowe:**
-- **Mini** — tańsze i szybsze; wystarczają w **ok. 80%** zastosowań; „nadają się szczególnie do budowy agentów AI", gdzie liczą się niskie koszty operacyjne. Dobre do zadań, które nie wymagają przetwarzania dużej ilości danych ani unikatowych odpowiedzi.
-- **Standardowe** — lepsze przy analizie złożonych danych i tworzeniu bardziej zróżnicowanych odpowiedzi.
+## Skąd biorą się modele w tej aplikacji
+Model wybierasz w karcie **Model AI** — najpierw dostawcę, potem konkretny model z listy. **Lista pochodzi z modeli włączonych na Twoim koncie** (Ustawienia → Modele językowe), a nie z tego tekstu. Dlatego nie znajdziesz tu żadnych nazw: oferta dostawców zmienia się szybciej niż materiały szkoleniowe, a nazwa przepisana z kursu bywa modelem, którego już nie ma. **Aktualne nazwy są zawsze na liście w aplikacji.**
 
-**Kryteria wyboru modelu:**
-- **Cel użycia** — do czego model ma służyć (chat, generowanie tekstu, analizy).
-- **Stopień skomplikowania zadania** — czy potrzebne są zaawansowane funkcje.
-- **Koszty** — licencja, utrzymanie, przetwarzanie danych, limity API.
-- **Moc obliczeniowa** — czy masz zasoby do obsługi wybranego modelu.
+Przy każdym modelu na liście widać dwie rzeczy, na które warto patrzeć: czy przyjmuje ręczną temperaturę i czy dostawca ma ustawiony klucz. Model bez klucza można zaznaczyć, ale rozmowa z agentem zwróci błąd.
 
-**Dopasowanie modelu do rodzaju zadania (wg materiałów):**
-- **Dokładność faktów** → „Claude i Gemini" (bardziej zachowawcze, mniej skłonne do nieprawdziwych odpowiedzi).
-- **Kreatywność i styl** → „GPT-4" (bardziej ludzkie, ale mniej przewidywalne odpowiedzi — reklamy, treści marketingowe, teksty twórcze).
-- **Praca z dużą ilością danych i dokumentów** → „Claude 3.5 i Gemini Pro" (zaprojektowane do złożonych analiz; „GPT-4" jest tu słabszy).
+## Jak wybrać model
+- **Zacznij od najtańszego i najszybszego.** Modele lekkie („mini") wystarczają w **ok. 80%** zastosowań — obsługa typowych pytań, przepisywanie tekstu, proste podsumowania, robocze wersje dokumentów. Do budowy agentów nadają się szczególnie dobrze, bo agent odpowiada wiele razy dziennie i koszt się mnoży.
+- **Po mocniejszy sięgaj wtedy, gdy widzisz konkretny powód.** Powody, które naprawdę go uzasadniają: złożone rozumowanie w wielu krokach, analiza długich albo sprzecznych dokumentów, wnioski i porównania zamiast przepisywania, zadania, w których pomyłka dużo kosztuje.
+- **Do faktów wybieraj model zachowawczy, do tekstów — swobodniejszy.** Agent od danych, liczb i regulaminów ma nie zmyślać; agent od treści marketingowych ma proponować warianty. To ta sama różnica, którą ustawia się temperaturą — tyle że zaczyna się już przy wyborze modelu.
+- **Sprawdź okno kontekstu**, jeśli agent ma dostawać dużo tekstu: długa persona, obszerne zasady, wskazane pliki z Bazy wiedzy i historia rozmowy muszą się zmieścić naraz. Za mały model po prostu zgubi początek.
+- **Miej plan B.** Model potrafi przestać działać, podrożeć albo zniknąć z oferty. Warto z góry wiedzieć, na co przełączysz agenta — zmiana modelu to jedno kliknięcie w karcie „Model AI".
+- **Możesz łączyć modele w jednym projekcie** — jeden agent na tańszym modelu do obsługi bieżących pytań, drugi na mocniejszym do analiz.
 
-**Przykładowe modele wymienione w materiałach** (nazwy przepisane wiernie ze slajdów — nie zmieniaj ich na nowsze):
-- Mini: **GPT-4o-mini, Mistral Small, Google Gemini 2.0 Flash**
-- Standardowe: **GPT-4o, Gemini 2.0 Pro**
-- Dodatkowo wspominane: **GPT-4o (OpenAI / Microsoft)**, **Gemini Pro 2.0 (Google)**, **Mistral**, **LLaMA (Meta)**, **Claude 3 (Anthropic)**.
-- *(Materiały niespójnie zapisują niektóre nazwy — patrz `_sources.md`.)*
-
-**Warto pamiętać o planie B** — jeśli model przestanie działać lub przekroczy limity, miej gotowy model alternatywny. Można też łączyć modele w jednym projekcie (np. jeden do przetwarzania danych, drugi do generowania treści).
+## Co znaczy „model nie przyjmuje temperatury"
+Część nowszych modeli **sama dobiera poziom losowości** i nie pozwala ustawić go ręcznie. Przy takim modelu suwak temperatury w kreatorze nic nie zmienia — nie jest zepsuty, po prostu ten model go nie obsługuje. Przy każdym modelu na liście widać, czy temperaturę przyjmuje. Jeśli zależy Ci na ręcznym sterowaniu losowością, wybierz model, który to umie. Więcej w pojęciu **„Temperatura"**.
 
 ## Typowe błędy
-*(Materiały nie mają osobnego slajdu „typowe błędy" dla modelu — trzy pierwsze punkty wynikają z sekcji o kosztach i wyborze modelu.)*
-- Wybór dużego, drogiego modelu tam, gdzie w zupełności wystarczy model mini (niepotrzebny koszt).
-- Ignorowanie kosztów i limitów API przy intensywnym korzystaniu — przy dużej skali potrafią drastycznie wpłynąć na budżet.
-- Brak planu awaryjnego (planu B) na wypadek awarii lub przekroczenia limitów modelu.
-- Sięganie po najmocniejszy i najdroższy model do prostych zadań — przepala budżet i spowalnia odpowiedzi, choć tańszy model w zupełności by wystarczył.
-- Błąd odwrotny: najtańszy i najszybszy model do zadań wymagających złożonego rozumowania — agent częściej się myli i gubi wątek.
-- Zakładanie, że każdy model przyjmuje te same ustawienia — nowsze modele (np. Opus 4.8, Sonnet 5) nie przyjmują ręcznej temperatury i same dobierają poziom losowości.
-- Ignorowanie okna kontekstu — wybór modelu, który nie pomieści potrzebnej ilości tekstu (długie instrukcje, wiedza, historia rozmowy).
+- **Najmocniejszy i najdroższy model do prostych zadań** — przepala budżet i spowalnia odpowiedzi, choć tańszy w zupełności by wystarczył.
+- **Błąd odwrotny: najtańszy model do zadań wymagających rozumowania** — agent częściej się myli, gubi wątek i wyciąga płytkie wnioski.
+- **Ignorowanie kosztów i limitów API** przy intensywnym korzystaniu — przy dużej skali potrafią drastycznie wpłynąć na budżet.
+- **Brak planu awaryjnego** na wypadek awarii, limitu albo wycofania modelu z oferty.
+- **Założenie, że każdy model przyjmuje te same ustawienia** — patrz wyżej: część z nich nie przyjmuje ręcznej temperatury.
+- **Ignorowanie okna kontekstu** — wybór modelu, który nie pomieści potrzebnej ilości tekstu.
+- **Zmiana modelu bez ponownego testu** — ta sama konfiguracja na innym modelu potrafi odpowiadać zauważalnie inaczej. Po zmianie warto przejść do karty „Test agenta".
 
 ## Krótki przykład
-- **Model mini** — przygotowanie treści komunikacji, postów w mediach społecznościowych, roboczej wersji briefu na bazie szablonu.
-- **Model duży** — analiza złożonych ofert od różnych agencji, aby wskazać mocne strony i ograniczenia każdej z nich.
+**Agent „Asystent biurowy"** odpowiada na powtarzalne pytania pracowników i przepisuje notatki — tu wystarczy model tańszy i szybszy, bo zadania są proste, a zapytań dużo.
 
-**Ilustracja proporcji kosztów** (nie jest to realny cennik — pokazuje jedynie skalę różnicy mini vs. duży model; liczby przepisane wiernie ze slajdu): koszt wygenerowania 20 000 tokenów tekstu — **GPT-4o-mini: $45,000** wobec **GPT-4o: $270,000**. Wniosek z materiałów: przy dużej skali użycia optymalizacja wyboru modelu ma kluczowe znaczenie dla budżetu.
+**Agent „Analityk ofert"** dostaje kilka długich ofert i ma wskazać mocne strony oraz ryzyka każdej z nich — tu opłaca się model mocniejszy: wymaga porównywania, wyciągania wniosków i utrzymania w głowie całości dokumentów naraz.
