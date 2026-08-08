@@ -4,6 +4,7 @@ import { sendChat } from "@/lib/providers";
 import { fetchOllamaModels } from "@/lib/providers/ollama";
 import { modelSupportsTemperature, KLUCZ_DOSTAWCY } from "@/lib/config/models";
 import { loadKnowledge } from "@/lib/mentor/knowledge";
+import { getParameter } from "@/lib/creator/parameters";
 import { MENTOR_PROVIDER, MENTOR_MODEL } from "@/lib/config/mentor";
 import { wczytajModeleKonta } from "@/lib/settings/dopuszczoneServer";
 import {
@@ -83,6 +84,12 @@ export async function POST(request) {
   }
 
   const { agent, messages, mode, personaDraft } = body || {};
+
+  // KARTA OTWARTA W KREATORZE — z przegladarki, wiec NIEZAUFANA.
+  // Sprawdzamy ja wobec rejestru parametrow zamiast wpuszczac do promptu
+  // dowolny string: `getParameter` zwraca null dla nieznanego id, a null
+  // znaczy tu dokladnie to samo, co brak pola — „nie wiem, gdzie stoi".
+  const aktywnaKarta = getParameter(body?.aktywnaKarta) || null;
 
   if (!Array.isArray(messages) || messages.length === 0) {
     return NextResponse.json(
@@ -166,9 +173,16 @@ export async function POST(request) {
     );
   }
   if (mode === "guided") {
-    return handleGuided(agent || {}, messages, mentorModel, ollamaUrl, dopuszczone);
+    return handleGuided(
+      agent || {},
+      messages,
+      mentorModel,
+      ollamaUrl,
+      dopuszczone,
+      aktywnaKarta,
+    );
   }
-  return handleReactive(agent || {}, messages, mentorModel);
+  return handleReactive(agent || {}, messages, mentorModel, aktywnaKarta);
 }
 
 // --- KROK PERSONA, ŚCIEŻKA A ("Opisz sam") — tryb OCENIAJĄCY.
@@ -204,10 +218,10 @@ async function handlePersonaFeedback(agent, messages, draft, model, runda) {
 }
 
 // --- Tryb reaktywny ("Zapytaj mentora") — BEZ ZMIAN wzgledem poprzedniej sesji.
-async function handleReactive(agent, messages, model) {
+async function handleReactive(agent, messages, model, aktywnaKarta) {
   try {
     const knowledge = await loadKnowledge();
-    const system = buildMentorSystem(knowledge, agent);
+    const system = buildMentorSystem(knowledge, agent, aktywnaKarta);
 
     const { text } = await sendChat({
       provider: MENTOR_PROVIDER,
@@ -358,7 +372,14 @@ function normalizeProposal(parsed, katalog) {
 // --- Tryb prowadzenia ("Przeprowadź mnie krok po kroku") — DWA ETAPY.
 // Etap 1: proza mentora BEZ structured output (nie psuje długiej prozy).
 // Etap 2: sama propozycja pola ZE structured output (krótkie, czyste dane).
-async function handleGuided(agent, messages, model, ollamaUrl, dopuszczone) {
+async function handleGuided(
+  agent,
+  messages,
+  model,
+  ollamaUrl,
+  dopuszczone,
+  aktywnaKarta,
+) {
   try {
     const knowledge = await loadKnowledge();
     const { text: availableModelsText, katalog } =
@@ -369,6 +390,7 @@ async function handleGuided(agent, messages, model, ollamaUrl, dopuszczone) {
       knowledge,
       agent,
       availableModelsText,
+      aktywnaKarta,
     );
     const { text: prose } = await sendChat({
       provider: MENTOR_PROVIDER,

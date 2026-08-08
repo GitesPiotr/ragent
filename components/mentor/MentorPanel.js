@@ -8,6 +8,7 @@ import {
   setLastEvent,
 } from "@/lib/state/actions";
 import { useMentorLayout } from "./MentorLayoutContext";
+import { useCreatorFocus } from "@/components/creator/CreatorFocusContext";
 import { useSettings } from "@/lib/settings/SettingsContext";
 import { RAG_TOOL_ID } from "@/lib/creator/parameters";
 import styles from "./MentorPanel.module.css";
@@ -71,12 +72,21 @@ export function MentorPanel() {
     separatorProps,
   } = useMentorLayout();
 
+  // KTORA KARTA KREATORA JEST OTWARTA. Mentor stoi obok kreatora i do tej pory
+  // nie mial jak tego zobaczyc: user klikal „RAG", pytal „co to jest?",
+  // a mentor nie wiedzial, o czym mowa.
+  const { activeId } = useCreatorFocus();
+
   const { settings } = useSettings();
   // Ustawienia wpływające na kod serwerowy mentora — dołączane do KAŻDEGO
   // zapytania; serwer je waliduje (model tylko z listy Anthropic).
+  //
+  // `aktywnaKarta` jedzie tą samą drogą i tak samo NIE JEST ZAUFANA: serwer
+  // sprawdza ją wobec rejestru parametrów i nieznaną traktuje jak jej brak.
   const mentorApiSettings = {
     mentorModel: settings.mentorModel,
     ollamaUrl: settings.ollamaUrl,
+    aktywnaKarta: activeId,
   };
 
   const [mode, setMode] = useState(null); // null | "reactive" | "guided"

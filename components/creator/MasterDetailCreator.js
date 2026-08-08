@@ -38,11 +38,17 @@ const SECTION_COMPONENTS = {
   test: TestSection,
 };
 
+// activeId/setActiveId przychodza ZE STRONY, a nie z lokalnego useState.
+// Ta sama informacja jest potrzebna mentorowi (musi wiedziec, na co patrzy
+// uzytkownik), a mentor jest rodzenstwem kreatora, nie jego dzieckiem —
+// patrz components/creator/CreatorFocusContext.js.
 export function MasterDetailCreator({
   onSave,
   saveStatus = "idle",
   hasUnsavedChanges = false,
   saveError = null,
+  activeId,
+  setActiveId,
 }) {
   const { state, dispatch } = useAppState();
   const agent = state.agent;
@@ -51,8 +57,8 @@ export function MasterDetailCreator({
   // Start: te, dla ktorych agent mial juz dane przy wejsciu na strone.
   const [addedIds, setAddedIds] = useState(() => initialAddedParameters(agent));
 
-  // Aktywny parametr w prawej kolumnie; null = ekran "Wybierz parametr".
-  const [activeId, setActiveId] = useState("persona");
+  // Aktywny parametr w prawej kolumnie (null = ekran "Wybierz parametr")
+  // przychodzi propsem ze strony — patrz komentarz przy sygnaturze.
 
   // Edycja nazwy agenta w naglowku.
   const [editingName, setEditingName] = useState(false);
