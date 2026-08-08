@@ -12,6 +12,7 @@ import { useCreatorFocus } from "@/components/creator/CreatorFocusContext";
 import { useSettings } from "@/lib/settings/SettingsContext";
 import { RAG_TOOL_ID, getParameter } from "@/lib/creator/parameters";
 import { wyjsciaDlaWiadomosci, RODZAJ, STYL } from "@/lib/mentor/wyjscia";
+import { modelSupportsTemperature } from "@/lib/config/models";
 import styles from "./MentorPanel.module.css";
 
 // Czytelne etykiety pol i narzedzi (do kart propozycji).
@@ -560,6 +561,9 @@ export function MentorPanel() {
       zastosowana: Boolean(m.applied),
       personaPath,
       edycjaOpisu,
+      // Model, ktory sam dobiera losowosc, nie zostawia w kroku temperatury
+      // zadnej decyzji — a przyciski obiecywalyby, ze jakas jest.
+      temperaturaDostepna: modelSupportsTemperature(agent.provider, agent.model),
     });
   }
 
