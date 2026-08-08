@@ -10,7 +10,7 @@ import {
 import { useMentorLayout } from "./MentorLayoutContext";
 import { useCreatorFocus } from "@/components/creator/CreatorFocusContext";
 import { useSettings } from "@/lib/settings/SettingsContext";
-import { RAG_TOOL_ID } from "@/lib/creator/parameters";
+import { RAG_TOOL_ID, getParameter } from "@/lib/creator/parameters";
 import styles from "./MentorPanel.module.css";
 
 // Czytelne etykiety pol i narzedzi (do kart propozycji).
@@ -75,7 +75,22 @@ export function MentorPanel() {
   // KTORA KARTA KREATORA JEST OTWARTA. Mentor stoi obok kreatora i do tej pory
   // nie mial jak tego zobaczyc: user klikal „RAG", pytal „co to jest?",
   // a mentor nie wiedzial, o czym mowa.
-  const { activeId } = useCreatorFocus();
+  //
+  // setActiveId i setKrokMentora ida w DRUGA strone: prowadzenie samo otwiera
+  // i podswietla karte, o ktorej wlasnie mowi.
+  const { activeId, setActiveId, setKrokMentora } = useCreatorFocus();
+
+  // Prowadzenie doszlo do kroku `step` -> pokaz i otworz jego karte.
+  //
+  // SPRAWDZAMY, CZY TEN KROK MA W OGOLE KARTE. Ostatni krok schematu to "done",
+  // ktore karta nie jest: samo `setActiveId("done")` zostawiloby prawa kolumne
+  // kreatora pusta — bez sekcji i bez ekranu wyboru. Rejestr parametrow jest
+  // tu jedynym sedzia, wiec nie powstaje druga lista krokow.
+  function pokazKrokWKreatorze(step) {
+    if (!step || !getParameter(step)) return;
+    setKrokMentora(step);
+    setActiveId(step);
+  }
 
   const { settings } = useSettings();
   // Ustawienia wpływające na kod serwerowy mentora — dołączane do KAŻDEGO
@@ -181,6 +196,11 @@ export function MentorPanel() {
     setPersonaPath(null);
     setPersonaDraft("");
     setEdycjaOpisu(false);
+    // Koniec prowadzenia (zmiana trybu, start nowego) -> nie ma juz kroku,
+    // ktory mentor omawia. Bez tego karta pokazana „na czas omawiania"
+    // zostawalaby na liscie po wyjsciu z prowadzenia — czyli dokladnie
+    // wbrew regule, ktora ma znikac, gdy nic w niej nie ustawiono.
+    setKrokMentora(null);
   }
 
   function chooseMode(m) {
@@ -287,6 +307,8 @@ export function MentorPanel() {
         },
       ]);
       dispatch(setLastEvent({ type: "mentor-reply" }));
+      // Karta kroku, o ktorym mentor wlasnie mowi, pokazuje sie i otwiera.
+      pokazKrokWKreatorze(data.step);
     } catch (e) {
       setError(e.message);
       dispatch(setLastEvent({ type: "mentor-error", message: e.message }));
@@ -357,6 +379,9 @@ export function MentorPanel() {
         },
       ]);
       dispatch(setLastEvent({ type: "mentor-reply" }));
+      // Ocena persony tez jest krokiem prowadzenia — karta „Osobowość" ma
+      // byc wtedy otwarta (jest stala, wiec chodzi o samo otwarcie).
+      pokazKrokWKreatorze(data.step);
       // Ocena wrocila -> pole edycji ustepuje miejsca trzem wyjsciom.
       setEdycjaOpisu(false);
       // POCZATEK OCENY, nie dno panelu — to jest cala poprawka tej sciezki.

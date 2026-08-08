@@ -27,19 +27,26 @@ import { createContext, useContext } from "react";
 //  [agentId]/page.js) — tak samo jak przy mentorOpen i mentorWidth, ktore
 //  juz tam mieszkaja z tego samego powodu: potrzebuja ich dwa rodzenstwa.
 // =============================================================================
+//  DRUGA WARTOSC, `krokMentora`, IDZIE W PRZECIWNA STRONE: to krok prowadzenia,
+//  o ktorym mentor wlasnie mowi. Kreator pokazuje wtedy odpowiadajaca mu karte
+//  — takze taka, ktorej uzytkownik nigdy nie dodal. Karta pokazana „na czas
+//  omawiania" znika, gdy prowadzenie idzie dalej, ALE TYLKO gdy nic w niej nie
+//  ustawiono; z danymi zostaje na liscie jak kazda inna (MasterDetailCreator).
 export const CreatorFocusContext = createContext(null);
 
-// Zwraca { activeId, setActiveId }.
+// Zwraca { activeId, setActiveId, krokMentora, setKrokMentora }.
 //
 // NIE RZUCA POZA PROVIDEREM, inaczej niz useMentorLayout. Panel mentora ma
 // dzialac takze wtedy, gdy ktos zamontuje go poza strona agenta — brak
 // informacji o ognisku jest wtedy poprawnym stanem („nie wiem, gdzie stoi"),
-// a nie awaria. Domyslka mowi to wprost: null i pusta funkcja.
+// a nie awaria. Domyslka mowi to wprost: null i puste funkcje.
 export function useCreatorFocus() {
   return (
     useContext(CreatorFocusContext) || {
       activeId: null,
       setActiveId: () => {},
+      krokMentora: null,
+      setKrokMentora: () => {},
     }
   );
 }

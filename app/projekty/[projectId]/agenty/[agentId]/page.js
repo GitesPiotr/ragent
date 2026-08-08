@@ -126,9 +126,15 @@ export default function AgentEditorPage() {
   // patrzy). Ten sam powod, dla ktorego wyzej mieszka mentorOpen.
   // Szczegoly i odrzucone warianty: components/creator/CreatorFocusContext.js.
   const [activeId, setActiveId] = useState("persona");
+
+  // Krok prowadzenia, o ktorym mentor wlasnie mowi (null poza prowadzeniem).
+  // Kreator pokazuje na ten czas odpowiadajaca mu karte — patrz komentarz
+  // przy `widoczneAdd` w MasterDetailCreator.
+  const [krokMentora, setKrokMentora] = useState(null);
+
   const creatorFocus = useMemo(
-    () => ({ activeId, setActiveId }),
-    [activeId],
+    () => ({ activeId, setActiveId, krokMentora, setKrokMentora }),
+    [activeId, krokMentora],
   );
 
   // ---------- LAYOUT MENTORA (przesuwalna, dwuetapowa granica) ----------
@@ -281,6 +287,7 @@ export default function AgentEditorPage() {
               saveError={saveError}
               activeId={activeId}
               setActiveId={setActiveId}
+              krokMentora={krokMentora}
             />
           )}
         </main>
