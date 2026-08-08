@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { sendChat } from "@/lib/providers";
 import { fetchOllamaModels } from "@/lib/providers/ollama";
-import { modelSupportsTemperature } from "@/lib/config/models";
+import { modelSupportsTemperature, KLUCZ_DOSTAWCY } from "@/lib/config/models";
 import { loadKnowledge } from "@/lib/mentor/knowledge";
 import { MENTOR_PROVIDER, MENTOR_MODEL } from "@/lib/config/mentor";
 import { wczytajModeleKonta } from "@/lib/settings/dopuszczoneServer";
@@ -11,6 +11,7 @@ import {
   modeleOllamy,
   tekstDostepnychModeli,
   czyModelMentoraDozwolony,
+  dopasujModel,
   DOSTAWCA_MENTORA,
 } from "@/lib/settings/dopuszczoneModele";
 import { rozstrzygnij, zPrzypisania, ZRODLO } from "@/lib/settings/przypisaniaModeli";
@@ -148,7 +149,21 @@ export async function POST(request) {
         { status: 400 },
       );
     }
-    return handlePersonaFeedback(agent || {}, messages, draft, mentorModel);
+    // Numer oceny przychodzi z panelu (liczy je tam kod, nie model). Ufamy mu
+    // tyle, ile trzeba: ma byc dodatnia liczba calkowita, wszystko inne to 1.
+    // Wartosc idzie WYLACZNIE do tresci promptu, wiec bledna nie psuje nic
+    // poza tonem odpowiedzi — ale „ocena nr NaN" w instrukcji juz by psula.
+    const runda =
+      Number.isInteger(body?.personaRunda) && body.personaRunda > 0
+        ? body.personaRunda
+        : 1;
+    return handlePersonaFeedback(
+      agent || {},
+      messages,
+      draft,
+      mentorModel,
+      runda,
+    );
   }
   if (mode === "guided") {
     return handleGuided(agent || {}, messages, mentorModel, ollamaUrl, dopuszczone);
@@ -160,10 +175,10 @@ export async function POST(request) {
 // JEDEN etap: czysta proza z feedbackiem. Propozycja do kreatora nie jest
 // wyciagana modelem — to wprost tekst uzytkownika, wiec trafia do kreatora
 // slowo w slowo (i oszczedzamy drugie wywolanie).
-async function handlePersonaFeedback(agent, messages, draft, model) {
+async function handlePersonaFeedback(agent, messages, draft, model, runda) {
   try {
     const knowledge = await loadKnowledge();
-    const system = buildPersonaFeedbackSystem(knowledge, agent, draft);
+    const system = buildPersonaFeedbackSystem(knowledge, agent, draft, runda);
 
     const { text } = await sendChat({
       provider: MENTOR_PROVIDER,
@@ -175,7 +190,12 @@ async function handlePersonaFeedback(agent, messages, draft, model) {
     return NextResponse.json({
       message: text,
       step: "persona",
-      proposal: { field: "persona", value: draft },
+      // `wlasny` MOWI PANELOWI, CZYJ JEST TEN TEKST. Propozycja persony
+      // z prowadzenia i ta maja ten sam `field` i ten sam `step` — a to dwie
+      // zupelnie rozne rzeczy na ekranie: tam mentor cos napisal, tu oddajemy
+      // uzytkownikowi jego wlasne zdania do wpisania. Bez tego znacznika karta
+      // podpisuje jego tekst jako „Propozycja do pola", czyli jako prace mentora.
+      proposal: { field: "persona", value: draft, wlasny: true },
     });
   } catch (error) {
     const { status, message } = mapError(error);
@@ -225,7 +245,30 @@ async function handleReactive(agent, messages, model) {
 //     potrafil na nim dzialac od rundy 2,
 //   • Ollama: lista z demona PRZECIETA z lista konta — bez tego mentor
 //     proponowalby modele wylaczone w Ustawieniach.
+//
+//  ZWRACA TAKZE `katalog` — TE SAME POZYCJE, TYLKO BEZ FORMATOWANIA.
+//  Propozycja modelu wraca z ekstraktora jako goly tekst, a zeby ustawic przy
+//  niej dostawce, trzeba wiedziec, z ktorej grupy ten model pochodzi. Katalog
+//  powstaje TU, z tych samych `grupy`, z ktorych powstaje tekst — bo tekst
+//  i odpowiedz „czyj to model" musza pochodzic z jednego odczytu. Drugie
+//  pytanie o modele (choćby o te same dane) byloby drugim miejscem, w ktorym
+//  te dwie odpowiedzi moglyby sie rozjechac — dokladnie ta pulapka, przed
+//  ktora ostrzega naglowek powyzej.
 // =============================================================================
+//
+//  KLUCZ DOSTAWCY CZYTAMY TUTAJ, Z `process.env` — I TO JEST CALY ODCZYT.
+//  Trasa jest kodem serwerowym w tym samym procesie, w ktorym siedza zmienne
+//  srodowiskowe, wiec to siegniecie do pamieci, a nie zapytanie. Trasa
+//  /api/providers/status robi doslownie to samo `Boolean(process.env...)`,
+//  tylko dla przegladarki — wolanie jej stad byloby tym samym odczytem
+//  przepuszczonym przez HTTP.
+function brakKluczaDostawcy(provider) {
+  const nazwa = KLUCZ_DOSTAWCY[provider];
+  // Ollama (nazwa === null) klucza nie potrzebuje — nigdy nie oznaczamy.
+  if (!nazwa) return null;
+  return process.env[nazwa] ? null : nazwa;
+}
+
 async function buildAvailableModelsText(ollamaUrl, dopuszczone) {
   const { models: ollamaModels, error } = await fetchOllamaModels(ollamaUrl);
 
@@ -234,7 +277,7 @@ async function buildAvailableModelsText(ollamaUrl, dopuszczone) {
     { provider: "openai", modele: listaModeli(dopuszczone, "openai").modele },
     { provider: "openrouter", modele: listaModeli(dopuszczone, "openrouter").modele },
     { provider: "ollama", modele: modeleOllamy(dopuszczone, ollamaModels).modele },
-  ];
+  ].map((g) => ({ ...g, brakKlucza: brakKluczaDostawcy(g.provider) }));
 
   // Powod „niedostepnosci" lokalnych rozroznia dwie sytuacje, bo mentor
   // dostaje to zdanie jako uzasadnienie: demon nie odpowiedzial (error)
@@ -245,15 +288,29 @@ async function buildAvailableModelsText(ollamaUrl, dopuszczone) {
       ? "żaden model lokalny nie jest włączony na koncie"
       : null);
 
-  return tekstDostepnychModeli(
-    grupy,
-    modelSupportsTemperature,
-    powodBrakuLokalnych,
+  // Katalog niesie `brakKlucza` dalej, bo propozycje odsiewa normalizeProposal,
+  // a zdanie w prompcie jest tylko prosba — model potrafi ja zignorowac.
+  const katalog = grupy.flatMap(({ provider, modele, brakKlucza }) =>
+    modele.map((m) => ({ provider, id: m.id, brakKlucza })),
   );
+
+  return {
+    text: tekstDostepnychModeli(
+      grupy,
+      modelSupportsTemperature,
+      powodBrakuLokalnych,
+    ),
+    katalog,
+  };
 }
 
 // Zamienia surowa odpowiedz JSON mentora na znormalizowana propozycje pola.
-function normalizeProposal(parsed) {
+//
+// KAZDY BEZPIECZNIK TUTAJ ODPOWIADA NA TO SAMO PYTANIE: czy z tej propozycji
+// da sie COKOLWIEK WPISAC. Karta propozycji ma jeden przycisk i on NADPISUJE
+// pole kreatora — wiec propozycja, ktora niesie pustke, nie jest propozycja,
+// tylko kasowaniem cudzych ustawien pod przyciskiem „Zaakceptuj".
+function normalizeProposal(parsed, katalog) {
   const field = parsed.proposalField;
   if (!field || field === "none") return null;
 
@@ -264,12 +321,33 @@ function normalizeProposal(parsed) {
     return { field: "temperature", value };
   }
   if (field === "rules" || field === "tools") {
-    return {
-      field,
-      value: Array.isArray(parsed.proposalList) ? parsed.proposalList : [],
-    };
+    const value = Array.isArray(parsed.proposalList)
+      ? parsed.proposalList.filter((v) => typeof v === "string" && v.trim())
+      : [];
+    // Bezpiecznik jak przy pustym tekscie nizej — i z tego samego powodu.
+    // „Ten agent nie potrzebuje narzedzi" to zdanie mentora, nie wartosc do
+    // wpisania: akceptacja pustej listy WYCZYSCILABY narzedzia albo zasady,
+    // ktore uzytkownik ustawil wczesniej. Zdejmowanie ich zostaje w kreatorze.
+    if (value.length === 0) return null;
+    return { field, value };
   }
-  // persona, model — wartosc tekstowa.
+  if (field === "model") {
+    // DOSTAWCA IDZIE RAZEM Z MODELEM albo nie ma propozycji.
+    // Lista w prompcie zawiera modele czterech dostawcow, a panel do tej rundy
+    // ustawial sam `model`, zostawiajac `provider` bez zmian — agent dostawal
+    // model jednego dostawcy wyslany do drugiego. `dopasujModel` oddaje takze
+    // KANONICZNE id, wiec „claude-haiku-4.5" z wypowiedzi mentora wchodzi do
+    // kreatora jako „claude-haiku-4-5".
+    const trafienie = dopasujModel(katalog, parsed.proposalText);
+    if (!trafienie) return null;
+    // MODEL BEZ KLUCZA NIE JEST PROPOZYCJA. Instrukcja w prompcie mowi
+    // mentorowi, zeby go nie proponowal, ale instrukcja jest prosba — karta
+    // z przyciskiem „Zaakceptuj" byla by obietnica agenta, ktory nie ruszy.
+    // Mentor moze taki model wymienic w prozie i powiedziec, czego brakuje.
+    if (trafienie.brakKlucza) return null;
+    return { field: "model", value: trafienie.id, provider: trafienie.provider };
+  }
+  // persona — wartosc tekstowa.
   // Bezpiecznik: NIE stosujemy pustej propozycji (model bywa myli sie na
   // krokach pomijanych i podaje puste pole - to wyzerowaloby dane usera).
   const value = (parsed.proposalText || "").trim();
@@ -283,10 +361,8 @@ function normalizeProposal(parsed) {
 async function handleGuided(agent, messages, model, ollamaUrl, dopuszczone) {
   try {
     const knowledge = await loadKnowledge();
-    const availableModelsText = await buildAvailableModelsText(
-      ollamaUrl,
-      dopuszczone,
-    );
+    const { text: availableModelsText, katalog } =
+      await buildAvailableModelsText(ollamaUrl, dopuszczone);
 
     // --- Etap 1: czysta proza (zwykły tekst, jak tryb reaktywny) ---
     const proseSystem = buildGuidedProseSystem(
@@ -333,7 +409,7 @@ async function handleGuided(agent, messages, model, ollamaUrl, dopuszczone) {
     return NextResponse.json({
       message: prose,
       step: parsed.step || null,
-      proposal: normalizeProposal(parsed),
+      proposal: normalizeProposal(parsed, katalog),
     });
   } catch (error) {
     const { status, message } = mapError(error);

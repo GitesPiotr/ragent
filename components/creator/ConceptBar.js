@@ -3,24 +3,23 @@
 import { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { useKnowledge } from "@/lib/knowledge/KnowledgeContext";
-import { getExtraConcept } from "@/lib/knowledge/extraConcepts";
 import styles from "./ConceptBar.module.css";
 
 // Zwijany pasek "Czym jest...?" nad edytorem KAZDEGO parametru.
 // Domyslnie ZWINIETY — wiedza jest pod reka, ale nie zaslania pracy.
 //
-// Zrodlo tresci:
-//  1. pliki ./knowledge wczytane serwerowo (kontekst KnowledgeProvider),
-//  2. lib/knowledge/extraConcepts.js dla pojec bez wlasnego pliku.
+// Zrodlo tresci: JEDNO — pliki ./knowledge wczytane serwerowo (kontekst
+// KnowledgeProvider, lista w lib/knowledge/concepts.js). Wczesniej byly dwa:
+// piec pojec bez wlasnego pliku mieszkalo w lib/knowledge/extraConcepts.js.
+// Dostaly pliki, wiec modul zniknal — a razem z nim ryzyko, ze te same
+// pojecia rozjada sie miedzy dwoma egzemplarzami prawdy.
 export function ConceptBar({ conceptIds = [] }) {
   const { concepts } = useKnowledge();
   const [openId, setOpenId] = useState(null);
 
-  // Sklejamy pojecia z obu zrodel, zachowujac kolejnosc z parametru.
+  // Zachowujemy kolejnosc z parametru, nie z listy pojec.
   const resolved = conceptIds
-    .map(
-      (id) => concepts.find((c) => c.id === id) ?? getExtraConcept(id) ?? null,
-    )
+    .map((id) => concepts.find((c) => c.id === id) ?? null)
     .filter(Boolean);
 
   if (resolved.length === 0) return null;
