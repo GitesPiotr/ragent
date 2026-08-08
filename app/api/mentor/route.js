@@ -149,7 +149,21 @@ export async function POST(request) {
         { status: 400 },
       );
     }
-    return handlePersonaFeedback(agent || {}, messages, draft, mentorModel);
+    // Numer oceny przychodzi z panelu (liczy je tam kod, nie model). Ufamy mu
+    // tyle, ile trzeba: ma byc dodatnia liczba calkowita, wszystko inne to 1.
+    // Wartosc idzie WYLACZNIE do tresci promptu, wiec bledna nie psuje nic
+    // poza tonem odpowiedzi — ale „ocena nr NaN" w instrukcji juz by psula.
+    const runda =
+      Number.isInteger(body?.personaRunda) && body.personaRunda > 0
+        ? body.personaRunda
+        : 1;
+    return handlePersonaFeedback(
+      agent || {},
+      messages,
+      draft,
+      mentorModel,
+      runda,
+    );
   }
   if (mode === "guided") {
     return handleGuided(agent || {}, messages, mentorModel, ollamaUrl, dopuszczone);
@@ -161,10 +175,10 @@ export async function POST(request) {
 // JEDEN etap: czysta proza z feedbackiem. Propozycja do kreatora nie jest
 // wyciagana modelem — to wprost tekst uzytkownika, wiec trafia do kreatora
 // slowo w slowo (i oszczedzamy drugie wywolanie).
-async function handlePersonaFeedback(agent, messages, draft, model) {
+async function handlePersonaFeedback(agent, messages, draft, model, runda) {
   try {
     const knowledge = await loadKnowledge();
-    const system = buildPersonaFeedbackSystem(knowledge, agent, draft);
+    const system = buildPersonaFeedbackSystem(knowledge, agent, draft, runda);
 
     const { text } = await sendChat({
       provider: MENTOR_PROVIDER,

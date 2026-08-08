@@ -94,6 +94,15 @@ export function MentorPanel() {
   const [personaPath, setPersonaPath] = useState(null);
   const [personaDraft, setPersonaDraft] = useState("");
 
+  // Czy pod rozmowa stoi POLE EDYCJI opisu, czy BLOK TRZECH WYJSC.
+  //
+  // Do tej rundy pole stalo tam zawsze, gdy personaPath === "self" — i to bylo
+  // caly slepy zaulek: mentor wypisywal braki, a jedyna dostepna czynnoscia
+  // bylo napisanie lepszego opisu. Kto by to umial, nie potrzebowalby mentora.
+  // Po ocenie pole ustepuje wiec miejsca wyborowi: popraw sam / niech mentor
+  // napisze na podstawie tego, co juz powiedzieliscie / akceptuj jak jest.
+  const [edycjaOpisu, setEdycjaOpisu] = useState(false);
+
   function scrollToBottom() {
     requestAnimationFrame(() => {
       const el = messagesRef.current;
@@ -161,6 +170,7 @@ export function MentorPanel() {
     setInput("");
     setPersonaPath(null);
     setPersonaDraft("");
+    setEdycjaOpisu(false);
   }
 
   function chooseMode(m) {
@@ -313,6 +323,13 @@ export function MentorPanel() {
           mode: "persona-feedback",
           agent,
           personaDraft: draft,
+          // KTORA TO OCENA — LICZONE W KODZIE, NIE PRZEZ MODEL.
+          // Od tego zalezy ton: przy pierwszej mentor moze wskazywac braki,
+          // przy kolejnych ma umiec powiedziec „wystarczy" i przestac pytac.
+          // Liczenie wlasnych wypowiedzi w historii jest dokladnie ta klasa
+          // zadania, w ktorej modele sie myla — a tu odpowiedz jest pewna:
+          // tyle ocen juz wrocilo, plus ta.
+          personaRunda: messages.filter((m) => m.proposal?.wlasny).length + 1,
           messages: toApiMessages(next),
           ...mentorApiSettings,
         }),
@@ -330,6 +347,8 @@ export function MentorPanel() {
         },
       ]);
       dispatch(setLastEvent({ type: "mentor-reply" }));
+      // Ocena wrocila -> pole edycji ustepuje miejsca trzem wyjsciom.
+      setEdycjaOpisu(false);
       // POCZATEK OCENY, nie dno panelu — to jest cala poprawka tej sciezki.
       // Indeks WPROST (ocena ląduje na koncu `next`), a nie „ostatni dymek
       // w DOM": w chwili pomiaru ostatnim dymkiem bywa jeszcze opis
@@ -360,6 +379,46 @@ export function MentorPanel() {
     ];
     setMessages(next);
     runGuided(next, agent);
+  }
+
+  // --- WYJŚCIE Z PĘTLI OCENIANIA: mentor pisze personę ZA użytkownika,
+  // ale na podstawie TEGO, co użytkownik już napisał, i swoich własnych uwag.
+  //
+  // IDZIE TRYBEM `guided`, NIE `persona-feedback` — i to nie jest oszczędność,
+  // tylko jedyna droga. persona-feedback jest jednoetapowy WLASNIE DLATEGO, ze
+  // jego propozycja jest znana serwerowi z gory (to tekst uzytkownika). Tutaj
+  // propozycja ma byc tekstem MENTORA, a jedynym mechanizmem, ktory zamienia
+  // proze mentora na propozycje pola, jest dwuetapowe handleGuided
+  // (proza + ekstraktor ze schematem).
+  //
+  // Kontekstu nie trzeba nigdzie doklejac: toApiMessages wysyla CALA rozmowe,
+  // a w niej siedzi i opis uzytkownika, i wszystkie dotychczasowe oceny.
+  // Dlatego im dluzej ktos poprawial, tym lepsza jest ta propozycja.
+  function askMentorFromDraft() {
+    if (loading) return;
+    setPersonaPath("propose");
+    setEdycjaOpisu(false);
+    const next = [
+      ...messages,
+      {
+        role: "user",
+        content:
+          "Na podstawie mojego opisu i Twoich dotychczasowych uwag napisz gotową osobowość — nie pytaj mnie już o nic, tylko zaproponuj pełny opis.",
+        ukryta: true,
+      },
+    ];
+    setMessages(next);
+    runGuided(next, agent);
+  }
+
+  // Przejecie CUDZEGO tekstu do wlasnej edycji — dziala w obie strony:
+  // wlasny opis wraca do poprawki, a gotowa propozycja mentora daje sie
+  // przerobic, zamiast byc do wziecia albo odrzucenia w calosci.
+  function przejmijDoEdycji(tekst) {
+    if (loading) return;
+    if (typeof tekst === "string") setPersonaDraft(tekst);
+    setPersonaPath("self");
+    setEdycjaOpisu(true);
   }
 
   // NARZEDZIA I RAG DZIELA JEDNA KOLUMNE (agents.tools), ALE MAJA OSOBNE KARTY.
@@ -443,6 +502,21 @@ export function MentorPanel() {
       personaPath === null &&
       m.step === "persona" &&
       !m.proposal &&
+      !loading
+    );
+  }
+
+  // Czy pokazac TRZY WYJSCIA pod ocena wlasnego opisu. Warunek `!edycjaOpisu`
+  // rozdziela dwa stany tej samej sciezki: uzytkownik albo pisze (pole na dole),
+  // albo wybiera, co dalej (te przyciski) — nigdy oba naraz.
+  function showsPersonaExits(m, i) {
+    return (
+      i === lastAssistantIndex &&
+      mode === "guided" &&
+      personaPath === "self" &&
+      !edycjaOpisu &&
+      m.proposal?.wlasny &&
+      !m.applied &&
       !loading
     );
   }
@@ -563,53 +637,104 @@ export function MentorPanel() {
                           {m.content}
                         </div>
 
-                        {/* Karta wartości do wpisania w kreator.
-                            Dwa warianty, bo to dwie różne rzeczy: propozycja
-                            mentora ORAZ własny opis użytkownika oddany mu do
-                            wpisania (ścieżka „Opisz sam" — patrz `wlasny`
-                            w app/api/mentor/route.js). */}
-                        {m.role === "assistant" && m.proposal && (
+                        {/* Karta propozycji mentora.
+                            WŁASNY opis użytkownika (`wlasny`, ścieżka „Opisz
+                            sam") NIE dostaje karty: jego akceptacja jest jednym
+                            z trzech wyjść pod oceną, a podgląd powtarzałby
+                            tekst z pola edycji. Sama propozycja zostaje na
+                            wiadomości jako dane — czyta ją acceptProposal. */}
+                        {m.role === "assistant" &&
+                          m.proposal &&
+                          !m.proposal.wlasny && (
                           <div className={styles.proposalCard}>
                             <div className={styles.proposalHead}>
-                              {m.proposal.wlasny ? (
-                                <strong>Twój opis — wpisz do kreatora</strong>
-                              ) : (
-                                <>
-                                  Propozycja do pola:{" "}
-                                  <strong>
-                                    {FIELD_LABELS[m.proposal.field] ||
-                                      m.proposal.field}
-                                  </strong>
-                                </>
-                              )}
+                              Propozycja do pola:{" "}
+                              <strong>
+                                {FIELD_LABELS[m.proposal.field] ||
+                                  m.proposal.field}
+                              </strong>
                             </div>
-                            {/* PODGLĄD TYLKO DLA PROPOZYCJI MENTORA.
-                                Przy własnym opisie pokazywałby tekst, który
-                                stoi kilkadziesiąt pikseli niżej, w polu edycji
-                                (personaDraft nie jest czyszczony po feedbacku).
-                                Ta kopia zajmowała cały widok pod odpowiedzią
-                                i to przez nią ocena zostawała nad krawędzią. */}
-                            {!m.proposal.wlasny && (
-                              <div className={styles.proposalBody}>
-                                <ProposalValue proposal={m.proposal} />
-                              </div>
-                            )}
+                            <div className={styles.proposalBody}>
+                              <ProposalValue proposal={m.proposal} />
+                            </div>
                             {m.applied ? (
                               <div className={styles.appliedBadge}>
                                 ✓ Wpisano do kreatora
                               </div>
                             ) : (
-                              <button
-                                type="button"
-                                className={styles.acceptButton}
-                                disabled={loading}
-                                onClick={() => acceptProposal(i)}
-                              >
-                                {m.proposal.wlasny
-                                  ? "Wpisz mój opis do kreatora"
-                                  : "Zaakceptuj i wpisz do kreatora"}
-                              </button>
+                              <>
+                                <button
+                                  type="button"
+                                  className={styles.acceptButton}
+                                  disabled={loading}
+                                  onClick={() => acceptProposal(i)}
+                                >
+                                  Zaakceptuj i wpisz do kreatora
+                                </button>
+                                {/* Gotowa persona nie jest do wzięcia albo
+                                    odrzucenia w całości: tu wchodzi do pola
+                                    edycji i można ją przerobić od razu. */}
+                                {m.proposal.field === "persona" && (
+                                  <button
+                                    type="button"
+                                    className={styles.secondaryButton}
+                                    disabled={loading}
+                                    onClick={() =>
+                                      przejmijDoEdycji(m.proposal.value)
+                                    }
+                                  >
+                                    Popraw ten opis samodzielnie
+                                  </button>
+                                )}
+                              </>
                             )}
+                          </div>
+                        )}
+
+                        {/* TRZY WYJŚCIA PO OCENIE WŁASNEGO OPISU.
+                            Bez nich ścieżka „Opisz sam" kończyła się poleceniem
+                            „napisz lepiej" — jedyną czynnością dostępną komuś,
+                            kto właśnie dlatego przyszedł po pomoc. */}
+                        {showsPersonaExits(m, i) && (
+                          <div className={styles.pathChoice}>
+                            <button
+                              type="button"
+                              className={styles.pathButton}
+                              onClick={() => przejmijDoEdycji()}
+                            >
+                              <span className={styles.pathTitle}>
+                                Popraw swój opis samodzielnie
+                              </span>
+                              <span className={styles.pathDesc}>
+                                Wrócisz do swojego tekstu i poprosisz o kolejną ocenę.
+                              </span>
+                            </button>
+                            <button
+                              type="button"
+                              className={styles.pathButton}
+                              onClick={askMentorFromDraft}
+                            >
+                              <span className={styles.pathTitle}>
+                                Mentor zaproponuje osobowość na podstawie mojego opisu
+                              </span>
+                              <span className={styles.pathDesc}>
+                                Napisze gotowy opis, korzystając z Twojego tekstu
+                                i wszystkich swoich uwag.
+                              </span>
+                            </button>
+                            <button
+                              type="button"
+                              className={styles.pathButton}
+                              onClick={() => acceptProposal(i)}
+                            >
+                              <span className={styles.pathTitle}>
+                                Akceptuję obecny opis
+                              </span>
+                              <span className={styles.pathDesc}>
+                                Wpisze Twój tekst do kreatora i przejdzie do
+                                następnego kroku.
+                              </span>
+                            </button>
                           </div>
                         )}
 
@@ -619,7 +744,7 @@ export function MentorPanel() {
                             <button
                               type="button"
                               className={styles.pathButton}
-                              onClick={() => setPersonaPath("self")}
+                              onClick={() => przejmijDoEdycji()}
                             >
                               <span className={styles.pathTitle}>
                                 Opisz sam
@@ -684,9 +809,10 @@ export function MentorPanel() {
               {error && <div className={styles.error}>⚠️ {error}</div>}
 
               {/* ŚCIEŻKA A: własne pole na opis persony + prośba o feedback.
-                  Zostaje widoczne po feedbacku, żeby user mógł poprawić opis
-                  i poprosić o kolejną ocenę. */}
-              {mode === "guided" && personaPath === "self" ? (
+                  Po ocenie pole USTĘPUJE trzem wyjściom (edycjaOpisu) i wraca
+                  dopiero, gdy użytkownik wybierze poprawianie — albo przejmie
+                  do edycji gotowy opis od mentora. */}
+              {mode === "guided" && personaPath === "self" && edycjaOpisu ? (
                 <div className={styles.draftBox}>
                   <label className={styles.draftLabel} htmlFor="persona-draft">
                     Twój opis osobowości — rola, styl, zakres, cechy

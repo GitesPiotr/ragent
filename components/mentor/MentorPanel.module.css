@@ -201,6 +201,31 @@
   cursor: not-allowed;
 }
 
+/* Drugie wyjście z karty propozycji („Popraw ten opis samodzielnie").
+   Wyraźnie słabsze niż .acceptButton — akceptacja zostaje domyślną drogą,
+   a przejęcie do edycji jest alternatywą dla tych, którzy chcą coś zmienić. */
+.secondaryButton {
+  display: block; /* pod przyciskiem akceptacji, nie obok — panel bywa wąski */
+  margin-top: 8px;
+  padding: 7px 12px;
+  border: 1px solid #c4b5fd;
+  border-radius: 8px;
+  background: transparent;
+  color: #6d28d9;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.secondaryButton:hover {
+  background: #f5f3ff;
+}
+
+.secondaryButton:disabled {
+  color: #a78bfa;
+  border-color: #ddd6fe;
+  cursor: not-allowed;
+}
+
 .appliedBadge {
   font-size: 13px;
   font-weight: 600;
