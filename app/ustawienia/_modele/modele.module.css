@@ -6,9 +6,13 @@
  * odróżnić, co należy do systemu ustawień, a co do jednej karty. Rozdział
  * ma też skutek praktyczny — usunięcie tej karty to usunięcie jednego pliku.
  *
- * Tokeny (kolory, promienie, rozmiary) są przepisane ze wspólnego arkusza
- * CELOWO, a nie przez zmienne CSS: tamten arkusz ich nie ma, a wprowadzenie
- * zmiennych tutaj znaczyłoby dwa systemy naraz.
+ * MOTYW JASNY ma wartości przepisane ze wspólnego arkusza wprost, bez zmiennych
+ * — tak powstał ten plik i tak zostaje.
+ *
+ * MOTYW CIEMNY idzie na tokenach z app/globals.css (--surface, --line, --text…),
+ * jak każdy inny arkusz w aplikacji. Wcześniej stał tu komentarz tłumaczący,
+ * dlaczego zmiennych NIE używamy: „tamten arkusz ich nie ma". Od czasu, gdy
+ * globals.css dostał pełną paletę, to uzasadnienie przestało być prawdziwe.
  */
 
 /* --- pasek narzędzi nad listą --- */
@@ -338,3 +342,270 @@
   font-size: 12.5px;
   line-height: 1.55;
 }
+
+/* ============================================================================
+   MOTYW CIEMNY = NOWY WYGLAD (docs/prototyp.html).
+
+   Ten plik nie mial ANI JEDNEJ reguly ciemnej — cala sekcja swiecila kolorami
+   z motywu jasnego na ciemnej karcie Ustawien. Ponizsze bloki sa dopisane
+   od zera, nie przepisane.
+
+   CZEGO TU NIE MA, I SLUSZNIE: przelacznik zrodla katalogu (.segmented),
+   przelaczniki wlaczania modeli (.toggle) i kropki dostawcow (.dot) nie sa
+   klasami tego arkusza — komponent bierze je z ../ustawienia.module.css
+   (import `wspolne`), gdzie dostaly nowa palete w etapie 5.
+
+   ODPOWIEDNIKI: .szukajka→.input, .filtr→.btn-quiet, .filtrAktywny→segment
+   wcisniety (--ink), .etykieta*→.tag, .ostrzezenie i .niedostepne→.summaryWarn,
+   .blad i .blokada→bloki bledu z reszty aplikacji.
+   ============================================================================ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .pasek,
+  :root:not([data-theme="light"]) .wiersz {
+    border-bottom-color: var(--line-soft);
+  }
+
+  :root:not([data-theme="light"]) .szukajka {
+    border-radius: var(--r-control);
+    border-color: var(--line);
+    background: var(--bg-2);
+    color: var(--text);
+    transition: border-color 0.16s var(--ease);
+  }
+
+  :root:not([data-theme="light"]) .szukajka:hover {
+    border-color: var(--text-3);
+  }
+
+  :root:not([data-theme="light"]) .szukajka:focus {
+    outline-color: var(--signal);
+    border-color: var(--signal-line);
+  }
+
+  :root:not([data-theme="light"]) .szukajka::placeholder {
+    color: var(--text-3);
+  }
+
+  :root:not([data-theme="light"]) .filtr,
+  :root:not([data-theme="light"]) .filtrSelect {
+    border-color: var(--line);
+    background: var(--bg-2);
+    color: var(--text-2);
+    font-weight: 500;
+    transition: border-color 0.16s var(--ease);
+  }
+
+  :root:not([data-theme="light"]) .filtr:hover:not(:disabled),
+  :root:not([data-theme="light"]) .filtrSelect:hover {
+    border-color: var(--text-3);
+    background: var(--bg-2);
+  }
+
+  /* Wcisniety filtr na --ink, jak aktywny segment w prototypie. Ten stan MUSI
+     byc widoczny bez najezdzania — pusta lista przy zapomnianym filtrze
+     wyglada dokladnie jak awaria katalogu (patrz komentarz przy .filtr). */
+  :root:not([data-theme="light"]) .filtrAktywny {
+    border-color: var(--ink);
+    background: var(--ink);
+    color: var(--on-ink);
+  }
+
+  :root:not([data-theme="light"]) .licznik {
+    color: var(--text-3);
+    font-family: var(--font-data);
+  }
+
+  /* .summaryWarn z prototypu: pas z lewej, bez pelnej ramki. .ostrzezenie
+     i .niedostepne sa display: flex / blokiem, wiec wystarczy border-left —
+     nie trzeba pseudoelementu jak przy .banner czy .roleNote. */
+  :root:not([data-theme="light"]) .ostrzezenie,
+  :root:not([data-theme="light"]) .niedostepne {
+    border: none;
+    border-left: 2px solid var(--warn);
+    border-radius: 0 var(--r-control) var(--r-control) 0;
+    background: var(--warn-soft);
+  }
+
+  :root:not([data-theme="light"]) .ostrzezenieTekst,
+  :root:not([data-theme="light"]) .niedostepneTytul,
+  :root:not([data-theme="light"]) .niedostepneWstep,
+  :root:not([data-theme="light"]) .niedostepnePowod {
+    color: var(--warn);
+  }
+
+  :root:not([data-theme="light"]) .niedostepne .wiersz {
+    border-bottom-color: var(--warn-line);
+  }
+
+  :root:not([data-theme="light"]) .wierszNazwa {
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  /* Ten sam monospace co daty i identyfikatory w calej aplikacji. */
+  :root:not([data-theme="light"]) .wierszId {
+    color: var(--text-3);
+    font-family: var(--font-data);
+  }
+
+  /* Wszystkie plakietki na neutralna .tag — to sa mozliwosci modelu, nie
+     sygnaly maszyny. Wyjatkiem jest „darmowy": ta informacja ma wartosc. */
+  :root:not([data-theme="light"]) .etykieta {
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--text-2);
+    font-family: var(--font-data);
+    font-weight: 400;
+    letter-spacing: 0.04em;
+  }
+
+  :root:not([data-theme="light"]) .etykietaDarmowy {
+    border-color: var(--ok);
+    background: transparent;
+    color: var(--ok);
+  }
+
+  /* Kreska ZOSTAJE. Brak deklaracji to nie „model nie umie", tylko „dostawca
+     nie napisal" — i kreskowana ramka jest jedynym nosnikiem tej roznicy. */
+  :root:not([data-theme="light"]) .etykietaBezDeklaracji {
+    border: 1px dashed var(--line);
+    background: transparent;
+    color: var(--text-3);
+  }
+
+  :root:not([data-theme="light"]) .pusto,
+  :root:not([data-theme="light"]) .ladowanie {
+    color: var(--text-3);
+  }
+
+  :root:not([data-theme="light"]) .pustoTytul {
+    color: var(--text-2);
+  }
+
+  :root:not([data-theme="light"]) .blokada,
+  :root:not([data-theme="light"]) .blad {
+    border-color: var(--err-line);
+    background: var(--err-soft);
+    color: var(--err);
+  }
+}
+
+:root[data-theme="dark"] .pasek,
+:root[data-theme="dark"] .wiersz {
+  border-bottom-color: var(--line-soft);
+}
+
+:root[data-theme="dark"] .szukajka {
+  border-radius: var(--r-control);
+  border-color: var(--line);
+  background: var(--bg-2);
+  color: var(--text);
+  transition: border-color 0.16s var(--ease);
+}
+
+:root[data-theme="dark"] .szukajka:hover {
+  border-color: var(--text-3);
+}
+
+:root[data-theme="dark"] .szukajka:focus {
+  outline-color: var(--signal);
+  border-color: var(--signal-line);
+}
+
+:root[data-theme="dark"] .szukajka::placeholder {
+  color: var(--text-3);
+}
+
+:root[data-theme="dark"] .filtr,
+:root[data-theme="dark"] .filtrSelect {
+  border-color: var(--line);
+  background: var(--bg-2);
+  color: var(--text-2);
+  font-weight: 500;
+  transition: border-color 0.16s var(--ease);
+}
+
+:root[data-theme="dark"] .filtr:hover:not(:disabled),
+:root[data-theme="dark"] .filtrSelect:hover {
+  border-color: var(--text-3);
+  background: var(--bg-2);
+}
+
+:root[data-theme="dark"] .filtrAktywny {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--on-ink);
+}
+
+:root[data-theme="dark"] .licznik {
+  color: var(--text-3);
+  font-family: var(--font-data);
+}
+
+:root[data-theme="dark"] .ostrzezenie,
+:root[data-theme="dark"] .niedostepne {
+  border: none;
+  border-left: 2px solid var(--warn);
+  border-radius: 0 var(--r-control) var(--r-control) 0;
+  background: var(--warn-soft);
+}
+
+:root[data-theme="dark"] .ostrzezenieTekst,
+:root[data-theme="dark"] .niedostepneTytul,
+:root[data-theme="dark"] .niedostepneWstep,
+:root[data-theme="dark"] .niedostepnePowod {
+  color: var(--warn);
+}
+
+:root[data-theme="dark"] .niedostepne .wiersz {
+  border-bottom-color: var(--warn-line);
+}
+
+:root[data-theme="dark"] .wierszNazwa {
+  color: var(--text);
+  font-weight: 500;
+}
+
+:root[data-theme="dark"] .wierszId {
+  color: var(--text-3);
+  font-family: var(--font-data);
+}
+
+:root[data-theme="dark"] .etykieta {
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--text-2);
+  font-family: var(--font-data);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+}
+
+:root[data-theme="dark"] .etykietaDarmowy {
+  border-color: var(--ok);
+  background: transparent;
+  color: var(--ok);
+}
+
+:root[data-theme="dark"] .etykietaBezDeklaracji {
+  border: 1px dashed var(--line);
+  background: transparent;
+  color: var(--text-3);
+}
+
+:root[data-theme="dark"] .pusto,
+:root[data-theme="dark"] .ladowanie {
+  color: var(--text-3);
+}
+
+:root[data-theme="dark"] .pustoTytul {
+  color: var(--text-2);
+}
+
+:root[data-theme="dark"] .blokada,
+:root[data-theme="dark"] .blad {
+  border-color: var(--err-line);
+  background: var(--err-soft);
+  color: var(--err);
+}
+
+/* themeified */

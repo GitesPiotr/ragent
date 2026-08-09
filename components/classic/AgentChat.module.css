@@ -204,84 +204,289 @@
   cursor: not-allowed;
 }
 
+/* ============================================================================
+   MOTYW CIEMNY = NOWY WYGLAD. Ta sama zasada co w panelu mentora:
+   ODPOWIEDZ AGENTA NIE JEST DYMKIEM (.msg-ai) — tekst z dwupikselowa linia
+   --signal-line z lewej, bez tla i bez ramki. Dymek zostaje wylacznie po
+   stronie uzytkownika (.msg-you).
+
+   Dzieki temu obie rozmowy w aplikacji — mentor i test agenta — wygladaja
+   tak samo. Wczesniej test agenta byl NIEBIESKI (#2563eb), a mentor fioletowy.
+   ============================================================================ */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .chat {
-    border-top-color: #262626;
+    border-top-color: var(--line);
   }
 
-  :root:not([data-theme="light"]) .subheading,
+  :root:not([data-theme="light"]) .heading {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  :root:not([data-theme="light"]) .subheading {
+    color: var(--text-2);
+  }
+
   :root:not([data-theme="light"]) .empty,
   :root:not([data-theme="light"]) .loader {
-    color: #999;
+    color: var(--text-3);
+  }
+
+  :root:not([data-theme="light"]) .dots span {
+    background: var(--signal);
   }
 
   :root:not([data-theme="light"]) .messages {
-    background: #0f0f0f;
-    border-color: #262626;
+    border-radius: var(--r-card);
+    border-color: var(--line);
+    background: var(--bg-2);
   }
 
+  :root:not([data-theme="light"]) .message {
+    font-size: 13.5px;
+    line-height: 1.55;
+  }
+
+  :root:not([data-theme="light"]) .user {
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    color: var(--text);
+    border-bottom-right-radius: var(--r-card);
+  }
+
+  /* ODPOWIEDZ AGENTA BEZ DYMKA — .msg-ai */
   :root:not([data-theme="light"]) .assistant {
-    background: #1a1a1a;
-    border-color: #333;
-    color: #ededed;
+    position: relative;
+    padding-left: 14px;
+    border: none;
+    background: none;
+    color: var(--text);
+    border-bottom-left-radius: 0;
   }
 
+  :root:not([data-theme="light"]) .assistant::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 3px;
+    bottom: 3px;
+    width: 2px;
+    border-radius: 2px;
+    background: var(--signal-line);
+  }
+
+  :root:not([data-theme="light"]) .role {
+    font-family: var(--font-data);
+    font-size: 10.5px;
+    font-weight: 400;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    opacity: 1;
+    margin-bottom: 3px;
+  }
+
+  /* Uzycie narzedzia to dzialanie MASZYNY — stad .tag-machine, czyli cyjan. */
   :root:not([data-theme="light"]) .toolBadge {
-    background: #1e1b3a;
-    border-color: #3730a3;
-    color: #c7d2fe;
+    border-radius: var(--r-pill);
+    border-color: var(--signal-line);
+    background: var(--signal-soft);
+    color: var(--signal-text);
+    font-family: var(--font-data);
+    font-weight: 400;
+  }
+
+  :root:not([data-theme="light"]) .sources {
+    border-top-color: var(--line-soft);
+  }
+
+  :root:not([data-theme="light"]) .sourcesTitle {
+    color: var(--text-3);
+    font-family: var(--font-data);
+  }
+
+  :root:not([data-theme="light"]) .sourceLink {
+    color: var(--signal-text);
+  }
+
+  :root:not([data-theme="light"]) .sourceDoc {
+    color: var(--text-3);
   }
 
   :root:not([data-theme="light"]) .input {
-    background: #111;
-    color: #ededed;
-    border-color: #333;
+    padding: 10px 12px;
+    border-radius: var(--r-control);
+    border-color: var(--line);
+    background: var(--bg-2);
+    color: var(--text);
+    transition: border-color 0.16s var(--ease);
+  }
+
+  :root:not([data-theme="light"]) .input:hover {
+    border-color: var(--text-3);
+  }
+
+  :root:not([data-theme="light"]) .input::placeholder {
+    color: var(--text-3);
+  }
+
+  :root:not([data-theme="light"]) .sendButton {
+    padding: 9px 15px;
+    border-radius: var(--r-control);
+    background: var(--ink);
+    color: var(--on-ink);
+    font-weight: 500;
+    transition: opacity 0.16s var(--ease);
+  }
+
+  :root:not([data-theme="light"]) .sendButton:disabled {
+    background: var(--ink);
+    color: var(--on-ink);
+    opacity: 0.4;
   }
 
   :root:not([data-theme="light"]) .error {
-    background: #2a1212;
-    border-color: #5a2a2a;
-    color: #ff8f8f;
+    border-radius: var(--r-control);
+    border-color: var(--err-line);
+    background: var(--err-soft);
+    color: var(--err);
   }
 }
 
 :root[data-theme="dark"] .chat {
-    border-top-color: #262626;
+    border-top-color: var(--line);
   }
 
-:root[data-theme="dark"] .subheading,
-  :root[data-theme="dark"] .empty,
+:root[data-theme="dark"] .heading {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+:root[data-theme="dark"] .subheading {
+    color: var(--text-2);
+  }
+
+:root[data-theme="dark"] .empty,
   :root[data-theme="dark"] .loader {
-    color: #999;
+    color: var(--text-3);
+  }
+
+:root[data-theme="dark"] .dots span {
+    background: var(--signal);
   }
 
 :root[data-theme="dark"] .messages {
-    background: #0f0f0f;
-    border-color: #262626;
+    border-radius: var(--r-card);
+    border-color: var(--line);
+    background: var(--bg-2);
+  }
+
+:root[data-theme="dark"] .message {
+    font-size: 13.5px;
+    line-height: 1.55;
+  }
+
+:root[data-theme="dark"] .user {
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    color: var(--text);
+    border-bottom-right-radius: var(--r-card);
   }
 
 :root[data-theme="dark"] .assistant {
-    background: #1a1a1a;
-    border-color: #333;
-    color: #ededed;
+    position: relative;
+    padding-left: 14px;
+    border: none;
+    background: none;
+    color: var(--text);
+    border-bottom-left-radius: 0;
+  }
+
+:root[data-theme="dark"] .assistant::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 3px;
+    bottom: 3px;
+    width: 2px;
+    border-radius: 2px;
+    background: var(--signal-line);
+  }
+
+:root[data-theme="dark"] .role {
+    font-family: var(--font-data);
+    font-size: 10.5px;
+    font-weight: 400;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    opacity: 1;
+    margin-bottom: 3px;
   }
 
 :root[data-theme="dark"] .toolBadge {
-    background: #1e1b3a;
-    border-color: #3730a3;
-    color: #c7d2fe;
+    border-radius: var(--r-pill);
+    border-color: var(--signal-line);
+    background: var(--signal-soft);
+    color: var(--signal-text);
+    font-family: var(--font-data);
+    font-weight: 400;
+  }
+
+:root[data-theme="dark"] .sources {
+    border-top-color: var(--line-soft);
+  }
+
+:root[data-theme="dark"] .sourcesTitle {
+    color: var(--text-3);
+    font-family: var(--font-data);
+  }
+
+:root[data-theme="dark"] .sourceLink {
+    color: var(--signal-text);
+  }
+
+:root[data-theme="dark"] .sourceDoc {
+    color: var(--text-3);
   }
 
 :root[data-theme="dark"] .input {
-    background: #111;
-    color: #ededed;
-    border-color: #333;
+    padding: 10px 12px;
+    border-radius: var(--r-control);
+    border-color: var(--line);
+    background: var(--bg-2);
+    color: var(--text);
+    transition: border-color 0.16s var(--ease);
+  }
+
+:root[data-theme="dark"] .input:hover {
+    border-color: var(--text-3);
+  }
+
+:root[data-theme="dark"] .input::placeholder {
+    color: var(--text-3);
+  }
+
+:root[data-theme="dark"] .sendButton {
+    padding: 9px 15px;
+    border-radius: var(--r-control);
+    background: var(--ink);
+    color: var(--on-ink);
+    font-weight: 500;
+    transition: opacity 0.16s var(--ease);
+  }
+
+:root[data-theme="dark"] .sendButton:disabled {
+    background: var(--ink);
+    color: var(--on-ink);
+    opacity: 0.4;
   }
 
 :root[data-theme="dark"] .error {
-    background: #2a1212;
-    border-color: #5a2a2a;
-    color: #ff8f8f;
+    border-radius: var(--r-control);
+    border-color: var(--err-line);
+    background: var(--err-soft);
+    color: var(--err);
   }
 
 /* themeified */

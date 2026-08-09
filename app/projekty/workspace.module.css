@@ -342,174 +342,402 @@
   cursor: pointer;
 }
 
+/* ============================================================================
+   MOTYW CIEMNY = NOWY WYGLAD. Wartosci przepisane z docs/prototyp.html.
+
+   DLACZEGO TE BLOKI NIE SA "TYLKO KOLORAMI".
+   Padding, promien, grubosc pisma i przejscie sa w tym pliku zadeklarowane
+   wylacznie w regulach bazowych, wspolnych dla obu motywow. Motyw jasny ma
+   zostac nietkniety co do jednej reguly, wiec geometria prototypu musi wejsc
+   tutaj — inaczej nie da sie trafic w jego wartosci bez ruszania jasnego.
+
+   ODPOWIEDNIKI: .card→.card, .primaryButton/.primaryLink→.btn-primary,
+   .ghostButton→.btn-quiet, .dangerButton→.btn-danger, .badge/.roleTag→.tag,
+   .input/.textarea→.input, .info→.info.
+   Klasy bez odpowiednika w prototypie (.form, .error, .confirmText,
+   .confirmWarning, .cardArchived) wyprowadzone z jego tokenow — oznaczone
+   nizej slowem WYPROWADZONE.
+   ============================================================================ */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .title,
   :root:not([data-theme="light"]) .cardTitle,
   :root:not([data-theme="light"]) .cardTitleLink {
-    color: #ededed;
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  :root:not([data-theme="light"]) .cardTitleLink:hover {
+    color: var(--signal-text);
   }
 
   :root:not([data-theme="light"]) .subtitle,
   :root:not([data-theme="light"]) .cardDesc,
   :root:not([data-theme="light"]) .toggleArchived,
-  :root:not([data-theme="light"]) .label {
-    color: #a1a1aa;
+  :root:not([data-theme="light"]) .confirmText {
+    color: var(--text-2);
   }
 
+  :root:not([data-theme="light"]) .cardMeta {
+    color: var(--text-3);
+  }
+
+  :root:not([data-theme="light"]) .label {
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  /* WYPROWADZONE — prototyp nie ma formularza inline, konwencja z .card. */
   :root:not([data-theme="light"]) .form {
-    background: #12101c;
-    border-color: #2a2540;
+    background: var(--surface);
+    border-color: var(--line);
+    border-radius: var(--r-card);
+  }
+
+  /* WYPROWADZONE — konwencja .modalTitle z prototypu. */
+  :root:not([data-theme="light"]) .formTitle {
+    color: var(--signal-text);
   }
 
   :root:not([data-theme="light"]) .input,
   :root:not([data-theme="light"]) .textarea {
-    background: #17171c;
-    border-color: #3f3f46;
-    color: #ededed;
+    padding: 10px 12px;
+    border-radius: var(--r-control);
+    border-color: var(--line);
+    background: var(--bg-2);
+    color: var(--text);
+    transition: border-color 0.16s var(--ease);
   }
 
+  :root:not([data-theme="light"]) .input:hover,
+  :root:not([data-theme="light"]) .textarea:hover {
+    border-color: var(--text-3);
+  }
+
+  :root:not([data-theme="light"]) .input::placeholder,
+  :root:not([data-theme="light"]) .textarea::placeholder {
+    color: var(--text-3);
+  }
+
+  /* Prototyp, regula globalna: :focus-visible{outline:2px solid var(--signal)}. */
+  :root:not([data-theme="light"]) .input:focus,
+  :root:not([data-theme="light"]) .textarea:focus {
+    outline-color: var(--signal);
+    border-color: var(--signal-line);
+  }
+
+  /* box-shadow: none kasuje fioletowy cien z reguly bazowej .card:hover,
+     ktorego prototyp nie ma. Specyficznosc 0,4,0 kontra 0,2,0 — wystarcza. */
   :root:not([data-theme="light"]) .card {
-    background: #131318;
-    border-color: #27272a;
+    padding: 14px 16px;
+    border-radius: var(--r-card);
+    border-color: var(--line);
+    background: var(--surface);
+    transition: border-color 0.16s var(--ease), background 0.16s var(--ease);
   }
 
+  :root:not([data-theme="light"]) .card:hover {
+    border-color: var(--text-3);
+    background: var(--surface-2);
+    box-shadow: none;
+  }
+
+  /* WYPROWADZONE — prototyp robi to stylem inline: opacity .62. */
   :root:not([data-theme="light"]) .cardArchived {
-    background: #0f0f13;
+    background: var(--surface);
+    opacity: 0.62;
+  }
+
+  /* .btn-primary: dzialania uzytkownika sa NEUTRALNE, nie kolorowe. */
+  :root:not([data-theme="light"]) .primaryButton,
+  :root:not([data-theme="light"]) .primaryLink {
+    border: 1px solid transparent;
+    border-radius: var(--r-control);
+    background: var(--ink);
+    color: var(--on-ink);
+    font-weight: 500;
+    transition: background 0.16s var(--ease), border-color 0.16s var(--ease),
+      opacity 0.16s var(--ease);
+  }
+
+  :root:not([data-theme="light"]) .primaryButton {
+    padding: 9px 15px;
+  }
+
+  /* Akcja w karcie = .btn-sm z prototypu. */
+  :root:not([data-theme="light"]) .primaryLink {
+    padding: 6px 11px;
+  }
+
+  :root:not([data-theme="light"]) .primaryButton:hover:not(:disabled),
+  :root:not([data-theme="light"]) .primaryLink:hover {
+    background: var(--ink);
+    border-color: transparent;
+    opacity: 0.86;
+  }
+
+  :root:not([data-theme="light"]) .primaryButton:disabled {
+    background: var(--ink);
+    opacity: 0.4;
   }
 
   :root:not([data-theme="light"]) .ghostButton {
-    background: #1c1c22;
-    border-color: #3f3f46;
-    color: #d4d4d8;
+    padding: 6px 11px;
+    border-radius: var(--r-control);
+    border-color: var(--line);
+    background: transparent;
+    color: var(--text);
+    font-weight: 500;
+    transition: background 0.16s var(--ease), border-color 0.16s var(--ease),
+      opacity 0.16s var(--ease);
   }
 
   :root:not([data-theme="light"]) .ghostButton:hover:not(:disabled) {
-    background: #27272e;
+    border-color: var(--text-3);
+    background: var(--surface-2);
+  }
+
+  :root:not([data-theme="light"]) .ghostButton:disabled {
+    opacity: 0.4;
   }
 
   :root:not([data-theme="light"]) .dangerButton {
-    background: #1c1c22;
-    border-color: #5a2a2a;
-    color: #ff8f8f;
+    padding: 6px 11px;
+    border-radius: var(--r-control);
+    border-color: var(--line);
+    background: transparent;
+    color: var(--err);
+    font-weight: 500;
+    transition: background 0.16s var(--ease), border-color 0.16s var(--ease),
+      opacity 0.16s var(--ease);
   }
 
   :root:not([data-theme="light"]) .dangerButton:hover:not(:disabled) {
-    background: #2a1212;
-    border-color: #7f3030;
+    border-color: var(--err);
+    background: transparent;
   }
 
-  :root:not([data-theme="light"]) .confirmText {
-    color: #d4d4d8;
+  :root:not([data-theme="light"]) .dangerButton:disabled {
+    opacity: 0.4;
   }
 
+  /* WYPROWADZONE — --err to kolor akcji nieodwracalnych. */
   :root:not([data-theme="light"]) .confirmWarning {
-    color: #ff8f8f;
+    color: var(--err);
   }
 
-  :root:not([data-theme="light"]) .badge {
-    background: #27272a;
-    color: #a1a1aa;
-  }
-
+  /* Obie plakietki na neutralna .tag. Wersaliki i grubosc 700 schodza —
+     prototyp ich nie ma, a zostawienie rozjechaloby je z reszta systemu. */
+  :root:not([data-theme="light"]) .badge,
   :root:not([data-theme="light"]) .roleTag {
-    background: #221a45;
-    color: #c4b5fd;
+    padding: 2px 9px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-pill);
+    background: transparent;
+    color: var(--text-2);
+    font-family: var(--font-data);
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    text-transform: none;
   }
 
+  /* WYPROWADZONE — wzorzec .summaryCard z prototypu, ale na --err. */
   :root:not([data-theme="light"]) .error {
-    background: #2a1212;
-    border-color: #5a2a2a;
-    color: #ff8f8f;
+    border-radius: var(--r-card);
+    border-color: var(--err-line);
+    background: var(--err-soft);
+    color: var(--err);
   }
 
   :root:not([data-theme="light"]) .info {
-    border-color: #3f3f46;
-    color: #a1a1aa;
+    padding: 20px;
+    border-radius: var(--r-card);
+    border-color: var(--line);
+    color: var(--text-3);
   }
 }
 
 :root[data-theme="dark"] .title,
   :root[data-theme="dark"] .cardTitle,
   :root[data-theme="dark"] .cardTitleLink {
-    color: #ededed;
+    color: var(--text);
+    font-weight: 600;
+  }
+
+:root[data-theme="dark"] .cardTitleLink:hover {
+    color: var(--signal-text);
   }
 
 :root[data-theme="dark"] .subtitle,
   :root[data-theme="dark"] .cardDesc,
   :root[data-theme="dark"] .toggleArchived,
-  :root[data-theme="dark"] .label {
-    color: #a1a1aa;
+  :root[data-theme="dark"] .confirmText {
+    color: var(--text-2);
+  }
+
+:root[data-theme="dark"] .cardMeta {
+    color: var(--text-3);
+  }
+
+:root[data-theme="dark"] .label {
+    color: var(--text);
+    font-weight: 500;
   }
 
 :root[data-theme="dark"] .form {
-    background: #12101c;
-    border-color: #2a2540;
+    background: var(--surface);
+    border-color: var(--line);
+    border-radius: var(--r-card);
+  }
+
+:root[data-theme="dark"] .formTitle {
+    color: var(--signal-text);
   }
 
 :root[data-theme="dark"] .input,
   :root[data-theme="dark"] .textarea {
-    background: #17171c;
-    border-color: #3f3f46;
-    color: #ededed;
+    padding: 10px 12px;
+    border-radius: var(--r-control);
+    border-color: var(--line);
+    background: var(--bg-2);
+    color: var(--text);
+    transition: border-color 0.16s var(--ease);
+  }
+
+:root[data-theme="dark"] .input:hover,
+  :root[data-theme="dark"] .textarea:hover {
+    border-color: var(--text-3);
+  }
+
+:root[data-theme="dark"] .input::placeholder,
+  :root[data-theme="dark"] .textarea::placeholder {
+    color: var(--text-3);
+  }
+
+:root[data-theme="dark"] .input:focus,
+  :root[data-theme="dark"] .textarea:focus {
+    outline-color: var(--signal);
+    border-color: var(--signal-line);
   }
 
 :root[data-theme="dark"] .card {
-    background: #131318;
-    border-color: #27272a;
+    padding: 14px 16px;
+    border-radius: var(--r-card);
+    border-color: var(--line);
+    background: var(--surface);
+    transition: border-color 0.16s var(--ease), background 0.16s var(--ease);
+  }
+
+:root[data-theme="dark"] .card:hover {
+    border-color: var(--text-3);
+    background: var(--surface-2);
+    box-shadow: none;
   }
 
 :root[data-theme="dark"] .cardArchived {
-    background: #0f0f13;
+    background: var(--surface);
+    opacity: 0.62;
+  }
+
+:root[data-theme="dark"] .primaryButton,
+  :root[data-theme="dark"] .primaryLink {
+    border: 1px solid transparent;
+    border-radius: var(--r-control);
+    background: var(--ink);
+    color: var(--on-ink);
+    font-weight: 500;
+    transition: background 0.16s var(--ease), border-color 0.16s var(--ease),
+      opacity 0.16s var(--ease);
+  }
+
+:root[data-theme="dark"] .primaryButton {
+    padding: 9px 15px;
+  }
+
+:root[data-theme="dark"] .primaryLink {
+    padding: 6px 11px;
+  }
+
+:root[data-theme="dark"] .primaryButton:hover:not(:disabled),
+  :root[data-theme="dark"] .primaryLink:hover {
+    background: var(--ink);
+    border-color: transparent;
+    opacity: 0.86;
+  }
+
+:root[data-theme="dark"] .primaryButton:disabled {
+    background: var(--ink);
+    opacity: 0.4;
   }
 
 :root[data-theme="dark"] .ghostButton {
-    background: #1c1c22;
-    border-color: #3f3f46;
-    color: #d4d4d8;
+    padding: 6px 11px;
+    border-radius: var(--r-control);
+    border-color: var(--line);
+    background: transparent;
+    color: var(--text);
+    font-weight: 500;
+    transition: background 0.16s var(--ease), border-color 0.16s var(--ease),
+      opacity 0.16s var(--ease);
   }
 
 :root[data-theme="dark"] .ghostButton:hover:not(:disabled) {
-    background: #27272e;
+    border-color: var(--text-3);
+    background: var(--surface-2);
+  }
+
+:root[data-theme="dark"] .ghostButton:disabled {
+    opacity: 0.4;
   }
 
 :root[data-theme="dark"] .dangerButton {
-    background: #1c1c22;
-    border-color: #5a2a2a;
-    color: #ff8f8f;
+    padding: 6px 11px;
+    border-radius: var(--r-control);
+    border-color: var(--line);
+    background: transparent;
+    color: var(--err);
+    font-weight: 500;
+    transition: background 0.16s var(--ease), border-color 0.16s var(--ease),
+      opacity 0.16s var(--ease);
   }
 
 :root[data-theme="dark"] .dangerButton:hover:not(:disabled) {
-    background: #2a1212;
-    border-color: #7f3030;
+    border-color: var(--err);
+    background: transparent;
   }
 
-:root[data-theme="dark"] .confirmText {
-    color: #d4d4d8;
+:root[data-theme="dark"] .dangerButton:disabled {
+    opacity: 0.4;
   }
 
 :root[data-theme="dark"] .confirmWarning {
-    color: #ff8f8f;
+    color: var(--err);
   }
 
-:root[data-theme="dark"] .badge {
-    background: #27272a;
-    color: #a1a1aa;
-  }
-
-:root[data-theme="dark"] .roleTag {
-    background: #221a45;
-    color: #c4b5fd;
+:root[data-theme="dark"] .badge,
+  :root[data-theme="dark"] .roleTag {
+    padding: 2px 9px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-pill);
+    background: transparent;
+    color: var(--text-2);
+    font-family: var(--font-data);
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    text-transform: none;
   }
 
 :root[data-theme="dark"] .error {
-    background: #2a1212;
-    border-color: #5a2a2a;
-    color: #ff8f8f;
+    border-radius: var(--r-card);
+    border-color: var(--err-line);
+    background: var(--err-soft);
+    color: var(--err);
   }
 
 :root[data-theme="dark"] .info {
-    border-color: #3f3f46;
-    color: #a1a1aa;
+    padding: 20px;
+    border-radius: var(--r-card);
+    border-color: var(--line);
+    color: var(--text-3);
   }
 
 /* themeified */

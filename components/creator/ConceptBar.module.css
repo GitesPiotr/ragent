@@ -96,74 +96,100 @@
   font-size: 12.5px;
 }
 
+/* MOTYW CIEMNY = NOWY WYGLAD (docs/prototyp.html: .bar / .barTrigger / .barBody).
+   Pasek nalezy do rodziny --signal: to wyjasnienie od maszyny, nie tresc
+   uzytkownika. Style markdown w .body sa WYPROWADZONE — prototyp nie pokazuje
+   rozwinietej tresci paska. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .bar {
-    background: #17132e;
-    border-color: #3b2f6b;
+    border-radius: var(--r-card);
+    border-color: var(--signal-line);
+    background: var(--signal-soft);
+  }
+
+  :root:not([data-theme="light"]) .trigger {
+    font-weight: 500;
   }
 
   :root:not([data-theme="light"]) .trigger:hover {
-    background: #1e1838;
+    background: rgba(53, 220, 255, 0.06);
   }
 
   :root:not([data-theme="light"]) .triggerLabel {
-    color: #c4b5fd;
+    color: var(--signal-text);
+    font-weight: 500;
+  }
+
+  :root:not([data-theme="light"]) .chevron {
+    color: var(--signal-line);
   }
 
   :root:not([data-theme="light"]) .body {
-    border-top-color: #2a2350;
-    color: #c9c9d4;
+    border-top-color: var(--signal-line);
+    color: var(--text-2);
   }
 
   :root:not([data-theme="light"]) .body h1,
   :root:not([data-theme="light"]) .body h2,
   :root:not([data-theme="light"]) .body h3 {
-    color: #ededed;
+    color: var(--text);
   }
 
   :root:not([data-theme="light"]) .body blockquote {
-    background: #1a1530;
-    border-left-color: #6d28d9;
-    color: #a1a1aa;
+    background: var(--surface-2);
+    border-left-color: var(--signal-line);
+    color: var(--text-3);
   }
 
   :root:not([data-theme="light"]) .body code {
-    background: #2a2350;
+    background: var(--bg-2);
+    font-family: var(--font-data);
   }
 }
 
 :root[data-theme="dark"] .bar {
-    background: #17132e;
-    border-color: #3b2f6b;
+    border-radius: var(--r-card);
+    border-color: var(--signal-line);
+    background: var(--signal-soft);
+  }
+
+:root[data-theme="dark"] .trigger {
+    font-weight: 500;
   }
 
 :root[data-theme="dark"] .trigger:hover {
-    background: #1e1838;
+    background: rgba(53, 220, 255, 0.06);
   }
 
 :root[data-theme="dark"] .triggerLabel {
-    color: #c4b5fd;
+    color: var(--signal-text);
+    font-weight: 500;
+  }
+
+:root[data-theme="dark"] .chevron {
+    color: var(--signal-line);
   }
 
 :root[data-theme="dark"] .body {
-    border-top-color: #2a2350;
-    color: #c9c9d4;
+    border-top-color: var(--signal-line);
+    color: var(--text-2);
   }
 
 :root[data-theme="dark"] .body h1,
   :root[data-theme="dark"] .body h2,
   :root[data-theme="dark"] .body h3 {
-    color: #ededed;
+    color: var(--text);
   }
 
 :root[data-theme="dark"] .body blockquote {
-    background: #1a1530;
-    border-left-color: #6d28d9;
-    color: #a1a1aa;
+    background: var(--surface-2);
+    border-left-color: var(--signal-line);
+    color: var(--text-3);
   }
 
 :root[data-theme="dark"] .body code {
-    background: #2a2350;
+    background: var(--bg-2);
+    font-family: var(--font-data);
   }
 
 /* themeified */

@@ -647,368 +647,646 @@
   white-space: pre-wrap;
 }
 
+/* ============================================================================
+   MOTYW CIEMNY = NOWY WYGLAD (docs/prototyp.html, sekcja WSPOLNE + KREATOR).
+
+   ODPOWIEDNIKI: .input/.textarea/.select→.input, .label→.label, .hint→.help,
+   .toolRow→.row, .toolName/.toolDesc→.rowText .t/.d, .switch→.switch,
+   .segmented/.segment→.segment, .dropZone→.dropZone, .button→.btn-primary,
+   .removeButton→.btn-quiet.btn-sm, .empty→.info, .roleNote→.banner,
+   .title/.subtitle→.detailTitle/.detailLead.
+   ============================================================================ */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .title,
-  :root:not([data-theme="light"]) .modelName,
-  :root:not([data-theme="light"]) .toolName {
-    color: #ededed;
+  :root:not([data-theme="light"]) .title {
+    color: var(--text);
+    font-weight: 600;
   }
 
-  :root:not([data-theme="light"]) .subtitle,
+  :root:not([data-theme="light"]) .subtitle {
+    color: var(--text-2);
+    max-width: 62ch;
+  }
+
   :root:not([data-theme="light"]) .hint,
   :root:not([data-theme="light"]) .modelMeta,
-  :root:not([data-theme="light"]) .toolDesc {
-    color: #a1a1aa;
+  :root:not([data-theme="light"]) .toolDesc,
+  :root:not([data-theme="light"]) .fileMeta,
+  :root:not([data-theme="light"]) .counter,
+  :root:not([data-theme="light"]) .promptFileChars,
+  :root:not([data-theme="light"]) .promptFileNote,
+  :root:not([data-theme="light"]) .promptPartSource {
+    color: var(--text-3);
   }
 
   :root:not([data-theme="light"]) .label {
-    color: #d4d4d8;
+    color: var(--text);
+    font-weight: 500;
   }
 
   :root:not([data-theme="light"]) .input,
   :root:not([data-theme="light"]) .textarea,
   :root:not([data-theme="light"]) .select {
-    background: #17171c;
-    border-color: #3f3f46;
-    color: #ededed;
+    padding: 10px 12px;
+    border-radius: var(--r-control);
+    border-color: var(--line);
+    background: var(--bg-2);
+    color: var(--text);
+    transition: border-color 0.16s var(--ease);
+  }
+
+  :root:not([data-theme="light"]) .input:hover,
+  :root:not([data-theme="light"]) .textarea:hover,
+  :root:not([data-theme="light"]) .select:hover {
+    border-color: var(--text-3);
+  }
+
+  :root:not([data-theme="light"]) .input::placeholder,
+  :root:not([data-theme="light"]) .textarea::placeholder {
+    color: var(--text-3);
+  }
+
+  :root:not([data-theme="light"]) .input:focus,
+  :root:not([data-theme="light"]) .textarea:focus,
+  :root:not([data-theme="light"]) .select:focus {
+    outline-color: var(--signal);
+    border-color: var(--signal-line);
+  }
+
+  :root:not([data-theme="light"]) .textarea {
+    min-height: 150px;
+    line-height: 1.6;
   }
 
   :root:not([data-theme="light"]) .modelOption,
-  :root:not([data-theme="light"]) .toolRow,
   :root:not([data-theme="light"]) .listItem,
   :root:not([data-theme="light"]) .qaPair,
-  :root:not([data-theme="light"]) .fileRow {
-    background: #131318;
-    border-color: #27272a;
-    color: #d4d4d8;
-  }
-
-  :root:not([data-theme="light"]) .fileName {
-    color: #ededed;
-  }
-
-  :root:not([data-theme="light"]) .fileMeta {
-    color: #a1a1aa;
-  }
-
-  :root:not([data-theme="light"]) .fileNote {
-    color: #fcd34d;
-  }
-
-  :root:not([data-theme="light"]) .statusReady {
-    color: #4ade80;
-  }
-
-  :root:not([data-theme="light"]) .statusWarn {
-    color: #fbbf24;
-  }
-
-  :root:not([data-theme="light"]) .statusError {
-    color: #ff8f8f;
-  }
-
-  :root:not([data-theme="light"]) .errorBox {
-    background: #2a1212;
-    border-color: #5a2a2a;
-    color: #ff8f8f;
-  }
-
-  :root:not([data-theme="light"]) .roleNote {
-    background: #0f1f3d;
-    border-color: #1e3a8a;
-    color: #93c5fd;
-  }
-
+  :root:not([data-theme="light"]) .fileRow,
   :root:not([data-theme="light"]) .promptPart {
-    background: #131318;
-    border-color: #27272a;
+    border-radius: var(--r-card);
+    border-color: var(--line);
+    background: var(--surface);
+    color: var(--text-2);
   }
 
-  :root:not([data-theme="light"]) .promptPartHead {
-    background: #17132e;
-    border-bottom-color: #2a2350;
+  /* .row w prototypie nie jest karta, tylko wierszem z dolna kreska. */
+  :root:not([data-theme="light"]) .toolRow {
+    padding: 12px 0;
+    margin-bottom: 0;
+    border: none;
+    border-bottom: 1px solid var(--line-soft);
+    border-radius: 0;
+    background: transparent;
   }
 
-  :root:not([data-theme="light"]) .promptPartLabel {
-    color: #c4b5fd;
-  }
-
-  :root:not([data-theme="light"]) .promptText,
-  :root:not([data-theme="light"]) .promptFile {
-    color: #d4d4d8;
-  }
-
-  :root:not([data-theme="light"]) .promptRaw {
-    background: #0f0f13;
-    border-color: #27272a;
-    color: #d4d4d8;
-  }
-
-  :root:not([data-theme="light"]) .promptWarn {
-    background: #241c07;
-    border-top-color: #5a4a14;
-    color: #fcd34d;
-  }
-
-  :root:not([data-theme="light"]) .testChat {
-    border-top-color: #27272a;
-  }
-
-  :root:not([data-theme="light"]) .dropZone {
-    background: #17132e;
-    border-color: #3b2f6b;
-    color: #c4b5fd;
-  }
-
-  :root:not([data-theme="light"]) .dropZone:hover {
-    background: #221a45;
-    border-color: #7c3aed;
-  }
-
-  :root:not([data-theme="light"]) .qaRow {
-    border-bottom-color: #27272a;
-  }
-
-  :root:not([data-theme="light"]) .qaToggle {
-    color: #a1a1aa;
-  }
-
-  :root:not([data-theme="light"]) .qaText {
-    color: #d4d4d8;
+  :root:not([data-theme="light"]) .modelName,
+  :root:not([data-theme="light"]) .toolName,
+  :root:not([data-theme="light"]) .fileName {
+    color: var(--text);
+    font-weight: 500;
   }
 
   :root:not([data-theme="light"]) .modelOption:hover {
-    background: #1a1530;
-    border-color: #6d28d9;
+    border-color: var(--text-3);
+    background: var(--surface-2);
   }
 
+  /* FIOLET ZNACZY MODEL — zasada z naglowka prototypu, zastosowana wprost. */
   :root:not([data-theme="light"]) .modelSelected {
-    background: #1a1530;
-    border-color: #7c3aed;
+    border-color: var(--model-line);
+    background: var(--model-soft);
+    box-shadow: inset 0 0 0 1px var(--model-line);
   }
 
+  :root:not([data-theme="light"]) .modelSelected .modelName {
+    color: var(--model-text);
+  }
+
+  :root:not([data-theme="light"]) .statusReady {
+    color: var(--ok);
+  }
+
+  :root:not([data-theme="light"]) .statusWarn {
+    color: var(--warn);
+  }
+
+  :root:not([data-theme="light"]) .statusError {
+    color: var(--err);
+  }
+
+  /* WYPROWADZONE — rodzina --warn, wzorzec .summaryWarn z prototypu. */
+  :root:not([data-theme="light"]) .note,
+  :root:not([data-theme="light"]) .previewBanner,
+  :root:not([data-theme="light"]) .toolNote {
+    border-color: var(--warn-line);
+    background: var(--warn-soft);
+    color: var(--warn);
+  }
+
+  :root:not([data-theme="light"]) .fileNote,
+  :root:not([data-theme="light"]) .toolCost {
+    color: var(--warn);
+  }
+
+  :root:not([data-theme="light"]) .promptWarn {
+    border-top-color: var(--warn-line);
+    background: var(--warn-soft);
+    color: var(--warn);
+  }
+
+  /* WYPROWADZONE — --err, jak .error w etapie 1. */
+  :root:not([data-theme="light"]) .errorBox {
+    border-radius: var(--r-card);
+    border-color: var(--err-line);
+    background: var(--err-soft);
+    color: var(--err);
+  }
+
+  /* .banner z prototypu: neutralna karta z paskiem --signal z lewej. */
+  :root:not([data-theme="light"]) .roleNote {
+    border-radius: var(--r-card);
+    border-color: var(--line);
+    background: var(--surface);
+    color: var(--text-2);
+  }
+
+  :root:not([data-theme="light"]) .roleNote::before {
+    content: "";
+    width: 2px;
+    border-radius: 2px;
+    background: var(--signal);
+    flex-shrink: 0;
+    align-self: stretch;
+  }
+
+  /* Podglad promptu to widok maszyny — stad rodzina --signal. */
+  :root:not([data-theme="light"]) .promptPartHead {
+    background: var(--signal-soft);
+    border-bottom-color: var(--signal-line);
+  }
+
+  :root:not([data-theme="light"]) .promptPartLabel {
+    color: var(--signal-text);
+  }
+
+  :root:not([data-theme="light"]) .promptText,
+  :root:not([data-theme="light"]) .promptFile,
+  :root:not([data-theme="light"]) .qaText,
+  :root:not([data-theme="light"]) .qaToggle {
+    color: var(--text-2);
+  }
+
+  :root:not([data-theme="light"]) .promptRaw {
+    border-radius: var(--r-card);
+    border-color: var(--line);
+    background: var(--bg-2);
+    color: var(--text-2);
+  }
+
+  :root:not([data-theme="light"]) .testChat {
+    border-top-color: var(--line);
+  }
+
+  :root:not([data-theme="light"]) .qaRow {
+    border-bottom-color: var(--line-soft);
+  }
+
+  :root:not([data-theme="light"]) .qaLabel {
+    color: var(--text-3);
+    font-family: var(--font-data);
+    letter-spacing: 0.04em;
+  }
+
+  /* Prototyp ma 1px, nie 2px. */
+  :root:not([data-theme="light"]) .dropZone {
+    border: 1px dashed var(--signal-line);
+    border-radius: var(--r-card);
+    background: var(--signal-soft);
+    color: var(--signal-text);
+    font-weight: 500;
+  }
+
+  :root:not([data-theme="light"]) .dropZone:hover {
+    border-color: var(--signal);
+    background: var(--signal-soft);
+  }
+
+  :root:not([data-theme="light"]) .slider {
+    accent-color: var(--signal);
+  }
+
+  /* WYPROWADZONE — temperatura nie jest ani maszyna, ani modelem. */
   :root:not([data-theme="light"]) .sliderValue {
-    background: #221a45;
-    color: #c4b5fd;
+    border-radius: var(--r-control);
+    background: var(--surface-2);
+    color: var(--text);
   }
 
   :root:not([data-theme="light"]) .tempHint {
-    color: #c4b5fd;
+    color: var(--text-2);
   }
 
-  :root:not([data-theme="light"]) .note,
-  :root:not([data-theme="light"]) .previewBanner {
-    background: #241c07;
-    border-color: #5a4a14;
-    color: #fcd34d;
+  :root:not([data-theme="light"]) .switch {
+    width: 40px;
+    height: 22px;
+    border-radius: var(--r-pill);
+    background: var(--line);
+    transition: background 0.18s var(--ease);
   }
 
-  :root:not([data-theme="light"]) .segmented,
-  :root:not([data-theme="light"]) .dropZone {
-    background: #131318;
-    border-color: #27272a;
+  :root:not([data-theme="light"]) .switchKnob {
+    top: 3px;
+    left: 3px;
+    width: 16px;
+    height: 16px;
+    background: var(--text-2);
+    transition: transform 0.18s var(--ease), background 0.18s var(--ease);
+  }
+
+  :root:not([data-theme="light"]) .switchOn {
+    background: rgba(53, 220, 255, 0.22);
+  }
+
+  :root:not([data-theme="light"]) .switchOn .switchKnob {
+    transform: translateX(18px);
+    background: var(--signal);
+    box-shadow: 0 0 10px var(--signal);
+  }
+
+  :root:not([data-theme="light"]) .segmented {
+    padding: 3px;
+    gap: 3px;
+    border-radius: var(--r-card);
+    border-color: var(--line);
+    background: var(--bg-2);
   }
 
   :root:not([data-theme="light"]) .segment {
-    color: #a1a1aa;
+    padding: 6px 14px;
+    border-radius: 7px;
+    color: var(--text-2);
+    font-weight: 500;
+    transition: background 0.16s var(--ease), color 0.16s var(--ease);
   }
 
+  /* Aktywny segment jest NEUTRALNY (--ink), nie kolorowy. */
   :root:not([data-theme="light"]) .segmentActive {
-    background: #7c3aed;
-    color: #fff;
+    background: var(--ink);
+    color: var(--on-ink);
+  }
+
+  :root:not([data-theme="light"]) .button {
+    padding: 9px 15px;
+    border: 1px solid transparent;
+    border-radius: var(--r-control);
+    background: var(--ink);
+    color: var(--on-ink);
+    font-weight: 500;
+    transition: background 0.16s var(--ease), opacity 0.16s var(--ease);
+  }
+
+  :root:not([data-theme="light"]) .button:hover:not(:disabled) {
+    background: var(--ink);
+    opacity: 0.86;
+  }
+
+  :root:not([data-theme="light"]) .button:disabled {
+    background: var(--ink);
+    color: var(--on-ink);
+    opacity: 0.4;
   }
 
   :root:not([data-theme="light"]) .removeButton {
-    background: #1c1c22;
-    border-color: #3f3f46;
-    color: #a1a1aa;
+    padding: 6px 11px;
+    border-radius: var(--r-control);
+    border-color: var(--line);
+    background: transparent;
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  :root:not([data-theme="light"]) .removeButton:hover {
+    border-color: var(--text-3);
+    background: var(--surface-2);
+    color: var(--text);
   }
 
   :root:not([data-theme="light"]) .empty {
-    border-color: #3f3f46;
-    color: #71717a;
+    padding: 20px;
+    border-radius: var(--r-card);
+    border-color: var(--line);
+    color: var(--text-3);
   }
 }
 
-:root[data-theme="dark"] .title,
-  :root[data-theme="dark"] .modelName,
-  :root[data-theme="dark"] .toolName {
-    color: #ededed;
+:root[data-theme="dark"] .title {
+    color: var(--text);
+    font-weight: 600;
   }
 
-:root[data-theme="dark"] .subtitle,
-  :root[data-theme="dark"] .hint,
+:root[data-theme="dark"] .subtitle {
+    color: var(--text-2);
+    max-width: 62ch;
+  }
+
+:root[data-theme="dark"] .hint,
   :root[data-theme="dark"] .modelMeta,
-  :root[data-theme="dark"] .toolDesc {
-    color: #a1a1aa;
+  :root[data-theme="dark"] .toolDesc,
+  :root[data-theme="dark"] .fileMeta,
+  :root[data-theme="dark"] .counter,
+  :root[data-theme="dark"] .promptFileChars,
+  :root[data-theme="dark"] .promptFileNote,
+  :root[data-theme="dark"] .promptPartSource {
+    color: var(--text-3);
   }
 
 :root[data-theme="dark"] .label {
-    color: #d4d4d8;
+    color: var(--text);
+    font-weight: 500;
   }
 
 :root[data-theme="dark"] .input,
   :root[data-theme="dark"] .textarea,
   :root[data-theme="dark"] .select {
-    background: #17171c;
-    border-color: #3f3f46;
-    color: #ededed;
+    padding: 10px 12px;
+    border-radius: var(--r-control);
+    border-color: var(--line);
+    background: var(--bg-2);
+    color: var(--text);
+    transition: border-color 0.16s var(--ease);
+  }
+
+:root[data-theme="dark"] .input:hover,
+  :root[data-theme="dark"] .textarea:hover,
+  :root[data-theme="dark"] .select:hover {
+    border-color: var(--text-3);
+  }
+
+:root[data-theme="dark"] .input::placeholder,
+  :root[data-theme="dark"] .textarea::placeholder {
+    color: var(--text-3);
+  }
+
+:root[data-theme="dark"] .input:focus,
+  :root[data-theme="dark"] .textarea:focus,
+  :root[data-theme="dark"] .select:focus {
+    outline-color: var(--signal);
+    border-color: var(--signal-line);
+  }
+
+:root[data-theme="dark"] .textarea {
+    min-height: 150px;
+    line-height: 1.6;
   }
 
 :root[data-theme="dark"] .modelOption,
-  :root[data-theme="dark"] .toolRow,
   :root[data-theme="dark"] .listItem,
   :root[data-theme="dark"] .qaPair,
-  :root[data-theme="dark"] .fileRow {
-    background: #131318;
-    border-color: #27272a;
-    color: #d4d4d8;
+  :root[data-theme="dark"] .fileRow,
+  :root[data-theme="dark"] .promptPart {
+    border-radius: var(--r-card);
+    border-color: var(--line);
+    background: var(--surface);
+    color: var(--text-2);
   }
 
-:root[data-theme="dark"] .fileName {
-    color: #ededed;
+:root[data-theme="dark"] .toolRow {
+    padding: 12px 0;
+    margin-bottom: 0;
+    border: none;
+    border-bottom: 1px solid var(--line-soft);
+    border-radius: 0;
+    background: transparent;
   }
 
-:root[data-theme="dark"] .fileMeta {
-    color: #a1a1aa;
-  }
-
-:root[data-theme="dark"] .fileNote {
-    color: #fcd34d;
-  }
-
-:root[data-theme="dark"] .statusReady {
-    color: #4ade80;
-  }
-
-:root[data-theme="dark"] .statusWarn {
-    color: #fbbf24;
-  }
-
-:root[data-theme="dark"] .statusError {
-    color: #ff8f8f;
-  }
-
-:root[data-theme="dark"] .errorBox {
-    background: #2a1212;
-    border-color: #5a2a2a;
-    color: #ff8f8f;
-  }
-
-:root[data-theme="dark"] .roleNote {
-    background: #0f1f3d;
-    border-color: #1e3a8a;
-    color: #93c5fd;
-  }
-
-:root[data-theme="dark"] .promptPart {
-    background: #131318;
-    border-color: #27272a;
-  }
-
-:root[data-theme="dark"] .promptPartHead {
-    background: #17132e;
-    border-bottom-color: #2a2350;
-  }
-
-:root[data-theme="dark"] .promptPartLabel {
-    color: #c4b5fd;
-  }
-
-:root[data-theme="dark"] .promptText,
-  :root[data-theme="dark"] .promptFile {
-    color: #d4d4d8;
-  }
-
-:root[data-theme="dark"] .promptRaw {
-    background: #0f0f13;
-    border-color: #27272a;
-    color: #d4d4d8;
-  }
-
-:root[data-theme="dark"] .promptWarn {
-    background: #241c07;
-    border-top-color: #5a4a14;
-    color: #fcd34d;
-  }
-
-:root[data-theme="dark"] .testChat {
-    border-top-color: #27272a;
-  }
-
-:root[data-theme="dark"] .dropZone {
-    background: #17132e;
-    border-color: #3b2f6b;
-    color: #c4b5fd;
-  }
-
-:root[data-theme="dark"] .dropZone:hover {
-    background: #221a45;
-    border-color: #7c3aed;
-  }
-
-:root[data-theme="dark"] .qaRow {
-    border-bottom-color: #27272a;
-  }
-
-:root[data-theme="dark"] .qaToggle {
-    color: #a1a1aa;
-  }
-
-:root[data-theme="dark"] .qaText {
-    color: #d4d4d8;
+:root[data-theme="dark"] .modelName,
+  :root[data-theme="dark"] .toolName,
+  :root[data-theme="dark"] .fileName {
+    color: var(--text);
+    font-weight: 500;
   }
 
 :root[data-theme="dark"] .modelOption:hover {
-    background: #1a1530;
-    border-color: #6d28d9;
+    border-color: var(--text-3);
+    background: var(--surface-2);
   }
 
 :root[data-theme="dark"] .modelSelected {
-    background: #1a1530;
-    border-color: #7c3aed;
+    border-color: var(--model-line);
+    background: var(--model-soft);
+    box-shadow: inset 0 0 0 1px var(--model-line);
   }
 
-:root[data-theme="dark"] .sliderValue {
-    background: #221a45;
-    color: #c4b5fd;
+:root[data-theme="dark"] .modelSelected .modelName {
+    color: var(--model-text);
   }
 
-:root[data-theme="dark"] .tempHint {
-    color: #c4b5fd;
+:root[data-theme="dark"] .statusReady {
+    color: var(--ok);
+  }
+
+:root[data-theme="dark"] .statusWarn {
+    color: var(--warn);
+  }
+
+:root[data-theme="dark"] .statusError {
+    color: var(--err);
   }
 
 :root[data-theme="dark"] .note,
-  :root[data-theme="dark"] .previewBanner {
-    background: #241c07;
-    border-color: #5a4a14;
-    color: #fcd34d;
+  :root[data-theme="dark"] .previewBanner,
+  :root[data-theme="dark"] .toolNote {
+    border-color: var(--warn-line);
+    background: var(--warn-soft);
+    color: var(--warn);
   }
 
-:root[data-theme="dark"] .segmented,
-  :root[data-theme="dark"] .dropZone {
-    background: #131318;
-    border-color: #27272a;
+:root[data-theme="dark"] .fileNote,
+  :root[data-theme="dark"] .toolCost {
+    color: var(--warn);
+  }
+
+:root[data-theme="dark"] .promptWarn {
+    border-top-color: var(--warn-line);
+    background: var(--warn-soft);
+    color: var(--warn);
+  }
+
+:root[data-theme="dark"] .errorBox {
+    border-radius: var(--r-card);
+    border-color: var(--err-line);
+    background: var(--err-soft);
+    color: var(--err);
+  }
+
+:root[data-theme="dark"] .roleNote {
+    border-radius: var(--r-card);
+    border-color: var(--line);
+    background: var(--surface);
+    color: var(--text-2);
+  }
+
+:root[data-theme="dark"] .roleNote::before {
+    content: "";
+    width: 2px;
+    border-radius: 2px;
+    background: var(--signal);
+    flex-shrink: 0;
+    align-self: stretch;
+  }
+
+:root[data-theme="dark"] .promptPartHead {
+    background: var(--signal-soft);
+    border-bottom-color: var(--signal-line);
+  }
+
+:root[data-theme="dark"] .promptPartLabel {
+    color: var(--signal-text);
+  }
+
+:root[data-theme="dark"] .promptText,
+  :root[data-theme="dark"] .promptFile,
+  :root[data-theme="dark"] .qaText,
+  :root[data-theme="dark"] .qaToggle {
+    color: var(--text-2);
+  }
+
+:root[data-theme="dark"] .promptRaw {
+    border-radius: var(--r-card);
+    border-color: var(--line);
+    background: var(--bg-2);
+    color: var(--text-2);
+  }
+
+:root[data-theme="dark"] .testChat {
+    border-top-color: var(--line);
+  }
+
+:root[data-theme="dark"] .qaRow {
+    border-bottom-color: var(--line-soft);
+  }
+
+:root[data-theme="dark"] .qaLabel {
+    color: var(--text-3);
+    font-family: var(--font-data);
+    letter-spacing: 0.04em;
+  }
+
+:root[data-theme="dark"] .dropZone {
+    border: 1px dashed var(--signal-line);
+    border-radius: var(--r-card);
+    background: var(--signal-soft);
+    color: var(--signal-text);
+    font-weight: 500;
+  }
+
+:root[data-theme="dark"] .dropZone:hover {
+    border-color: var(--signal);
+    background: var(--signal-soft);
+  }
+
+:root[data-theme="dark"] .slider {
+    accent-color: var(--signal);
+  }
+
+:root[data-theme="dark"] .sliderValue {
+    border-radius: var(--r-control);
+    background: var(--surface-2);
+    color: var(--text);
+  }
+
+:root[data-theme="dark"] .tempHint {
+    color: var(--text-2);
+  }
+
+:root[data-theme="dark"] .switch {
+    width: 40px;
+    height: 22px;
+    border-radius: var(--r-pill);
+    background: var(--line);
+    transition: background 0.18s var(--ease);
+  }
+
+:root[data-theme="dark"] .switchKnob {
+    top: 3px;
+    left: 3px;
+    width: 16px;
+    height: 16px;
+    background: var(--text-2);
+    transition: transform 0.18s var(--ease), background 0.18s var(--ease);
+  }
+
+:root[data-theme="dark"] .switchOn {
+    background: rgba(53, 220, 255, 0.22);
+  }
+
+:root[data-theme="dark"] .switchOn .switchKnob {
+    transform: translateX(18px);
+    background: var(--signal);
+    box-shadow: 0 0 10px var(--signal);
+  }
+
+:root[data-theme="dark"] .segmented {
+    padding: 3px;
+    gap: 3px;
+    border-radius: var(--r-card);
+    border-color: var(--line);
+    background: var(--bg-2);
   }
 
 :root[data-theme="dark"] .segment {
-    color: #a1a1aa;
+    padding: 6px 14px;
+    border-radius: 7px;
+    color: var(--text-2);
+    font-weight: 500;
+    transition: background 0.16s var(--ease), color 0.16s var(--ease);
   }
 
 :root[data-theme="dark"] .segmentActive {
-    background: #7c3aed;
-    color: #fff;
+    background: var(--ink);
+    color: var(--on-ink);
+  }
+
+:root[data-theme="dark"] .button {
+    padding: 9px 15px;
+    border: 1px solid transparent;
+    border-radius: var(--r-control);
+    background: var(--ink);
+    color: var(--on-ink);
+    font-weight: 500;
+    transition: background 0.16s var(--ease), opacity 0.16s var(--ease);
+  }
+
+:root[data-theme="dark"] .button:hover:not(:disabled) {
+    background: var(--ink);
+    opacity: 0.86;
+  }
+
+:root[data-theme="dark"] .button:disabled {
+    background: var(--ink);
+    color: var(--on-ink);
+    opacity: 0.4;
   }
 
 :root[data-theme="dark"] .removeButton {
-    background: #1c1c22;
-    border-color: #3f3f46;
-    color: #a1a1aa;
+    padding: 6px 11px;
+    border-radius: var(--r-control);
+    border-color: var(--line);
+    background: transparent;
+    color: var(--text);
+    font-weight: 500;
+  }
+
+:root[data-theme="dark"] .removeButton:hover {
+    border-color: var(--text-3);
+    background: var(--surface-2);
+    color: var(--text);
   }
 
 :root[data-theme="dark"] .empty {
-    border-color: #3f3f46;
-    color: #71717a;
+    padding: 20px;
+    border-radius: var(--r-card);
+    border-color: var(--line);
+    color: var(--text-3);
   }
 
 /* --- Naglowek listy plikow z odnosnikiem do magazynu --- */
@@ -1034,12 +1312,12 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .manageLink {
-    color: #c4b5fd;
+    color: var(--signal-text);
   }
 }
 
 :root[data-theme="dark"] .manageLink {
-  color: #c4b5fd;
+  color: var(--signal-text);
 }
 
 /* themeified */

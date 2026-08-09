@@ -6,12 +6,78 @@
   color-scheme: light;
 }
 
-/* Auto — ciemny gdy OS ciemny i user NIE wymusil jasnego. */
+/* TOKENY NIEZALEZNE OD MOTYWU (docs/prototyp.html, blok :root).
+   Kroje, promienie i krzywa przejscia sa takie same w kazdym motywie, wiec
+   stoja tutaj, a nie w blokach ciemnych. Motyw jasny ich dzis nie czyta —
+   dolozenie ich niczego w nim nie zmienia. */
+:root {
+  --font-ui: var(--font-instrument-sans), system-ui, sans-serif;
+  --font-data: var(--font-ibm-plex-mono), ui-monospace, monospace;
+
+  --r-control: 8px;
+  --r-card: 10px;
+  --r-shell: 14px;
+  --r-pill: 999px;
+  --ease: cubic-bezier(0.2, 0.6, 0.25, 1);
+}
+
+/* PALETA MOTYWU CIEMNEGO — przepisana doslownie z docs/prototyp.html.
+   Zasada prototypu: CYJAN ZNACZY MASZYNE, FIOLET ZNACZY MODEL, dzialania
+   uzytkownika sa neutralne (--ink na --on-ink).
+
+   UWAGA na --ok: te sama nazwe deklaruje kreator-rag.module.css na .panel
+   (linie 51 / 1294 / 1466). .panel siedzi na <main> calego modulu, wiec jego
+   lokalna deklaracja przeslania te globalna dla kazdego potomka — paleta
+   plotna mapy i grafu zostaje nietknieta. Nie zmieniac tego bez sprawdzenia
+   mapy i grafu na zywo. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --background: #0a0a0a;
     --foreground: #ededed;
     color-scheme: dark;
+
+    --bg: #040611;
+    --bg-2: #080d1d;
+    --surface: #0c1428;
+    --surface-2: #101c36;
+    --line: #213b63;
+    --line-soft: #16294a;
+    --text: #f3fbff;
+    --text-2: #9db3c9;
+    --text-3: #7890aa;
+    --ink: #f3fbff;
+    --on-ink: #040611;
+
+    --signal: #35dcff;
+    --signal-2: #8a6cff;
+    --signal-soft: rgba(53, 220, 255, 0.09);
+    --signal-line: rgba(53, 220, 255, 0.34);
+    --signal-text: #7fe9ff;
+    --model-soft: rgba(138, 108, 255, 0.08);
+    --model-line: rgba(138, 108, 255, 0.4);
+    --model-text: #b6a4ff;
+
+    --ok: #52f0bf;
+    --warn: #d8b46a;
+
+    /* Tla i ramki ostrzezen — z tego samego powodu co --err-soft / --err-line
+       nizej: bez nich rgba(216, 180, 106, ...) stoi rozpisane na skladowe
+       w kilkunastu miejscach i --warn jest zmienna, ktorej zmiana nie dziala. */
+    --warn-soft: rgba(216, 180, 106, 0.08);
+    --warn-line: rgba(216, 180, 106, 0.4);
+
+    /* --err: #ff68ad;  <- wartosc z prototypu, HSL(333, 100%, 70%).
+       Zamieniona na cieplejsza czerwien o TYM SAMYM nasyceniu i jasnosci
+       (HSL 355, 100%, 70%) — zmienia sie tylko odcien, wiec kontrast na
+       granatowym tle zostaje bez zmian. Powrot to jedna linia. */
+    --err: #ff6673;
+
+    /* Tla i ramki bledow BIORA SIE Z --err, a nie z wpisanego recznie rgba.
+       Wczesniej w osmiu plikach stalo rgba(255, 104, 173, ...) rozlozone na
+       skladowe starego --err — zmiana samego tokenu zostawilaby rozowe tla
+       pod czerwonym tekstem. Wzorowane na --signal-soft / --signal-line. */
+    --err-soft: rgba(255, 102, 115, 0.07);
+    --err-line: rgba(255, 102, 115, 0.4);
   }
 }
 
@@ -20,6 +86,37 @@
   --background: #0a0a0a;
   --foreground: #ededed;
   color-scheme: dark;
+
+  --bg: #040611;
+  --bg-2: #080d1d;
+  --surface: #0c1428;
+  --surface-2: #101c36;
+  --line: #213b63;
+  --line-soft: #16294a;
+  --text: #f3fbff;
+  --text-2: #9db3c9;
+  --text-3: #7890aa;
+  --ink: #f3fbff;
+  --on-ink: #040611;
+
+  --signal: #35dcff;
+  --signal-2: #8a6cff;
+  --signal-soft: rgba(53, 220, 255, 0.09);
+  --signal-line: rgba(53, 220, 255, 0.34);
+  --signal-text: #7fe9ff;
+  --model-soft: rgba(138, 108, 255, 0.08);
+  --model-line: rgba(138, 108, 255, 0.4);
+  --model-text: #b6a4ff;
+
+  --ok: #52f0bf;
+  --warn: #d8b46a;
+  --warn-soft: rgba(216, 180, 106, 0.08);
+  --warn-line: rgba(216, 180, 106, 0.4);
+
+  /* --err: #ff68ad;  <- wartosc z prototypu, patrz komentarz w bloku @media. */
+  --err: #ff6673;
+  --err-soft: rgba(255, 102, 115, 0.07);
+  --err-line: rgba(255, 102, 115, 0.4);
 }
 
 :root[data-theme="light"] {
@@ -35,6 +132,22 @@ html {
 html,
 body {
   max-width: 100vw;
+}
+
+/* overflow-x TYLKO na html, NIE na body — i to jest warunek dzialania
+   przypietego paska bocznego (components/workspace/Sidebar.module.css).
+
+   Gdy jedna os ma hidden, a druga visible, to visible WYLICZA SIE NA auto.
+   body dostawalo wiec overflow-y: auto i stawalo sie kontenerem przewijania.
+   Element przyklejony szuka najblizszego przewijalnego przodka — znajdowal
+   body, nie okno. A body ma tylko min-height: 100% i rosnie z trescia, wiec
+   nigdy nie ma czego w sobie przewijac: zakres przyklejenia wychodzil zerowy
+   i sticky nie dzialalo w ogole.
+
+   Na html jest bezpiecznie: to element glowny, a jego overflow jest
+   PROPAGOWANY NA OKNO, wiec poziome przewijanie dalej jest obcinane tak samo.
+   Linia na body byla nadmiarowa. */
+html {
   overflow-x: hidden;
 }
 
@@ -47,6 +160,27 @@ body {
   font-family: Arial, Helvetica, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* POSWIATA U GORY EKRANU — docs/prototyp.html, regula body.
+   #0d1c38 jest w prototypie wpisane wprost, nie przez token, wiec zostaje
+   literalem. Warstwy w kolejnosci: najpierw gradient, pod nim --bg.
+
+   ZEBY TO BYLO WIDOCZNE, .shell w projekty/layout.module.css musi byc
+   przezroczysty w ciemnym — inaczej przykrywa body na kazdym ekranie
+   z paskiem bocznym. W prototypie .shell nie ma zadnego tla. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) body {
+    background:
+      radial-gradient(120% 70% at 50% -10%, #0d1c38 0%, transparent 60%),
+      var(--bg);
+  }
+}
+
+:root[data-theme="dark"] body {
+  background:
+    radial-gradient(120% 70% at 50% -10%, #0d1c38 0%, transparent 60%),
+    var(--bg);
 }
 
 * {

@@ -297,12 +297,61 @@
   flex: 0 0 auto;
 }
 
+/* PASEK NAWIGACJI — TRZY ROLE, NIE CZTERY RÓWNORZĘDNE LINKI.
+   Ślad powrotu po lewej (najcichszy), bieżące miejsce obok niego (mocne,
+   nieklikalne), przejścia do widoków siostrzanych po prawej jako przyciski.
+
+   Układ jest regułą BAZOWĄ, bo wynika ze struktury znaczników wspólnej dla obu
+   motywów. Kolory, ramki i kreska pod paskiem siedzą w blokach ciemnych. */
 .nawigacja {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
   gap: 16px;
   margin-bottom: 24px;
   font-size: 14px;
 }
+
+/* flex: 1 jest konieczne. .nawigacja siedzi w .pasek-gorny obok przycisku
+   diagnostyki, więc bez tego jest wymiarowana treścią i space-between nie ma
+   czego rozpychać — tak samo, jak dotąd nic nie robił marginLeft: auto
+   wpisany stylem inline przy „Mapa fragmentów". */
+.pasek-gorny .nawigacja {
+  flex: 1;
+  min-width: 0;
+}
+
+.nawigacja-slad {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+.nawigacja-widoki {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Strzałka z CSS, nie z tekstu — dzięki temu każdy powrót w module wygląda
+   tak samo i nie trzeba jej pamiętać przy każdym nowym linku. */
+.nawigacja-powrot::before {
+  content: "← ";
+}
+
+.nawigacja-widok {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 11px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
 .nawigacja a {
   color: var(--przygaszony);
   text-decoration: none;
@@ -310,6 +359,8 @@
 .nawigacja a:hover {
   color: var(--tekst);
 }
+/* Zostaje dla zgodności — w pasku zastąpiła ją .nawigacja-miejsce, ale reguła
+   nic nie kosztuje, a jej usunięcie byłoby zmianą w motywie jasnym. */
 .nawigacja a.aktywny {
   color: var(--tekst);
   font-weight: 600;
@@ -1286,15 +1337,31 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .panel {
-    --tlo: #0f1115;
-    --karta: #1a1d24;
-    --obwod: #2a2f3a;
-    --tekst: #e6e8ec;
-    --przygaszony: #9aa2b1;
-    --ok: #37b26b;
-    --blad: #e5484d;
-    --nieznane: #d1a53a;
+    /* OSIEM TOKENOW SEMANTYCZNYCH PRZEMAPOWANYCH NA PALETE GLOBALNA.
+       Nazwy zostaja, wiec ani jedna regula korzystajaca nie wymaga zmiany —
+       var(--obwod) uzyte 27 razy, var(--przygaszony) 20, var(--tekst) 16.
 
+       --ok MUSI BYC LITERALEM, nie var(--ok). Modul deklaruje --ok tutaj,
+       na .panel, a globalny --ok siedzi na :root. Zapis --ok: var(--ok) na
+       tym samym elemencie jest CYKLICZNY: CSS uniewaznilby zmienna i wszystko,
+       co z niej czerpie (pasek postepu, kropka „na zywo", .score.mocny,
+       ukonczony etap), poleciałoby na wartosc nieprawidlowa.
+       Kolizja zostaje nienaruszona — lokalna deklaracja dalej przeslania
+       globalna dla calego modulu. Zmienia sie tylko jej wartosc.
+       Przy zmianie globalnego --ok trzeba poprawic te linie recznie. */
+    --tlo: var(--bg);
+    --karta: var(--surface);
+    --obwod: var(--line);
+    --tekst: var(--text);
+    --przygaszony: var(--text-3);
+    --ok: #52f0bf;
+    --blad: var(--err);
+    --nieznane: var(--warn);
+
+    /* PONIZEJ NIE RUSZAC — paleta plotna. Czyta ja paletaPlotna.js przez
+       getComputedStyle z tego elementu, a paletaPlotna.test.js pilnuje, zeby
+       zgadzala sie z rdzeniem (lib/rag/map.js) i miedzy oboma blokami
+       ciemnymi. Zmiana ktorejkolwiek wartosci przewroci testy. */
     --plotno-tlo: #0b0d12;
     --plotno-siatka: rgba(230, 232, 236, 0.06);
     --plotno-podpis: #9aa2b1;
@@ -1317,46 +1384,46 @@
   }
 
   :root:not([data-theme="light"]) .panel button {
-    background: #2a2f3a;
+    background: transparent;
     color: var(--tekst);
     border-color: var(--obwod);
   }
   :root:not([data-theme="light"]) .panel button:hover:not(:disabled) {
-    background: #333a47;
-    border-color: #3d4553;
+    background: var(--surface-2);
+    border-color: var(--text-3);
   }
   /* Wyłączony przycisk dostaje WŁASNE TŁO także tutaj. Historia miała w tym
      miejscu opacity: 0.5 i to właśnie zostało odrzucone przy przestylowaniu
      (komentarz przy .panel button:disabled) — półprzezroczysty przycisk na
      ciemnym tle zostawał ciemniejszy od tła i dalej było go widać jako plamę. */
   :root:not([data-theme="light"]) .panel button:disabled {
-    background: #1a1d24;
-    border-color: #2a2f3a;
-    color: #5c6473;
+    background: var(--surface);
+    border-color: var(--obwod);
+    color: var(--text-3);
   }
 
   :root:not([data-theme="light"]) .panel input[type='text'],
   :root:not([data-theme="light"]) .panel textarea {
-    background: #12151b;
+    background: var(--bg-2);
     border-color: var(--obwod);
   }
   :root:not([data-theme="light"]) .panel input[type='text']:focus,
   :root:not([data-theme="light"]) .panel textarea:focus {
-    outline-color: #7c5cd6;
-    border-color: #a78bfa;
+    outline-color: var(--signal);
+    border-color: var(--signal-line);
   }
 
-  :root:not([data-theme="light"]) .modele li { background: #1a1d24; }
-  :root:not([data-theme="light"]) .pasek { background: #1a1d24; }
+  :root:not([data-theme="light"]) .modele li { background: var(--karta); }
+  :root:not([data-theme="light"]) .pasek { background: var(--karta); }
 
   :root:not([data-theme="light"]) .przycisk-diagnostyki {
-    background: #1a1d24;
-    border-color: #2a2f3a;
-    color: #c9cfd9;
+    background: transparent;
+    border-color: var(--obwod);
+    color: var(--tekst);
   }
   :root:not([data-theme="light"]) .przycisk-diagnostyki:hover {
-    background: #232833;
-    border-color: #3d4553;
+    background: var(--surface-2);
+    border-color: var(--text-3);
     color: var(--tekst);
   }
 
@@ -1374,7 +1441,7 @@
   :root:not([data-theme="light"]) .mapa-info-3d,
   :root:not([data-theme="light"]) .mapa-sterowanie button,
   :root:not([data-theme="light"]) .przelacznik button {
-    background: rgba(26, 29, 36, 0.94);
+    background: rgba(12, 20, 40, 0.94);
   }
   :root:not([data-theme="light"]) .mapa-dymek,
   :root:not([data-theme="light"]) .mapa-panel,
@@ -1384,89 +1451,171 @@
   :root:not([data-theme="light"]) .mapa-info-3d,
   :root:not([data-theme="light"]) .mapa-sterowanie button,
   :root:not([data-theme="light"]) .przelacznik {
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+    box-shadow: 0 2px 8px rgba(4, 6, 17, 0.55);
   }
   :root:not([data-theme="light"]) .przelacznik button { box-shadow: none; }
 
+  /* KROJ TECHNICZNY W CALYM MODULE. Wlasny stos ui-monospace/Cascadia/Consolas
+     ustepuje --font-data, zeby liczby, identyfikatory i skala szly tym samym
+     krojem co daty w Czatach i identyfikatory modeli w Ustawieniach.
+     Cztery z tych selektorow to panele NAD PLOTNEM — zmienia sie sam kroj,
+     pozycje i max-width zostaja nietkniete. */
+  :root:not([data-theme="light"]) .kod,
+  :root:not([data-theme="light"]) .modele li,
+  :root:not([data-theme="light"]) .meta code,
+  :root:not([data-theme="light"]) .rzad-kolekcji .detale code,
+  :root:not([data-theme="light"]) .score,
+  :root:not([data-theme="light"]) .linia-odciecia,
+  :root:not([data-theme="light"]) .mapa-dymek .zrodlo,
+  :root:not([data-theme="light"]) .mapa-skala,
+  :root:not([data-theme="light"]) .graf-suwak span,
+  :root:not([data-theme="light"]) .mapa-licznik {
+    font-family: var(--font-data);
+  }
+
+  :root:not([data-theme="light"]) .panel {
+    font-family: var(--font-ui);
+  }
+
+  /* TRZY ROLE PASKA NAWIGACJI. Powrót najcichszy, miejsce najmocniejsze,
+     przejścia jako .btn-quiet z prototypu. */
+  :root:not([data-theme="light"]) .nawigacja-powrot {
+    color: var(--text-3);
+  }
+  :root:not([data-theme="light"]) .nawigacja-powrot:hover {
+    color: var(--text-2);
+  }
+  :root:not([data-theme="light"]) .nawigacja-miejsce {
+    color: var(--text);
+    font-weight: 600;
+  }
+  :root:not([data-theme="light"]) .nawigacja-widok {
+    border-color: var(--obwod);
+    background: transparent;
+    color: var(--tekst);
+  }
+  :root:not([data-theme="light"]) .nawigacja-widok:hover {
+    border-color: var(--text-3);
+    background: var(--surface-2);
+    color: var(--tekst);
+  }
+  /* Kreska oddziela nawigację od tytułu strony. Tylko w ciemnym — w jasnym
+     byłaby zmianą wyglądu, a nie układu. */
+  :root:not([data-theme="light"]) .pasek-gorny {
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+
   :root:not([data-theme="light"]) .graf-suwak input[type='range'] {
-    accent-color: #a78bfa;
+    accent-color: var(--signal);
   }
+  /* Segment wcisniety — konwencja z prototypu: --ink, nie kolor. */
   :root:not([data-theme="light"]) .przelacznik button.wybrany {
-    background: #2e2450;
-    color: #c4b5fd;
+    background: var(--ink);
+    color: var(--on-ink);
   }
 
-  :root:not([data-theme="light"]) .karta-modelu:hover { border-color: #3d4553; }
+  :root:not([data-theme="light"]) .karta-modelu:hover { border-color: var(--text-3); }
   :root:not([data-theme="light"]) .karta-modelu-wybrana {
-    border-color: #8b5cf6;
-    box-shadow: inset 0 0 0 1px #8b5cf6;
-    background: #1e1a2e;
+    border-color: var(--signal-line);
+    box-shadow: inset 0 0 0 1px var(--signal-line);
+    background: var(--signal-soft);
   }
 
-  :root:not([data-theme="light"]) .gdzie-lokalny { background: #14301f; color: #6ee7a8; }
-  :root:not([data-theme="light"]) .gdzie-chmura { background: #1c2140; color: #a5b4fc; }
-  :root:not([data-theme="light"]) .znacznik-koszt { background: #1f242e; color: #9aa2b1; }
+  /* Plakietki: „lokalny" zostaje na --ok, bo niesie informacje (model nic nie
+     kosztuje). Reszta na neutralna .tag. */
+  :root:not([data-theme="light"]) .gdzie-lokalny {
+    border: 1px solid var(--ok);
+    background: transparent;
+    color: var(--ok);
+  }
+  :root:not([data-theme="light"]) .gdzie-chmura,
+  :root:not([data-theme="light"]) .znacznik-koszt {
+    border: 1px solid var(--obwod);
+    background: transparent;
+    color: var(--text-2);
+  }
+  :root:not([data-theme="light"]) .gdzie-lokalny,
+  :root:not([data-theme="light"]) .gdzie-chmura,
+  :root:not([data-theme="light"]) .znacznik-koszt {
+    font-family: var(--font-data);
+    font-weight: 400;
+    letter-spacing: 0.04em;
+  }
 
-  /* Ta sama trójka co w motywie ciemnym FormModal.module.css (:235-239) —
-     komunikat o błędzie ma wyglądać tak samo w całej aplikacji. */
+  /* Bylo czerwone na czerwonym i slabo sie czytalo. Teraz wzorzec .summaryWarn
+     u mentora: pas z lewej, bez pelnej ramki. To OSTRZEZENIE przed decyzja
+     nieodwracalna, nie komunikat o bledzie — bursztyn niesie to lepiej. */
   :root:not([data-theme="light"]) .ostrzezenie-nieodwracalne {
-    border-color: #5a2a2a;
-    background: #2a1212;
-    color: #ff8f8f;
+    border: none;
+    border-left: 2px solid var(--warn);
+    border-radius: 0 var(--r-control) var(--r-control) 0;
+    background: var(--warn-soft);
+    color: var(--warn);
   }
-  :root:not([data-theme="light"]) .ostrzezenie-nieodwracalne strong { color: #ffb4b4; }
+  :root:not([data-theme="light"]) .ostrzezenie-nieodwracalne strong {
+    color: var(--warn);
+    font-weight: 600;
+  }
 
   :root:not([data-theme="light"]) .etap-krok.aktywny {
-    border-color: #8b5cf6;
-    background: #1e1a2e;
-    box-shadow: inset 0 0 0 1px #8b5cf6;
+    border-color: var(--signal-line);
+    background: var(--signal-soft);
+    box-shadow: inset 0 0 0 1px var(--signal-line);
   }
   :root:not([data-theme="light"]) .etap-krok.ukonczony {
-    background: #12241a;
-    border-color: #2f6b45;
+    background: rgba(82, 240, 191, 0.07);
+    border-color: rgba(82, 240, 191, 0.4);
   }
   :root:not([data-theme="light"]) .etap-numer {
-    background: #2a2f3a;
-    color: #c9cfd9;
+    background: var(--surface-2);
+    color: var(--text-2);
   }
-  /* Cyfra na wypełnionym kółku jest CIEMNA, nie biała: tłem jest jasny fiolet
+  /* Cyfra na wypełnionym kółku jest CIEMNA, nie biała: tłem jest jasny cyjan
      i jasna zieleń, więc biel dałaby tu kontrast poniżej 2:1. */
   :root:not([data-theme="light"]) .etap-krok.aktywny .etap-numer {
-    background: #8b5cf6;
-    color: #12101c;
+    background: var(--signal);
+    color: var(--on-ink);
   }
-  :root:not([data-theme="light"]) .etap-krok.ukonczony .etap-numer { color: #0b1a10; }
-  :root:not([data-theme="light"]) .etap-znacznik.wymagany { color: #c4b5fd; }
-  :root:not([data-theme="light"]) .etap-panel-opis { color: #9aa2b1; }
+  :root:not([data-theme="light"]) .etap-krok.ukonczony .etap-numer { color: var(--on-ink); }
+  :root:not([data-theme="light"]) .etap-znacznik.wymagany { color: var(--signal-text); }
+  :root:not([data-theme="light"]) .etap-panel-opis { color: var(--przygaszony); }
 
+  /* Ostatni niebieski w aplikacji — etap 5 zdjal go z banera Ustawien.
+     Konwencja .banner z prototypu: neutralna karta z pasem --signal z lewej. */
   :root:not([data-theme="light"]) .nota-wyjasnienie {
-    border-color: #24406e;
-    background: #101a2e;
-    color: #93c5fd;
+    border: none;
+    border-left: 2px solid var(--signal);
+    border-radius: 0 var(--r-control) var(--r-control) 0;
+    background: var(--surface);
+    color: var(--text-2);
   }
   :root:not([data-theme="light"]) .nota-gotowe {
-    border-color: #2f6b45;
-    background: #12241a;
-    color: #6ee7a8;
+    border-color: rgba(82, 240, 191, 0.4);
+    background: rgba(82, 240, 191, 0.07);
+    color: var(--ok);
   }
   :root:not([data-theme="light"]) .znacznik-nazywo {
-    background: #14301f;
-    color: #6ee7a8;
+    background: transparent;
+    border: 1px solid var(--ok);
+    color: var(--ok);
   }
 }
 
 /* --- WYMUSZONY CIEMNY — dosłowny duplikat bloku wyżej ---------------------- */
 
 :root[data-theme="dark"] .panel {
-  --tlo: #0f1115;
-  --karta: #1a1d24;
-  --obwod: #2a2f3a;
-  --tekst: #e6e8ec;
-  --przygaszony: #9aa2b1;
-  --ok: #37b26b;
-  --blad: #e5484d;
-  --nieznane: #d1a53a;
+  /* Bliźniak bloku @media — uzasadnienie i pułapka z --ok opisane tam. */
+  --tlo: var(--bg);
+  --karta: var(--surface);
+  --obwod: var(--line);
+  --tekst: var(--text);
+  --przygaszony: var(--text-3);
+  --ok: #52f0bf;
+  --blad: var(--err);
+  --nieznane: var(--warn);
 
+  /* PONIZEJ NIE RUSZAC — paleta plotna, patrz komentarz w bloku @media. */
   --plotno-tlo: #0b0d12;
   --plotno-siatka: rgba(230, 232, 236, 0.06);
   --plotno-podpis: #9aa2b1;
@@ -1489,42 +1638,42 @@
 }
 
 :root[data-theme="dark"] .panel button {
-  background: #2a2f3a;
+  background: transparent;
   color: var(--tekst);
   border-color: var(--obwod);
 }
 :root[data-theme="dark"] .panel button:hover:not(:disabled) {
-  background: #333a47;
-  border-color: #3d4553;
+  background: var(--surface-2);
+  border-color: var(--text-3);
 }
 :root[data-theme="dark"] .panel button:disabled {
-  background: #1a1d24;
-  border-color: #2a2f3a;
-  color: #5c6473;
+  background: var(--surface);
+  border-color: var(--obwod);
+  color: var(--text-3);
 }
 
 :root[data-theme="dark"] .panel input[type='text'],
 :root[data-theme="dark"] .panel textarea {
-  background: #12151b;
+  background: var(--bg-2);
   border-color: var(--obwod);
 }
 :root[data-theme="dark"] .panel input[type='text']:focus,
 :root[data-theme="dark"] .panel textarea:focus {
-  outline-color: #7c5cd6;
-  border-color: #a78bfa;
+  outline-color: var(--signal);
+  border-color: var(--signal-line);
 }
 
-:root[data-theme="dark"] .modele li { background: #1a1d24; }
-:root[data-theme="dark"] .pasek { background: #1a1d24; }
+:root[data-theme="dark"] .modele li { background: var(--karta); }
+:root[data-theme="dark"] .pasek { background: var(--karta); }
 
 :root[data-theme="dark"] .przycisk-diagnostyki {
-  background: #1a1d24;
-  border-color: #2a2f3a;
-  color: #c9cfd9;
+  background: transparent;
+  border-color: var(--obwod);
+  color: var(--tekst);
 }
 :root[data-theme="dark"] .przycisk-diagnostyki:hover {
-  background: #232833;
-  border-color: #3d4553;
+  background: var(--surface-2);
+  border-color: var(--text-3);
   color: var(--tekst);
 }
 
@@ -1536,7 +1685,7 @@
 :root[data-theme="dark"] .mapa-info-3d,
 :root[data-theme="dark"] .mapa-sterowanie button,
 :root[data-theme="dark"] .przelacznik button {
-  background: rgba(26, 29, 36, 0.94);
+  background: rgba(12, 20, 40, 0.94);
 }
 :root[data-theme="dark"] .mapa-dymek,
 :root[data-theme="dark"] .mapa-panel,
@@ -1546,70 +1695,135 @@
 :root[data-theme="dark"] .mapa-info-3d,
 :root[data-theme="dark"] .mapa-sterowanie button,
 :root[data-theme="dark"] .przelacznik {
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 2px 8px rgba(4, 6, 17, 0.55);
 }
 :root[data-theme="dark"] .przelacznik button { box-shadow: none; }
 
+:root[data-theme="dark"] .kod,
+:root[data-theme="dark"] .modele li,
+:root[data-theme="dark"] .meta code,
+:root[data-theme="dark"] .rzad-kolekcji .detale code,
+:root[data-theme="dark"] .score,
+:root[data-theme="dark"] .linia-odciecia,
+:root[data-theme="dark"] .mapa-dymek .zrodlo,
+:root[data-theme="dark"] .mapa-skala,
+:root[data-theme="dark"] .graf-suwak span,
+:root[data-theme="dark"] .mapa-licznik {
+  font-family: var(--font-data);
+}
+
+:root[data-theme="dark"] .panel {
+  font-family: var(--font-ui);
+}
+
+:root[data-theme="dark"] .nawigacja-powrot {
+  color: var(--text-3);
+}
+:root[data-theme="dark"] .nawigacja-powrot:hover {
+  color: var(--text-2);
+}
+:root[data-theme="dark"] .nawigacja-miejsce {
+  color: var(--text);
+  font-weight: 600;
+}
+:root[data-theme="dark"] .nawigacja-widok {
+  border-color: var(--obwod);
+  background: transparent;
+  color: var(--tekst);
+}
+:root[data-theme="dark"] .nawigacja-widok:hover {
+  border-color: var(--text-3);
+  background: var(--surface-2);
+  color: var(--tekst);
+}
+:root[data-theme="dark"] .pasek-gorny {
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
 :root[data-theme="dark"] .graf-suwak input[type='range'] {
-  accent-color: #a78bfa;
+  accent-color: var(--signal);
 }
 :root[data-theme="dark"] .przelacznik button.wybrany {
-  background: #2e2450;
-  color: #c4b5fd;
+  background: var(--ink);
+  color: var(--on-ink);
 }
 
-:root[data-theme="dark"] .karta-modelu:hover { border-color: #3d4553; }
+:root[data-theme="dark"] .karta-modelu:hover { border-color: var(--text-3); }
 :root[data-theme="dark"] .karta-modelu-wybrana {
-  border-color: #8b5cf6;
-  box-shadow: inset 0 0 0 1px #8b5cf6;
-  background: #1e1a2e;
+  border-color: var(--signal-line);
+  box-shadow: inset 0 0 0 1px var(--signal-line);
+  background: var(--signal-soft);
 }
 
-:root[data-theme="dark"] .gdzie-lokalny { background: #14301f; color: #6ee7a8; }
-:root[data-theme="dark"] .gdzie-chmura { background: #1c2140; color: #a5b4fc; }
-:root[data-theme="dark"] .znacznik-koszt { background: #1f242e; color: #9aa2b1; }
+:root[data-theme="dark"] .gdzie-lokalny {
+  border: 1px solid var(--ok);
+  background: transparent;
+  color: var(--ok);
+}
+:root[data-theme="dark"] .gdzie-chmura,
+:root[data-theme="dark"] .znacznik-koszt {
+  border: 1px solid var(--obwod);
+  background: transparent;
+  color: var(--text-2);
+}
+:root[data-theme="dark"] .gdzie-lokalny,
+:root[data-theme="dark"] .gdzie-chmura,
+:root[data-theme="dark"] .znacznik-koszt {
+  font-family: var(--font-data);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+}
 
 :root[data-theme="dark"] .ostrzezenie-nieodwracalne {
-  border-color: #5a2a2a;
-  background: #2a1212;
-  color: #ff8f8f;
+  border: none;
+  border-left: 2px solid var(--warn);
+  border-radius: 0 var(--r-control) var(--r-control) 0;
+  background: var(--warn-soft);
+  color: var(--warn);
 }
-:root[data-theme="dark"] .ostrzezenie-nieodwracalne strong { color: #ffb4b4; }
+:root[data-theme="dark"] .ostrzezenie-nieodwracalne strong {
+  color: var(--warn);
+  font-weight: 600;
+}
 
 :root[data-theme="dark"] .etap-krok.aktywny {
-  border-color: #8b5cf6;
-  background: #1e1a2e;
-  box-shadow: inset 0 0 0 1px #8b5cf6;
+  border-color: var(--signal-line);
+  background: var(--signal-soft);
+  box-shadow: inset 0 0 0 1px var(--signal-line);
 }
 :root[data-theme="dark"] .etap-krok.ukonczony {
-  background: #12241a;
-  border-color: #2f6b45;
+  background: rgba(82, 240, 191, 0.07);
+  border-color: rgba(82, 240, 191, 0.4);
 }
 :root[data-theme="dark"] .etap-numer {
-  background: #2a2f3a;
-  color: #c9cfd9;
+  background: var(--surface-2);
+  color: var(--text-2);
 }
 :root[data-theme="dark"] .etap-krok.aktywny .etap-numer {
-  background: #8b5cf6;
-  color: #12101c;
+  background: var(--signal);
+  color: var(--on-ink);
 }
-:root[data-theme="dark"] .etap-krok.ukonczony .etap-numer { color: #0b1a10; }
-:root[data-theme="dark"] .etap-znacznik.wymagany { color: #c4b5fd; }
-:root[data-theme="dark"] .etap-panel-opis { color: #9aa2b1; }
+:root[data-theme="dark"] .etap-krok.ukonczony .etap-numer { color: var(--on-ink); }
+:root[data-theme="dark"] .etap-znacznik.wymagany { color: var(--signal-text); }
+:root[data-theme="dark"] .etap-panel-opis { color: var(--przygaszony); }
 
 :root[data-theme="dark"] .nota-wyjasnienie {
-  border-color: #24406e;
-  background: #101a2e;
-  color: #93c5fd;
+  border: none;
+  border-left: 2px solid var(--signal);
+  border-radius: 0 var(--r-control) var(--r-control) 0;
+  background: var(--surface);
+  color: var(--text-2);
 }
 :root[data-theme="dark"] .nota-gotowe {
-  border-color: #2f6b45;
-  background: #12241a;
-  color: #6ee7a8;
+  border-color: rgba(82, 240, 191, 0.4);
+  background: rgba(82, 240, 191, 0.07);
+  color: var(--ok);
 }
 :root[data-theme="dark"] .znacznik-nazywo {
-  background: #14301f;
-  color: #6ee7a8;
+  background: transparent;
+  border: 1px solid var(--ok);
+  color: var(--ok);
 }
 
 /* themeified */

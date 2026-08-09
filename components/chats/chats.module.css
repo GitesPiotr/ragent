@@ -106,10 +106,12 @@
   border-color: #a78bfa;
 }
 
+/* gap: 0 — wiersze rozdziela teraz kreska (.convItem::after). Dwa mechanizmy
+   rozdzielania naraz robily balagan. */
 .convList {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 0;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
@@ -125,10 +127,41 @@
   width: 100%;
   min-width: 0;
   overflow: hidden;
-  padding: 8px 6px 8px 10px;
+  /* WYSOKOSC WIERSZA ≈ 81px, liczona od tytulu do tytulu nastepnego wiersza.
+     Blok tekstu ma 44.6px (19.6 tytul + 6 odstep + 19 metadane — patrz
+     .convTitle i .convMeta), wiec 2 × 18px paddingu daje 80.6px.
+     Punkt odniesienia: 62px przed ta seria poprawek, czyli 130%.
+
+     min-height jest zabezpieczeniem dla TRYBU ZMIANY NAZWY: tam zamiast
+     dwuliniowego tekstu stoi jednoliniowe pole (~28px) i bez tego wiersz
+     kurczylby sie o kilkanascie pikseli w trakcie edycji. Trzymac zgodnie
+     z paddingiem: min-height ≈ blok tekstu + 2 × padding. */
+  padding: 18px 10px;
+  min-height: 80px;
   border-left: 3px solid transparent;
   border-radius: 8px;
   background: transparent;
+}
+
+/* KRESKA MIEDZY WIERSZAMI jako pseudoelement, nie border-bottom.
+   Wsunieta o padding, wiec nie dotyka krawedzi i NIE jedzie po
+   border-radius: 8px — zaokraglenie zostaje dla tla hover i wiersza
+   aktywnego, a linia jest prosta. */
+.convItem::after {
+  content: "";
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 0;
+  height: 1px;
+  background: #f4f4f5;
+}
+
+/* Dzieci .convList to [naglowek?, ...przypiete, naglowek?, ...reszta], wiec
+   :last-child trafia w ostatni wiersz calej listy. Ostatni wiersz grupy
+   „Przypiete" kreske zachowuje — oddziela ja od naglowka „Ostatnie". */
+.convItem:last-child::after {
+  display: none;
 }
 
 .convItem:hover {
@@ -276,9 +309,17 @@
   overflow: hidden;
 }
 
+/* TYTUL MA DOMINOWAC. 14px/600 w kolorze tekstu glownego, a wszystko pod nim
+   cofa sie do 11.5px w kolorze przygaszonym. Wczesniej tytul mial 13px, a
+   nazwa rozmowcy dokladnie ten sam kolor i te sama wage — i tytul ginal. */
+/* line-height JAWNIE, nie `normal`. Bez tego wysokosc wiersza zalezy od
+   metryk kroju, a te sa inne w kazdym motywie (Geist w jasnym, Instrument
+   Sans w ciemnym) — i nie da sie policzyc, ile wiersz ma naprawde miec.
+   1.4 × 14px = 19.6px. */
 .convTitle {
   display: block;
-  font-size: 13px;
+  font-size: 14px;
+  line-height: 1.4;
   font-weight: 600;
   color: #18181b;
   overflow: hidden;
@@ -286,14 +327,24 @@
   white-space: nowrap;
 }
 
+/* gap: 0, nie 5px — w wierszu z wytlumiona nazwa blok rozmowcy ma zerowa
+   szerokosc, ale gap i tak by go liczyl i data zaczynalaby sie 5px od lewej,
+   czyli nie rowno z tytulem. Odstep przed data przywraca .runnerName
+   (margin-right nizej) tylko wtedy, gdy nazwa faktycznie jest. */
+/* min-height rowna wiersze: sam tekst daje 16.1px (1.4 × 11.5), ale wiersz
+   z plakietka „Model AI" ma 19px w ciemnym (10px × 1.5 + padding + ramka)
+   i 17px w jasnym, gdzie plakietka ramki nie ma. Bez tego wiersze
+   roznilyby sie wysokoscia zaleznie od typu rozmowy i od motywu. */
 .convMeta {
   display: flex;
   align-items: center;
-  gap: 5px;
-  margin-top: 2px;
+  gap: 0;
+  margin-top: 6px;
+  min-height: 19px;
   min-width: 0;
   font-size: 11.5px;
-  color: #71717a;
+  line-height: 1.4;
+  color: #a1a1aa;
 }
 
 .convDate {
@@ -490,8 +541,50 @@
   padding: 1px 6px;
 }
 
+/* PLAKIETKA „AGENT" ZNIKA Z WIERSZA LISTY.
+   Wszystkie rozmowy na tej liscie sa z agentem, a role niesie juz awatar —
+   plakietka tylko zabierala miejsce w linii metadanych, ktora ma zmiescic
+   nazwe i date w kolumnie szerokiej na 260px.
+
+   `.runnerCompact` trafia WYLACZNIE na wiersz listy (ConversationRow.js:185 —
+   jedyne miejsce, gdzie RunnerLabel dostaje `compact`), wiec naglowek rozmowy,
+   przycisk wyboru rozmowcy i lista rozwijana zachowuja plakietke. Tam odroznia
+   ona agenta od golego modelu, czyli niesie informacje.
+
+   .chipModel i .chipDeleted ZOSTAJA: „Model AI" mowi cos, czego awatar nie mowi,
+   a czerwone „Agent" przy usunietym agencie to ostrzezenie, nie etykieta typu. */
+.runnerCompact .chipAgent {
+  display: none;
+}
+
+/* NAZWA ROZMOWCY W WIERSZU LISTY COFA SIE ZA TYTUL.
+   Bazowa .runnerName ma wage 600 i kolor tekstu glownego — i tak ma zostac
+   w naglowku rozmowy, w przycisku wyboru rozmowcy i na liscie rozwijanej.
+   Tutaj, pod tytulem, ta sama waga i ten sam kolor sprawialy, ze nazwa
+   konkurowala z tytulem. `color: inherit` bierze przygaszony kolor z .convMeta. */
 .runnerCompact .runnerName {
   font-size: 11.5px;
+  font-weight: 400;
+  /* Mocniejsza od daty: nazwa pojawia sie tylko przy ZMIANIE rozmowcy, wiec
+     kiedy juz stoi, cos znaczy. Data stoi w kazdym wierszu i zostaje slabsza. */
+  color: #71717a;
+}
+
+/* Odstep przed data — zamiast gap na .convMeta, ktory liczyl sie takze przy
+   pustej nazwie. `:not(:empty)` bo w wytlumionych wierszach renderRow
+   przekazuje runnerName="" i React nie tworzy wtedy wezla tekstowego. */
+.runnerCompact .runnerName:not(:empty) {
+  margin-right: 5px;
+}
+
+/* Blok rozmowcy NIE rozpycha sie w wierszu listy — inaczej data ladowala przy
+   prawej krawedzi, a w wierszach z wytlumiona nazwa zostawala tam sama,
+   oderwana od tytulu. W przycisku wyboru rozmowcy i na liscie rozwijanej
+   `flex: 1` zostaje (tam blok ma wypelniac szerokosc kontrolki), dlatego
+   selektor jest zlozony z .runnerCompact — ta klasa trafia tylko na wiersz
+   listy (ConversationRow.js:185). */
+.runnerCompact.runnerGrow {
+  flex: 0 1 auto;
 }
 
 .headerRight {
@@ -600,6 +693,10 @@
   color: #a1a1aa;
 }
 
+/* Fallback #6d28d9 jest inny niz zadeklarowane --purple (#4b0fb4) i nigdy sie
+   nie uruchamia, bo .page zawsze deklaruje zmienna. Zostawiony celowo: jego
+   usuniecie byloby zmiana reguly w czesci JASNEJ. W motywie ciemnym --purple
+   jest przekierowane na --signal, wiec link jest cyjanowy. */
 .msgSourceLink {
   font-size: 12.5px;
   color: var(--purple, #6d28d9);
@@ -861,302 +958,602 @@
 }
 
 /* ===================== DARK MODE ===================== */
+/* ============================================================================
+   MOTYW CIEMNY = NOWY WYGLAD (docs/prototyp.html, ekran s-czaty).
+
+   PRZEKIEROWANIE ZMIENNYCH LOKALNYCH — jedyne takie miejsce w projekcie.
+   .page deklaruje w czesci JASNEJ wlasny fiolet (--purple: #4b0fb4) i granat
+   (--navy), uzyte w 25 miejscach: 19 tutaj i 6 w Avatar.module.css. Usuniecie
+   ich zepsuloby motyw jasny, wiec zamiast tego przestawiam je na tokeny
+   globalne. Wszystkie 25 uzyc przelacza sie naraz — takze w Avatar, bo awatary
+   renderuja sie wylacznie wewnatrz .page.
+   NIE SZUKAJ wiec #4b0fb4 w blokach ciemnych: fioletu Czatow tam nie ma.
+
+   WIADOMOSCI NIE MAJA LINII Z LEWEJ — inaczej niz u mentora i w tescie agenta.
+   Prototyp (linie 220-223) daje obu rolom pudelko z ramka i rozroznia je samym
+   tlem; role niesie AWATAR, ktorego tamte dwie powierzchnie nie maja.
+
+   ODPOWIEDNIKI: .page→.chatsFrame, .msgBox→.msgBox, .msgToolBadge→.tag-machine,
+   .msgSources→.sources, .footer→.chatFoot, .emptyState→.info,
+   .chipAgent→.tag-machine, .chipModel→.tag-model, .badge/.chip→.tag.
+   ============================================================================ */
 @media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .page {
+    --purple: var(--signal);
+    --purple-light: var(--signal-soft);
+    --navy: var(--model-text);
+    --navy-light: var(--model-soft);
+
+    border-radius: var(--r-shell);
+    border-color: var(--line);
+    background: var(--surface);
+    box-shadow: none;
+  }
+
   :root:not([data-theme="light"]) .convTitle,
   :root:not([data-theme="light"]) .title,
   :root:not([data-theme="light"]) .runnerName,
-  :root:not([data-theme="light"]) .msgBox {
-    color: #ededed;
+  :root:not([data-theme="light"]) .msgBox,
+  :root:not([data-theme="light"]) .actionItem {
+    color: var(--text);
   }
 
-  :root:not([data-theme="light"]) .convMeta,
+  :root:not([data-theme="light"]) .convTitle,
+  :root:not([data-theme="light"]) .runnerName {
+    font-weight: 500;
+  }
+
+  :root:not([data-theme="light"]) .title,
+  :root:not([data-theme="light"]) .titleInput {
+    font-weight: 600;
+  }
+
   :root:not([data-theme="light"]) .counter,
-  :root:not([data-theme="light"]) .convDate,
   :root:not([data-theme="light"]) .hint,
   :root:not([data-theme="light"]) .listInfo,
-  :root:not([data-theme="light"]) .emptyState {
-    color: #a1a1aa;
+  :root:not([data-theme="light"]) .emptyState,
+  :root:not([data-theme="light"]) .empty,
+  :root:not([data-theme="light"]) .loaderRow,
+  :root:not([data-theme="light"]) .msgSourceDoc,
+  :root:not([data-theme="light"]) .dropdownPlaceholder,
+  :root:not([data-theme="light"]) .dropdownEmpty,
+  :root:not([data-theme="light"]) .caret {
+    color: var(--text-3);
+  }
+
+  /* MONO WYLACZNIE NA DACIE. Wczesniej --font-data siedzialo na .convMeta
+     i schodzilo dziedziczeniem takze na nazwe rozmowcy — mono jest szersze
+     i ciezsze, wiec nazwa konkurowala z tytulem. */
+  :root:not([data-theme="light"]) .convMeta {
+    color: var(--text-3);
+  }
+
+  :root:not([data-theme="light"]) .convDate {
+    color: var(--text-3);
+    font-family: var(--font-data);
+  }
+
+  /* Przebija :root:not(...) .runnerName { color: var(--text) } z etapu 3
+     (swoistosc 0,4,0 kontra 0,3,0) — tylko w wierszu listy.
+     --text-2, nie --text-3: nazwa ma byc mocniejsza od daty. */
+  :root:not([data-theme="light"]) .runnerCompact .runnerName {
+    color: var(--text-2);
+    font-weight: 400;
+  }
+
+  :root:not([data-theme="light"]) .convItem::after {
+    background: var(--line-soft);
+  }
+
+  /* .eyebrow */
+  :root:not([data-theme="light"]) .groupLabel,
+  :root:not([data-theme="light"]) .dropdownGroupLabel,
+  :root:not([data-theme="light"]) .msgSourcesTitle {
+    color: var(--text-3);
+    font-family: var(--font-data);
+    font-weight: 500;
+    letter-spacing: 0.14em;
   }
 
   :root:not([data-theme="light"]) .search,
   :root:not([data-theme="light"]) .input,
   :root:not([data-theme="light"]) .dropdownButton,
-  :root:not([data-theme="light"]) .titleInput {
-    background: #17171c;
-    border-color: #3f3f46;
-    color: #ededed;
+  :root:not([data-theme="light"]) .titleInput,
+  :root:not([data-theme="light"]) .renameInput {
+    border-radius: var(--r-control);
+    border: 1px solid var(--line);
+    background: var(--bg-2);
+    color: var(--text);
+    transition: border-color 0.16s var(--ease);
   }
 
+  :root:not([data-theme="light"]) .search:hover,
+  :root:not([data-theme="light"]) .input:hover,
+  :root:not([data-theme="light"]) .dropdownButton:hover {
+    border-color: var(--text-3);
+  }
+
+  :root:not([data-theme="light"]) .search::placeholder,
+  :root:not([data-theme="light"]) .input::placeholder {
+    color: var(--text-3);
+  }
+
+  :root:not([data-theme="light"]) .search:focus,
+  :root:not([data-theme="light"]) .input:focus,
+  :root:not([data-theme="light"]) .dropdownButton:focus,
+  :root:not([data-theme="light"]) .titleInput:focus,
+  :root:not([data-theme="light"]) .renameInput:focus {
+    outline-color: var(--signal);
+    border-color: var(--signal-line);
+  }
+
+  /* Dzialania uzytkownika sa NEUTRALNE — .btn-primary, nie akcent.
+     filter: none kasuje brightness(1.08) z reguly bazowej. */
+  :root:not([data-theme="light"]) .newButton,
+  :root:not([data-theme="light"]) .sendButton {
+    padding: 9px 15px;
+    border-radius: var(--r-control);
+    background: var(--ink);
+    color: var(--on-ink);
+    font-weight: 500;
+    transition: opacity 0.16s var(--ease);
+  }
+
+  :root:not([data-theme="light"]) .newButton:hover,
+  :root:not([data-theme="light"]) .sendButton:hover:not(:disabled) {
+    filter: none;
+    opacity: 0.86;
+  }
+
+  :root:not([data-theme="light"]) .sendButton:disabled {
+    background: var(--ink);
+    color: var(--on-ink);
+    opacity: 0.4;
+  }
+
+  /* Plakietki: .tag neutralna, .tag-machine dla agenta, .tag-model dla modelu. */
+  :root:not([data-theme="light"]) .badge,
+  :root:not([data-theme="light"]) .chip {
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--text-2);
+    font-family: var(--font-data);
+    font-weight: 400;
+    letter-spacing: 0.04em;
+  }
+
+  :root:not([data-theme="light"]) .badgeAgent,
+  :root:not([data-theme="light"]) .chipAgent {
+    border-color: var(--signal-line);
+    background: var(--signal-soft);
+    color: var(--signal-text);
+  }
+
+  :root:not([data-theme="light"]) .badgeModelName,
   :root:not([data-theme="light"]) .chipModel {
-    background: #1a2433;
-    color: #9db6d8;
+    border-color: var(--model-line);
+    background: var(--model-soft);
+    color: var(--model-text);
   }
 
-  :root:not([data-theme="light"]) .dropdownList {
-    background: #17171c;
-    border-color: #2a2a31;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  :root:not([data-theme="light"]) .badgeModel {
+    border-color: var(--line);
+    background: transparent;
+    color: var(--text-2);
   }
 
-  :root:not([data-theme="light"]) .dropdownOptionActive {
-    background: #1a1622;
+  :root:not([data-theme="light"]) .badgeDeleted,
+  :root:not([data-theme="light"]) .chipDeleted,
+  :root:not([data-theme="light"]) .deletedText,
+  :root:not([data-theme="light"]) .runnerDeleted,
+  :root:not([data-theme="light"]) .runnerDeletedTag {
+    border-color: var(--err-line);
+    background: transparent;
+    color: var(--err);
+  }
+
+  :root:not([data-theme="light"]) .dropdownList,
+  :root:not([data-theme="light"]) .actionMenu {
+    border-radius: var(--r-card);
+    border-color: var(--line);
+    background: var(--surface);
+    box-shadow: 0 10px 30px rgba(4, 6, 17, 0.55);
+  }
+
+  :root:not([data-theme="light"]) .dropdownOptionActive,
+  :root:not([data-theme="light"]) .actionItem:hover,
+  :root:not([data-theme="light"]) .actionItemActive,
+  :root:not([data-theme="light"]) .convItem:hover {
+    background: var(--surface-2);
   }
 
   :root:not([data-theme="light"]) .dropdownOptionSelected {
-    background: #221a45;
+    background: var(--signal-soft);
   }
 
-  :root:not([data-theme="light"]) .convItem:hover {
-    background: #1a1622;
+  /* Prototyp: 2px, dzis 3px. Krawedz jest deklarowana takze w spoczynku
+     (przezroczysta), wiec tekst nie skacze. */
+  :root:not([data-theme="light"]) .convItem {
+    border-left-width: 2px;
   }
 
   :root:not([data-theme="light"]) .convItemActive {
-    background: #221a45;
+    background: var(--surface-2);
   }
 
   :root:not([data-theme="light"]) .convMenuBtn {
-    color: #a1a1aa;
+    color: var(--text-3);
   }
 
   :root:not([data-theme="light"]) .convMenuBtn:hover {
-    background: #27272e;
-    color: #ededed;
-  }
-
-  :root:not([data-theme="light"]) .renameInput {
-    background: #17171c;
-    color: #ededed;
-  }
-
-  :root:not([data-theme="light"]) .actionMenu {
-    background: #17171c;
-    border-color: #2a2a31;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-  }
-
-  :root:not([data-theme="light"]) .actionItem {
-    color: #ededed;
-  }
-
-  :root:not([data-theme="light"]) .actionItem:hover,
-  :root:not([data-theme="light"]) .actionItemActive {
-    background: #1a1622;
+    background: var(--surface-2);
+    color: var(--text);
   }
 
   :root:not([data-theme="light"]) .actionDanger {
-    border-top-color: #2a2a31;
-    color: #ff8f8f;
+    border-top-color: var(--line);
+    color: var(--err);
   }
 
   :root:not([data-theme="light"]) .actionDanger:hover,
   :root:not([data-theme="light"]) .actionItemActive.actionDanger {
-    background: #2a1212;
+    background: var(--err-soft);
   }
 
   :root:not([data-theme="light"]) .msgBox {
-    background: #15131d;
-    border-color: #2a2540;
+    border-radius: var(--r-card);
+    border-color: var(--line);
+    background: var(--bg-2);
   }
 
   :root:not([data-theme="light"]) .msgUser .msgBox {
-    background: #131318;
+    background: var(--surface-2);
   }
 
-  :root:not([data-theme="light"]) .badgeModel {
-    background: #27272a;
-    color: #a1a1aa;
+  /* „uzyto: dokumenty" to dzialanie MASZYNY — .tag-machine. */
+  :root:not([data-theme="light"]) .msgToolBadge {
+    border-color: var(--signal-line);
+    background: var(--signal-soft);
+    color: var(--signal-text);
+    font-family: var(--font-data);
+    font-weight: 400;
   }
 
-  :root:not([data-theme="light"]) .badgeDeleted {
-    background: #2a1212;
-    color: #ff8f8f;
+  :root:not([data-theme="light"]) .msgSources {
+    border-top-color: var(--line-soft);
+  }
+
+  :root:not([data-theme="light"]) .msgSourceLink {
+    color: var(--signal-text);
   }
 
   :root:not([data-theme="light"]) .deleteButton {
-    background: #1c1c22;
-    border-color: #5a2a2a;
-    color: #ff8f8f;
+    padding: 6px 11px;
+    border-radius: var(--r-control);
+    border-color: var(--line);
+    background: transparent;
+    color: var(--err);
+    font-weight: 500;
+  }
+
+  :root:not([data-theme="light"]) .deleteButton:hover {
+    border-color: var(--err);
+    background: transparent;
   }
 
   :root:not([data-theme="light"]) .error,
   :root:not([data-theme="light"]) .dropdownError {
-    background: #2a1212;
-    border-color: #5a2a2a;
-    color: #ff8f8f;
+    border-radius: var(--r-control);
+    border-color: var(--err-line);
+    background: var(--err-soft);
+    color: var(--err);
+  }
+
+  :root:not([data-theme="light"]) .emptyState {
+    border-radius: var(--r-card);
+    border-color: var(--line);
   }
 
   :root:not([data-theme="light"]) .chatHeader,
   :root:not([data-theme="light"]) .footer {
-    border-color: #27272a;
+    border-color: var(--line);
   }
 
-  :root:not([data-theme="light"]) .page {
-    background: #0e0e12;
-    border-color: #27272a;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+  :root:not([data-theme="light"]) .footer {
+    background: var(--surface);
   }
 
   :root:not([data-theme="light"]) .resizer::before {
-    background: #27272a;
+    background: var(--line);
   }
 
   :root:not([data-theme="light"]) .resizer:hover::before,
   :root:not([data-theme="light"]) .resizer:focus-visible::before,
   :root:not([data-theme="light"]) .resizerActive::before {
-    background: var(--purple);
-  }
-
-  :root:not([data-theme="light"]) .footer {
-    background: #0e0e12;
+    background: var(--signal);
   }
 }
+
+:root[data-theme="dark"] .page {
+    --purple: var(--signal);
+    --purple-light: var(--signal-soft);
+    --navy: var(--model-text);
+    --navy-light: var(--model-soft);
+
+    border-radius: var(--r-shell);
+    border-color: var(--line);
+    background: var(--surface);
+    box-shadow: none;
+  }
 
 :root[data-theme="dark"] .convTitle,
   :root[data-theme="dark"] .title,
   :root[data-theme="dark"] .runnerName,
-  :root[data-theme="dark"] .msgBox {
-    color: #ededed;
+  :root[data-theme="dark"] .msgBox,
+  :root[data-theme="dark"] .actionItem {
+    color: var(--text);
   }
 
-:root[data-theme="dark"] .convMeta,
-  :root[data-theme="dark"] .counter,
-  :root[data-theme="dark"] .convDate,
+:root[data-theme="dark"] .convTitle,
+  :root[data-theme="dark"] .runnerName {
+    font-weight: 500;
+  }
+
+:root[data-theme="dark"] .title,
+  :root[data-theme="dark"] .titleInput {
+    font-weight: 600;
+  }
+
+:root[data-theme="dark"] .counter,
   :root[data-theme="dark"] .hint,
   :root[data-theme="dark"] .listInfo,
-  :root[data-theme="dark"] .emptyState {
-    color: #a1a1aa;
+  :root[data-theme="dark"] .emptyState,
+  :root[data-theme="dark"] .empty,
+  :root[data-theme="dark"] .loaderRow,
+  :root[data-theme="dark"] .msgSourceDoc,
+  :root[data-theme="dark"] .dropdownPlaceholder,
+  :root[data-theme="dark"] .dropdownEmpty,
+  :root[data-theme="dark"] .caret {
+    color: var(--text-3);
+  }
+
+:root[data-theme="dark"] .convMeta {
+    color: var(--text-3);
+  }
+
+:root[data-theme="dark"] .convDate {
+    color: var(--text-3);
+    font-family: var(--font-data);
+  }
+
+:root[data-theme="dark"] .runnerCompact .runnerName {
+    color: var(--text-2);
+    font-weight: 400;
+  }
+
+:root[data-theme="dark"] .convItem::after {
+    background: var(--line-soft);
+  }
+
+:root[data-theme="dark"] .groupLabel,
+  :root[data-theme="dark"] .dropdownGroupLabel,
+  :root[data-theme="dark"] .msgSourcesTitle {
+    color: var(--text-3);
+    font-family: var(--font-data);
+    font-weight: 500;
+    letter-spacing: 0.14em;
   }
 
 :root[data-theme="dark"] .search,
   :root[data-theme="dark"] .input,
   :root[data-theme="dark"] .dropdownButton,
-  :root[data-theme="dark"] .titleInput {
-    background: #17171c;
-    border-color: #3f3f46;
-    color: #ededed;
+  :root[data-theme="dark"] .titleInput,
+  :root[data-theme="dark"] .renameInput {
+    border-radius: var(--r-control);
+    border: 1px solid var(--line);
+    background: var(--bg-2);
+    color: var(--text);
+    transition: border-color 0.16s var(--ease);
   }
 
-:root[data-theme="dark"] .chipModel {
-    background: #1a2433;
-    color: #9db6d8;
+:root[data-theme="dark"] .search:hover,
+  :root[data-theme="dark"] .input:hover,
+  :root[data-theme="dark"] .dropdownButton:hover {
+    border-color: var(--text-3);
   }
 
-:root[data-theme="dark"] .dropdownList {
-    background: #17171c;
-    border-color: #2a2a31;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+:root[data-theme="dark"] .search::placeholder,
+  :root[data-theme="dark"] .input::placeholder {
+    color: var(--text-3);
   }
 
-:root[data-theme="dark"] .dropdownOptionActive {
-    background: #1a1622;
+:root[data-theme="dark"] .search:focus,
+  :root[data-theme="dark"] .input:focus,
+  :root[data-theme="dark"] .dropdownButton:focus,
+  :root[data-theme="dark"] .titleInput:focus,
+  :root[data-theme="dark"] .renameInput:focus {
+    outline-color: var(--signal);
+    border-color: var(--signal-line);
+  }
+
+:root[data-theme="dark"] .newButton,
+  :root[data-theme="dark"] .sendButton {
+    padding: 9px 15px;
+    border-radius: var(--r-control);
+    background: var(--ink);
+    color: var(--on-ink);
+    font-weight: 500;
+    transition: opacity 0.16s var(--ease);
+  }
+
+:root[data-theme="dark"] .newButton:hover,
+  :root[data-theme="dark"] .sendButton:hover:not(:disabled) {
+    filter: none;
+    opacity: 0.86;
+  }
+
+:root[data-theme="dark"] .sendButton:disabled {
+    background: var(--ink);
+    color: var(--on-ink);
+    opacity: 0.4;
+  }
+
+:root[data-theme="dark"] .badge,
+  :root[data-theme="dark"] .chip {
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--text-2);
+    font-family: var(--font-data);
+    font-weight: 400;
+    letter-spacing: 0.04em;
+  }
+
+:root[data-theme="dark"] .badgeAgent,
+  :root[data-theme="dark"] .chipAgent {
+    border-color: var(--signal-line);
+    background: var(--signal-soft);
+    color: var(--signal-text);
+  }
+
+:root[data-theme="dark"] .badgeModelName,
+  :root[data-theme="dark"] .chipModel {
+    border-color: var(--model-line);
+    background: var(--model-soft);
+    color: var(--model-text);
+  }
+
+:root[data-theme="dark"] .badgeModel {
+    border-color: var(--line);
+    background: transparent;
+    color: var(--text-2);
+  }
+
+:root[data-theme="dark"] .badgeDeleted,
+  :root[data-theme="dark"] .chipDeleted,
+  :root[data-theme="dark"] .deletedText,
+  :root[data-theme="dark"] .runnerDeleted,
+  :root[data-theme="dark"] .runnerDeletedTag {
+    border-color: var(--err-line);
+    background: transparent;
+    color: var(--err);
+  }
+
+:root[data-theme="dark"] .dropdownList,
+  :root[data-theme="dark"] .actionMenu {
+    border-radius: var(--r-card);
+    border-color: var(--line);
+    background: var(--surface);
+    box-shadow: 0 10px 30px rgba(4, 6, 17, 0.55);
+  }
+
+:root[data-theme="dark"] .dropdownOptionActive,
+  :root[data-theme="dark"] .actionItem:hover,
+  :root[data-theme="dark"] .actionItemActive,
+  :root[data-theme="dark"] .convItem:hover {
+    background: var(--surface-2);
   }
 
 :root[data-theme="dark"] .dropdownOptionSelected {
-    background: #221a45;
+    background: var(--signal-soft);
   }
 
-:root[data-theme="dark"] .convItem:hover {
-    background: #1a1622;
+:root[data-theme="dark"] .convItem {
+    border-left-width: 2px;
   }
 
 :root[data-theme="dark"] .convItemActive {
-    background: #221a45;
+    background: var(--surface-2);
   }
 
 :root[data-theme="dark"] .convMenuBtn {
-    color: #a1a1aa;
+    color: var(--text-3);
   }
 
 :root[data-theme="dark"] .convMenuBtn:hover {
-    background: #27272e;
-    color: #ededed;
-  }
-
-:root[data-theme="dark"] .renameInput {
-    background: #17171c;
-    color: #ededed;
-  }
-
-:root[data-theme="dark"] .actionMenu {
-    background: #17171c;
-    border-color: #2a2a31;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-  }
-
-:root[data-theme="dark"] .actionItem {
-    color: #ededed;
-  }
-
-:root[data-theme="dark"] .actionItem:hover,
-  :root[data-theme="dark"] .actionItemActive {
-    background: #1a1622;
+    background: var(--surface-2);
+    color: var(--text);
   }
 
 :root[data-theme="dark"] .actionDanger {
-    border-top-color: #2a2a31;
-    color: #ff8f8f;
+    border-top-color: var(--line);
+    color: var(--err);
   }
 
 :root[data-theme="dark"] .actionDanger:hover,
   :root[data-theme="dark"] .actionItemActive.actionDanger {
-    background: #2a1212;
+    background: var(--err-soft);
   }
 
 :root[data-theme="dark"] .msgBox {
-    background: #15131d;
-    border-color: #2a2540;
+    border-radius: var(--r-card);
+    border-color: var(--line);
+    background: var(--bg-2);
   }
 
 :root[data-theme="dark"] .msgUser .msgBox {
-    background: #131318;
+    background: var(--surface-2);
   }
 
-:root[data-theme="dark"] .badgeModel {
-    background: #27272a;
-    color: #a1a1aa;
+:root[data-theme="dark"] .msgToolBadge {
+    border-color: var(--signal-line);
+    background: var(--signal-soft);
+    color: var(--signal-text);
+    font-family: var(--font-data);
+    font-weight: 400;
   }
 
-:root[data-theme="dark"] .badgeDeleted {
-    background: #2a1212;
-    color: #ff8f8f;
+:root[data-theme="dark"] .msgSources {
+    border-top-color: var(--line-soft);
+  }
+
+:root[data-theme="dark"] .msgSourceLink {
+    color: var(--signal-text);
   }
 
 :root[data-theme="dark"] .deleteButton {
-    background: #1c1c22;
-    border-color: #5a2a2a;
-    color: #ff8f8f;
+    padding: 6px 11px;
+    border-radius: var(--r-control);
+    border-color: var(--line);
+    background: transparent;
+    color: var(--err);
+    font-weight: 500;
+  }
+
+:root[data-theme="dark"] .deleteButton:hover {
+    border-color: var(--err);
+    background: transparent;
   }
 
 :root[data-theme="dark"] .error,
 :root[data-theme="dark"] .dropdownError {
-    background: #2a1212;
-    border-color: #5a2a2a;
-    color: #ff8f8f;
+    border-radius: var(--r-control);
+    border-color: var(--err-line);
+    background: var(--err-soft);
+    color: var(--err);
+  }
+
+:root[data-theme="dark"] .emptyState {
+    border-radius: var(--r-card);
+    border-color: var(--line);
   }
 
 :root[data-theme="dark"] .chatHeader,
   :root[data-theme="dark"] .footer {
-    border-color: #27272a;
+    border-color: var(--line);
   }
 
-:root[data-theme="dark"] .page {
-    background: #0e0e12;
-    border-color: #27272a;
-    box-shadow: 0 2px 12px rgba(0, 0, 0, 0.35);
+:root[data-theme="dark"] .footer {
+    background: var(--surface);
   }
 
 :root[data-theme="dark"] .resizer::before {
-    background: #27272a;
+    background: var(--line);
   }
 
 :root[data-theme="dark"] .resizer:hover::before,
   :root[data-theme="dark"] .resizer:focus-visible::before,
   :root[data-theme="dark"] .resizerActive::before {
-    background: var(--purple);
-  }
-
-:root[data-theme="dark"] .footer {
-    background: #0e0e12;
+    background: var(--signal);
   }
 
 /* themeified */

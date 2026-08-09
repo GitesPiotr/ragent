@@ -24,14 +24,23 @@
   }
 }
 
+/* MOTYW CIEMNY = NOWY WYGLAD (docs/prototyp.html).
+   Kroj podmieniany TYLKO tutaj, nie w regule bazowej .shell — motyw jasny ma
+   zostac na Geist, zeby przelacznik w Ustawieniach pokazywal pelna roznice
+   miedzy starym a nowym wygladem. */
+/* Tlo PRZEZROCZYSTE, nie --bg: poswiata z globals.css jest namalowana na
+   body, a .shell rozciaga sie na cala strone i przykrylby ja wlasnym tlem.
+   W prototypie .shell rowniez nie ma tla. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .shell {
-    background: #0a0a0a;
+    background: transparent;
+    font-family: var(--font-ui);
   }
 }
 
 :root[data-theme="dark"] .shell {
-    background: #0a0a0a;
+    background: transparent;
+    font-family: var(--font-ui);
   }
 
 /* themeified */

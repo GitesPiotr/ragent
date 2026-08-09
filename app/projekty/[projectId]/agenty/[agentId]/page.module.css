@@ -139,8 +139,10 @@
 }
 
 @media (prefers-color-scheme: dark) {
+  /* Przezroczyste, nie #000: poswiata jest namalowana na body (globals.css),
+     a .page rozciaga sie na cala strone i przykrylaby ja wlasnym tlem. */
   :root:not([data-theme="light"]) .page {
-    background: #000;
+    background: transparent;
   }
 
   :root:not([data-theme="light"]) .saveBar {
@@ -190,7 +192,7 @@
 }
 
 :root[data-theme="dark"] .page {
-    background: #000;
+    background: transparent;
   }
 
 :root[data-theme="dark"] .saveBar {

@@ -32,11 +32,33 @@ export default function GrafPage() {
   return (
     <main className={styles["strona-szeroka"]}>
       <div className={styles["pasek-gorny"]}>
+        {/* „Mapa fragmentow" PRZENIESIONA ZE SLADU DO PRZEJSC. Stala w sciezce
+            jako rzekomy przodek grafu, a jest widokiem siostrzanym — z grafu
+            nie wychodzi sie „w gore" do mapy, tylko w bok. */}
         <nav className={styles.nawigacja}>
-          <Link href="/kreator-rag/kolekcje">Kolekcje</Link>
-          <Link href={`/kreator-rag/kolekcje/${id}`}>{nazwa || 'Kolekcja'}</Link>
-          <Link href={`/kreator-rag/kolekcje/${id}/mapa`}>Mapa</Link>
-          <span className={styles.aktywny}>Graf</span>
+          <div className={styles["nawigacja-slad"]}>
+            <Link
+              href="/kreator-rag/kolekcje"
+              className={styles["nawigacja-powrot"]}
+            >
+              Kolekcje
+            </Link>
+            <Link
+              href={`/kreator-rag/kolekcje/${id}`}
+              className={styles["nawigacja-powrot"]}
+            >
+              {nazwa || 'Kolekcja'}
+            </Link>
+            <span className={styles["nawigacja-miejsce"]}>Graf wiedzy</span>
+          </div>
+          <div className={styles["nawigacja-widoki"]}>
+            <Link
+              href={`/kreator-rag/kolekcje/${id}/mapa`}
+              className={styles["nawigacja-widok"]}
+            >
+              Mapa fragmentów →
+            </Link>
+          </div>
         </nav>
         <PrzyciskDiagnostyki />
       </div>

@@ -15,8 +15,12 @@ import PrzyciskDiagnostyki from '@/app/kreator-rag/_components/PrzyciskDiagnosty
 function Nawigacja() {
   return (
     <div className={styles["pasek-gorny"]}>
+      {/* Korzen modulu — nie ma dokad wracac ani w bok. Sam slad z biezacym
+          miejscem, zeby pasek wygladal tak samo jak na pozostalych stronach. */}
       <nav className={styles.nawigacja}>
-        <Link href="/kreator-rag/kolekcje" className={styles.aktywny}>Kolekcje</Link>
+        <div className={styles["nawigacja-slad"]}>
+          <span className={styles["nawigacja-miejsce"]}>Kolekcje</span>
+        </div>
       </nav>
       <PrzyciskDiagnostyki />
     </div>

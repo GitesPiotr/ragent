@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname, useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/client";
@@ -65,7 +66,35 @@ export function Sidebar() {
 
   return (
     <nav className={styles.sidebar}>
-      <div className={styles.brand}>AIdeas</div>
+      {/* OBA WARIANTY SIEDZA W DOM, przelacza je CSS — a nie odczyt motywu w JS.
+          Gdyby o wyborze decydowal JavaScript, przy pierwszym renderze (jeszcze
+          bez data-theme) trzeba by zgadywac, a przy „auto" zgadnac sie nie da.
+
+          Napis w logo jest cyjanowo-bialy: na jasnym pasku #fbfaff daje 1,28:1
+          i 1,02:1, czyli jest niewidoczny. Dlatego w motywie jasnym zostaje stary
+          tekst, dopoki jasny nie zostanie przerobiony (etap 4b).
+
+          alt na obrazie niesie nazwe, tekst zapasowy jest aria-hidden — inaczej
+          czytnik ekranu przeczytalby obie nazwy pod rzad.
+
+          BEZ priority, choc logo stoi nad zgieciem. priority dokłada do <head>
+          wstepne pobranie, ktore w motywie jasnym pobieraloby obraz nigdy nie
+          pokazany — z ostrzezeniem w konsoli o nieuzytym preloadzie. Domyslne
+          leniwe ladowanie zachowuje sie tu lepiej: w ciemnym obraz jest w polu
+          widzenia, wiec i tak rusza od razu, a w jasnym display: none sprawia,
+          ze nie rusza wcale. */}
+      <Link href="/projekty" className={styles.brand} aria-label="RAGent — Projekty">
+        <Image
+          src="/ragent-pelne.png"
+          alt="RAGent"
+          width={152}
+          height={195}
+          className={styles.brandLogo}
+        />
+        <span className={styles.brandTekst} aria-hidden="true">
+          AIdeas
+        </span>
+      </Link>
 
       <div className={styles.group}>
         <span className={styles.groupLabel}>Obszar roboczy</span>
