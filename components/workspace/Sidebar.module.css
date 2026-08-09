@@ -31,11 +31,32 @@
   gap: 24px;
 }
 
+/* .brand jest teraz odnosnikiem na /projekty, nie martwym <div>. Wlasnosci
+   wygladu (rozmiar, grubosc, kolor, swiatlo) sa te same co dotad, wiec motyw
+   jasny wyglada bez zmian — doszly wylacznie wlasnosci ukladu.
+
+   align-self: flex-start, bo .sidebar to kolumna z domyslnym stretch: bez tego
+   odnosnik rozciagalby sie na cala szerokosc paska i klikniecie w pusta przestrzen
+   obok napisu przenosiloby na /projekty. W ciemnym jest odwrotnie — patrz nizej. */
 .brand {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
   font-size: 18px;
   font-weight: 800;
   color: #6d28d9;
   letter-spacing: -0.02em;
+}
+
+/* WIDOCZNOSC WARIANTOW MARKI. Regula bazowa = motyw jasny, bo bazowy :root
+   w globals.css jest jasny (--background: #ffffff). Logo wlacza sie dopiero
+   w blokach ciemnych — a te lapia takze tryb „auto" na ciemnym systemie,
+   dzieki czlonowi :not([data-theme="light"]). Nie odwracac tego warunku:
+   przy „auto" na jasnym systemie atrybutu na <html> NIE MA, wiec regula
+   oparta na [data-theme="light"] nie mialaby czego zlapac i cyjanowy napis
+   stanalby na bialym pasku przy kontrascie 1,28:1. */
+.brandLogo {
+  display: none;
 }
 
 .group {
@@ -118,9 +139,28 @@
     border-right-color: var(--line);
   }
 
+  /* UKLAD PIONOWY TYLKO W CIEMNYM. Logo jest wysokim blokiem (152x195), wiec
+     stoi wysrodkowane w kolumnie. align-self: stretch cofa flex-start z reguly
+     bazowej — bez tego .brand zwezalby sie do 152px przy 188px dostepnych
+     i align-items: center nie mialby czego wysrodkowywac.
+
+     Te dwie wlasnosci NIE MOGA stac w regule bazowej: w motywie jasnym dzieckiem
+     jest sam tekst „AIdeas", wiec wysrodkowanie przesunieteloby go na srodek
+     paska — a jasny ma zostac nietkniety do etapu 4b. */
   :root:not([data-theme="light"]) .brand {
+    align-self: stretch;
+    flex-direction: column;
+    align-items: center;
     color: var(--signal-text);
     font-weight: 700;
+  }
+
+  :root:not([data-theme="light"]) .brandLogo {
+    display: block;
+  }
+
+  :root:not([data-theme="light"]) .brandTekst {
+    display: none;
   }
 
   :root:not([data-theme="light"]) .groupLabel {
@@ -162,8 +202,19 @@
   }
 
 :root[data-theme="dark"] .brand {
+    align-self: stretch;
+    flex-direction: column;
+    align-items: center;
     color: var(--signal-text);
     font-weight: 700;
+  }
+
+:root[data-theme="dark"] .brandLogo {
+    display: block;
+  }
+
+:root[data-theme="dark"] .brandTekst {
+    display: none;
   }
 
 :root[data-theme="dark"] .groupLabel {

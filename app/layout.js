@@ -42,7 +42,7 @@ const ibmPlexMono = IBM_Plex_Mono({
 });
 
 export const metadata = {
-  title: "AIdeas — Kreator Agenta AI",
+  title: "RAGent",
   description: "Moduł 1: kreator agenta AI z mentorem",
 };
 
