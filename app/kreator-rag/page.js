@@ -1,5 +1,29 @@
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/server";
+import { listCollections } from "@/lib/rag/collections.js";
+import { odmianaKolekcji } from "./_lib/odmianaKolekcji.js";
 import styles from "./wejscie.module.css";
+
+// Ile kolekcji ma to konto. Zwraca null, gdy NIE WIADOMO — a to jest osobny
+// stan od zera i nie wolno ich mylić: „Nie masz jeszcze żadnej kolekcji"
+// powiedziane komuś, kto ma dziesięć, a tylko baza nie odpowiedziała, jest
+// po prostu nieprawdą.
+//
+// Odczyt idzie klientem z SESJĄ użytkownika, nie kluczem service_role — ten
+// drugi ma BYPASSRLS i policzyłby cudze kolekcje razem z własnymi
+// (uzasadnienie w app/api/rag/_lib/klientSesji.js).
+async function policzKolekcje() {
+  try {
+    const client = await createClient();
+    if (!client) return null;
+    const kolekcje = await listCollections({}, { client });
+    return kolekcje.length;
+  } catch {
+    // Ekran wejściowy ma się pokazać nawet wtedy, gdy baza milczy. Licznik
+    // jest dodatkiem, nie warunkiem wejścia do zakładki.
+    return null;
+  }
+}
 
 // EKRAN WEJŚCIOWY KRETORA RAG. Dwie karty: instrukcja i praca.
 //
@@ -33,16 +57,19 @@ export const metadata = {
   title: "Kreator RAG — RAGent",
 };
 
-export default function KreatorRagPage() {
+export default async function KreatorRagPage() {
+  const liczbaKolekcji = await policzKolekcje();
+  const maKolekcje = liczbaKolekcji > 0;
+
   return (
     <div className={styles.wejscie}>
       <header className={styles.naglowek}>
         <div className={styles.nadtytul}>Obszar roboczy · Kreator RAG</div>
         <h1 className={styles.tytul}>Baza wiedzy dla twoich agentów</h1>
         <p>
-          Wgraj własne dokumenty, żeby agent odpowiadał z nich, a nie z pamięci
-          modelu. Zacznij od instrukcji — pięć minut oszczędzi ci godziny
-          zgadywania, dlaczego agent nie znajduje odpowiedzi.
+          {maKolekcje
+            ? "Wróć do swoich kolekcji albo załóż nową. Instrukcja jest zawsze pod ręką."
+            : "Wgraj własne dokumenty, żeby agent odpowiadał z nich, a nie z pamięci modelu. Zacznij od instrukcji — pięć minut oszczędzi ci godziny zgadywania, dlaczego agent nie znajduje odpowiedzi."}
         </p>
       </header>
 
@@ -109,10 +136,11 @@ export default function KreatorRagPage() {
             </svg>
           </div>
 
-          <h2>Zbuduj bazę wektorową</h2>
+          <h2>{maKolekcje ? "Twoje kolekcje" : "Zbuduj bazę wektorową"}</h2>
           <p className={styles.opisKarty}>
-            Załóż kolekcję, wgraj dokumenty i zindeksuj je. Po tym kroku możesz
-            podpiąć bazę do dowolnego agenta i zacząć z nim rozmawiać.
+            {maKolekcje
+              ? "Wróć do kolekcji, dołóż dokumenty albo załóż nową bazę dla kolejnego agenta."
+              : "Załóż kolekcję, wgraj dokumenty i zindeksuj je. Po tym kroku możesz podpiąć bazę do dowolnego agenta i zacząć z nim rozmawiać."}
           </p>
 
           <ul className={styles.punkty}>
@@ -122,18 +150,39 @@ export default function KreatorRagPage() {
           </ul>
 
           <div className={styles.dolKarty}>
-            <span className={styles.przyciskCichy}>Otwórz Kreator RAG</span>
+            <span className={styles.przyciskCichy}>
+              {maKolekcje ? "Przejdź do kolekcji" : "Otwórz Kreator RAG"}
+            </span>
           </div>
 
-          <div className={styles.stanKolekcji}>Nie masz jeszcze żadnej kolekcji.</div>
+          {/* Przy nieznanym liczniku (null) NIE MA TU NIC. Zdanie „Nie masz
+              jeszcze żadnej kolekcji" powiedziane komuś, kto ma dziesięć,
+              a tylko baza nie odpowiedziała, byłoby nieprawdą. Cisza jest
+              uczciwsza niż zgadywanie. */}
+          {liczbaKolekcji === null ? null : (
+            <div className={styles.stanKolekcji}>
+              {maKolekcje ? (
+                <>
+                  <b>{liczbaKolekcji}</b> {odmianaKolekcji(liczbaKolekcji)}
+                </>
+              ) : (
+                "Nie masz jeszcze żadnej kolekcji."
+              )}
+            </div>
+          )}
         </Link>
       </div>
 
-      <div className={styles.przypis}>
-        <b>Zanim wgrasz pliki:</b> najczęstszy powód, dla którego agent „nie
-        widzi” dokumentów, to pominięte indeksowanie. Wgranie tworzy fragmenty,
-        ale przeszukiwalne stają się dopiero po kliknięciu <b>Indeksuj</b>.
-      </div>
+      {/* Przypis o indeksowaniu ma sens dla kogoś, kto jeszcze nie wgrywał.
+          Przy nieznanym liczniku zostaje — lepiej powiedzieć o tym drugi raz
+          niż nie powiedzieć wcale. */}
+      {maKolekcje ? null : (
+        <div className={styles.przypis}>
+          <b>Zanim wgrasz pliki:</b> najczęstszy powód, dla którego agent „nie
+          widzi” dokumentów, to pominięte indeksowanie. Wgranie tworzy fragmenty,
+          ale przeszukiwalne stają się dopiero po kliknięciu <b>Indeksuj</b>.
+        </div>
+      )}
     </div>
   );
 }
