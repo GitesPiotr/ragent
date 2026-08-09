@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RAGent — Jak przygotować dokumenty</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+<!--
+  ==========================================================================
+  RAGent — samouczek "Jak przygotować dokumenty", do Kreatora RAG.
+
+  UWAGA PRZY IMPLEMENTACJI:
+  Wszystkie tokeny są zadeklarowane na .samouczek, NIGDY w :root.
+  Ta sama zasada, co przy ekranie logowania — inaczej --line i --bg
+  przemalowałyby całą aplikację. Tutaj nazwy są celowo zgodne
+  z globalnymi, bo w aplikacji cały ten blok deklaracji WYPADA:
+  komponent dziedziczy tokeny z .shell. Zostawiony tylko po to,
+  żeby prototyp dało się otworzyć z dysku.
+
+  Stan do przeniesienia na useState (trzy sztuki):
+    wersja      'zle' | 'dobrze'   — przełącznik dokumentu
+    pytanie     null | id pytania  — które pytanie zadano
+    rozwiniete  Set(id)            — które zasady są rozwinięte
+
+  Dane fragmentów i pytań leżą w stałej DEMO na dole pliku —
+  w aplikacji idą do osobnego modułu _lib/demoFragmenty.js,
+  bez DOM, żeby dały się przetestować.
+  ==========================================================================
+-->
+
+<style>
+.samouczek{
+  /* ===== W APLIKACJI TEN BLOK USUNĄĆ — tokeny dziedziczą się z .shell ===== */
+  --bg:#040611; --bg-2:#080d1d; --surface:#0C1428; --surface-2:#101C36;
+  --line:#213B63; --line-soft:#16294a;
+  --text:#F3FBFF; --text-2:#9DB3C9; --text-3:#7890AA;
+  --ink:#F3FBFF; --on-ink:#040611;
+  --signal:#35DCFF; --signal-soft:rgba(53,220,255,.10); --signal-line:rgba(53,220,255,.35);
+  --model:#8A6CFF; --model-soft:rgba(138,108,255,.10);
+  --ok:#52F0BF; --ok-soft:rgba(82,240,191,.10); --ok-line:rgba(82,240,191,.32);
+  --warn:#D8B46A; --warn-soft:rgba(216,180,106,.10); --warn-line:rgba(216,180,106,.32);
+  --err:#ff6673; --err-soft:rgba(255,102,115,.10); --err-line:rgba(255,102,115,.32);
+  --font-ui:'Instrument Sans',system-ui,sans-serif;
+  --font-data:'IBM Plex Mono',ui-monospace,monospace;
+  --r-card:12px;
+  /* ===== koniec bloku do usunięcia ===== */
+
+  font-family:var(--font-ui);
+  color:var(--text);
+  background:var(--bg);
+  max-width:940px;
+  margin:0 auto;
+  padding:48px 24px 96px;
+  line-height:1.55;
+}
+.samouczek *{box-sizing:border-box}
+
+/* ---------- nagłówki ---------- */
+.naglowek{margin-bottom:40px}
+.nadtytul{
+  font-family:var(--font-data); font-size:11px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--text-3); margin-bottom:10px;
+}
+.naglowek h1{font-size:34px; line-height:1.15; margin:0 0 12px; font-weight:700; letter-spacing:-.01em}
+.naglowek p{margin:0; color:var(--text-2); font-size:16px; max-width:62ch}
+
+.sekcja{margin-top:56px}
+.sekcja > h2{
+  font-size:20px; font-weight:600; margin:0 0 6px; letter-spacing:-.005em;
+}
+.sekcja > .wstep{margin:0 0 22px; color:var(--text-2); max-width:64ch}
+
+/* ---------- czym jest RAG ---------- */
+.wyjasnienie{
+  border:1px solid var(--line); border-radius:var(--r-card);
+  background:var(--surface); padding:22px 24px;
+}
+.wyjasnienie p{margin:0 0 12px; color:var(--text-2); font-size:15px; max-width:70ch}
+.wyjasnienie p:last-of-type{margin-bottom:0}
+.wyjasnienie strong{color:var(--text); font-weight:600}
+.rozwiniecie{
+  font-family:var(--font-data); font-size:12px; color:var(--text-3);
+  padding-top:14px; margin-top:16px; border-top:1px solid var(--line-soft);
+}
+
+.kroki{display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin-top:14px}
+@media (max-width:700px){ .kroki{grid-template-columns:1fr} }
+.krok{
+  border:1px solid var(--line); border-radius:var(--r-card);
+  background:var(--surface); padding:16px 18px;
+}
+.krok .nr{
+  font-family:var(--font-data); font-size:11px; color:var(--signal);
+  letter-spacing:.1em; display:block; margin-bottom:8px;
+}
+.krok h3{font-size:14.5px; margin:0 0 5px; font-weight:600}
+.krok p{margin:0; font-size:13px; color:var(--text-3); line-height:1.55}
+
+/* ---------- uwaga ---------- */
+.uwaga{border:1px solid var(--warn-line); background:var(--warn-soft);
+  border-radius:var(--r-card); padding:16px 18px; margin-top:16px}
+.uwaga .tytul{display:block; font-weight:600; font-size:14.5px; color:var(--warn); margin-bottom:6px}
+.uwaga p{margin:0; font-size:14px; color:var(--text-2); max-width:70ch}
+.uwaga p + p{margin-top:10px}
+.uwaga code{font-family:var(--font-data); font-size:12.5px; color:var(--text);
+  background:var(--bg-2); padding:1px 6px; border-radius:5px; border:1px solid var(--line)}
+
+/* ---------- tabela formatow ---------- */
+.tabelaFormatow{width:100%; border-collapse:collapse; border:1px solid var(--line);
+  border-radius:var(--r-card); overflow:hidden; background:var(--surface); font-size:14px}
+.tabelaFormatow th{text-align:left; font-family:var(--font-data); font-size:10.5px;
+  letter-spacing:.1em; text-transform:uppercase; color:var(--text-3);
+  font-weight:500; padding:12px 16px; background:var(--bg-2);
+  border-bottom:1px solid var(--line-soft)}
+.tabelaFormatow td{padding:13px 16px; border-bottom:1px solid var(--line-soft);
+  color:var(--text-2); vertical-align:top}
+.tabelaFormatow tr:last-child td{border-bottom:0}
+.tabelaFormatow .fmt{font-family:var(--font-data); color:var(--text); font-size:13px; white-space:nowrap}
+.tabelaFormatow code{font-family:var(--font-data); font-size:12px; color:var(--text)}
+.znacznik{font-size:12px; font-weight:600; white-space:nowrap; display:block; margin-bottom:3px}
+.znacznik.pewne{color:var(--ok)}
+.znacznik.zgadywane{color:var(--warn)}
+.znacznik.brak{color:var(--text-3)}
+@media (max-width:700px){
+  .tabelaFormatow thead{display:none}
+  .tabelaFormatow td{display:block; border-bottom:0; padding:4px 16px}
+  .tabelaFormatow tr{display:block; padding:12px 0; border-bottom:1px solid var(--line-soft)}
+}
+.nieczyta{margin-top:12px; border:1px solid var(--err-line); background:var(--err-soft);
+  border-radius:var(--r-card); padding:14px 18px}
+.nieczyta .tytul{display:block; font-weight:600; font-size:14px; color:var(--err); margin-bottom:6px}
+.nieczyta p{margin:0; font-size:13.5px; color:var(--text-2)}
+.nieczyta .lista{font-family:var(--font-data); font-size:13px; color:var(--text); margin-top:8px}
+.podDemo{margin:10px 0 0; font-size:12.5px; color:var(--text-3); font-family:var(--font-data)}
+
+/* ---------- demo cięcia (element sygnaturowy) ---------- */
+.demo{
+  border:1px solid var(--line); border-radius:var(--r-card);
+  background:var(--surface); overflow:hidden;
+}
+.demoPasek{
+  display:flex; align-items:center; gap:4px;
+  padding:10px 12px; border-bottom:1px solid var(--line-soft);
+  background:var(--bg-2);
+}
+.demoPasek .etykieta{
+  font-family:var(--font-data); font-size:11px; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--text-3); margin-right:auto;
+}
+.przelacznik{
+  font:inherit; font-size:13px; font-weight:500;
+  padding:6px 12px; border-radius:8px; cursor:pointer;
+  background:transparent; border:1px solid transparent; color:var(--text-2);
+}
+.przelacznik:hover{color:var(--text)}
+.przelacznik[aria-pressed="true"]{
+  background:var(--surface-2); border-color:var(--line); color:var(--text);
+}
+
+.demoCialo{display:grid; grid-template-columns:1.35fr 1fr}
+@media (max-width:760px){ .demoCialo{grid-template-columns:1fr} }
+
+.dokument{padding:18px; border-right:1px solid var(--line-soft)}
+@media (max-width:760px){ .dokument{border-right:0; border-bottom:1px solid var(--line-soft)} }
+
+.fragment{
+  position:relative;
+  border:1px dashed var(--line); border-radius:8px;
+  padding:12px 12px 12px 44px; margin-bottom:8px;
+  font-size:13.5px; color:var(--text-2); line-height:1.6;
+  transition:border-color .18s, background .18s, color .18s;
+}
+.fragment .nr{
+  position:absolute; left:12px; top:12px;
+  font-family:var(--font-data); font-size:11px; color:var(--text-3);
+}
+.fragment .tytul{
+  display:block; font-weight:600; color:var(--text); margin-bottom:3px; font-size:13.5px;
+}
+.fragment.trafiony{
+  border-style:solid; border-color:var(--signal-line);
+  background:var(--signal-soft); color:var(--text);
+}
+.fragment.trafiony .nr{color:var(--signal)}
+.fragment mark{background:rgba(53,220,255,.22); color:var(--text); border-radius:3px; padding:0 2px}
+
+.panelPytan{padding:18px; display:flex; flex-direction:column; gap:8px}
+.panelPytan .etykieta{
+  font-family:var(--font-data); font-size:11px; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--text-3); margin-bottom:2px;
+}
+.pytanie{
+  font:inherit; font-size:13.5px; text-align:left; cursor:pointer;
+  padding:10px 12px; border-radius:8px;
+  background:var(--surface-2); border:1px solid var(--line); color:var(--text-2);
+}
+.pytanie:hover{border-color:var(--signal-line); color:var(--text)}
+.pytanie[aria-pressed="true"]{border-color:var(--signal-line); color:var(--text); background:var(--signal-soft)}
+
+.werdykt{
+  margin-top:6px; padding:12px; border-radius:8px; font-size:13px; line-height:1.55;
+  border:1px solid var(--line); background:var(--bg-2); color:var(--text-2);
+}
+.werdykt.tak{border-color:var(--ok-line); background:var(--ok-soft)}
+.werdykt.nie{border-color:var(--err-line); background:var(--err-soft)}
+.werdykt b{display:block; margin-bottom:3px; font-size:13px}
+.werdykt.tak b{color:var(--ok)}
+.werdykt.nie b{color:var(--err)}
+.werdykt.pusty{color:var(--text-3); font-style:italic}
+
+/* ---------- zasady ---------- */
+.zasady{display:flex; flex-direction:column; gap:10px}
+.zasada{
+  border:1px solid var(--line); border-radius:var(--r-card);
+  background:var(--surface); overflow:hidden;
+}
+.zasadaGlowa{
+  width:100%; font:inherit; text-align:left; cursor:pointer;
+  display:flex; align-items:baseline; gap:12px;
+  padding:16px 18px; background:transparent; border:0; color:var(--text);
+}
+.zasadaGlowa:hover{background:var(--surface-2)}
+.zasadaGlowa .nazwa{font-weight:600; font-size:15px; flex:1}
+.zasadaGlowa .skrot{color:var(--text-3); font-size:13px; font-weight:400}
+.zasadaGlowa .znak{color:var(--text-3); font-family:var(--font-data); font-size:13px}
+.zasadaTresc{padding:0 18px 18px; display:none}
+.zasada.otwarta .zasadaTresc{display:block}
+.zasadaTresc p{margin:0 0 14px; color:var(--text-2); font-size:14px; max-width:66ch}
+
+.porownanie{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+@media (max-width:640px){ .porownanie{grid-template-columns:1fr} }
+.probka{border:1px solid var(--line); border-radius:8px; padding:12px; background:var(--bg-2)}
+.probka .metka{
+  font-family:var(--font-data); font-size:10.5px; letter-spacing:.1em;
+  text-transform:uppercase; margin-bottom:8px; display:block;
+}
+.probka.zle{border-color:var(--err-line)} .probka.zle .metka{color:var(--err)}
+.probka.dobrze{border-color:var(--ok-line)} .probka.dobrze .metka{color:var(--ok)}
+.probka pre{
+  margin:0; font-family:var(--font-data); font-size:12px; line-height:1.65;
+  color:var(--text-2); white-space:pre-wrap; word-break:break-word;
+}
+
+/* ---------- formaty ---------- */
+.formaty{display:grid; grid-template-columns:1fr 1fr; gap:10px}
+@media (max-width:640px){ .formaty{grid-template-columns:1fr} }
+.kolumnaFormatow{
+  border:1px solid var(--line); border-radius:var(--r-card);
+  background:var(--surface); padding:16px 18px;
+}
+.kolumnaFormatow h3{
+  font-size:13px; margin:0 0 12px; font-family:var(--font-data);
+  letter-spacing:.1em; text-transform:uppercase; font-weight:500;
+}
+.kolumnaFormatow.dziala{border-color:var(--ok-line)}
+.kolumnaFormatow.dziala h3{color:var(--ok)}
+.kolumnaFormatow.psuje{border-color:var(--warn-line)}
+.kolumnaFormatow.psuje h3{color:var(--warn)}
+.kolumnaFormatow ul{margin:0; padding:0; list-style:none}
+.kolumnaFormatow li{
+  padding:8px 0; border-top:1px solid var(--line-soft); font-size:14px; color:var(--text);
+}
+.kolumnaFormatow li:first-child{border-top:0}
+.kolumnaFormatow li span{display:block; color:var(--text-3); font-size:12.5px; margin-top:2px}
+
+/* ---------- lista kontrolna ---------- */
+.kontrolna{
+  border:1px solid var(--line); border-radius:var(--r-card);
+  background:var(--surface); padding:8px 18px 18px;
+}
+.pozycja{
+  display:flex; align-items:flex-start; gap:12px;
+  padding:14px 0; border-top:1px solid var(--line-soft); cursor:pointer;
+}
+.pozycja:first-of-type{border-top:0}
+.pudelko{
+  flex:none; width:18px; height:18px; margin-top:1px; border-radius:5px;
+  border:1px solid var(--line); background:var(--bg-2);
+  display:grid; place-items:center;
+  font-family:var(--font-data); font-size:11px; color:transparent;
+}
+.pozycja.zaznaczona .pudelko{border-color:var(--ok-line); background:var(--ok-soft); color:var(--ok)}
+.pozycja .opis{font-size:14px; color:var(--text)}
+.pozycja.zaznaczona .opis{color:var(--text-2)}
+
+.stopka{
+  margin-top:20px; display:flex; align-items:center; gap:16px; flex-wrap:wrap;
+}
+.postep{font-family:var(--font-data); font-size:12px; color:var(--text-3); margin-right:auto}
+.btnGlowny{
+  font:inherit; font-weight:600; font-size:14px; cursor:pointer;
+  padding:11px 20px; border-radius:9px; border:0;
+  background:var(--ink); color:var(--on-ink);
+}
+.btnGlowny:disabled{opacity:.4; cursor:not-allowed}
+.btnCichy{
+  font:inherit; font-size:14px; cursor:pointer; padding:11px 4px;
+  background:none; border:0; color:var(--text-2); text-decoration:underline;
+  text-underline-offset:3px;
+}
+.btnCichy:hover{color:var(--text)}
+
+.samouczek :focus-visible{outline:2px solid var(--signal); outline-offset:2px; border-radius:6px}
+@media (prefers-reduced-motion:reduce){ .samouczek *{transition:none !important} }
+</style>
+</head>
+
+<body style="margin:0;background:#040611">
+<div class="samouczek">
+
+  <header class="naglowek">
+    <div class="nadtytul">Kreator RAG · zanim wgrasz pliki</div>
+    <h1>Jak przygotować dokumenty</h1>
+    <p>Pięć minut czytania, które decyduje o tym, czy agent będzie odpowiadał
+       z twoich dokumentów, czy zmyślał.</p>
+  </header>
+
+  <!-- ===================== CZYM JEST RAG ===================== -->
+  <section class="sekcja" style="margin-top:0">
+    <h2>Czym jest RAG</h2>
+
+    <div class="wyjasnienie">
+      <p>Model językowy zna to, czego nauczył się w trakcie treningu. Nie zna twojego
+         regulaminu, notatek ze spotkań ani cennika — a zapytany o nie potrafi odpowiedzieć
+         pewnym tonem i nieprawdziwie.</p>
+      <p><strong>RAG to danie modelowi wyszukiwarki do twoich dokumentów.</strong>
+         Zanim odpowie, przeszukuje je i buduje odpowiedź z tego, co faktycznie znalazł.
+         Nie z pamięci, tylko z twojego pliku.</p>
+      <div class="rozwiniecie">RAG = retrieval-augmented generation, czyli „odpowiadanie wsparte wyszukiwaniem”. W skrócie: agent najpierw szuka, potem mówi.</div>
+    </div>
+
+    <div class="kroki">
+      <div class="krok">
+        <span class="nr">01</span>
+        <h3>Wgrywasz dokumenty</h3>
+        <p>Aplikacja wyciąga z pliku tekst i dzieli go na fragmenty po mniej więcej 900 znaków.</p>
+      </div>
+      <div class="krok">
+        <span class="nr">02</span>
+        <h3>Indeksujesz kolekcję</h3>
+        <p>Osobny krok, osobny przycisk. Każdy fragment dostaje zapis liczbowy opisujący jego znaczenie — dopiero to czyni go przeszukiwalnym.</p>
+      </div>
+      <div class="krok">
+        <span class="nr">03</span>
+        <h3>Agent szuka i odpowiada</h3>
+        <p>Przy pytaniu wybiera kilka najbliższych fragmentów i odpowiada na ich podstawie, podając plik i sekcję.</p>
+      </div>
+    </div>
+
+    <!-- ŹRÓDŁO: page.js:592 „Dokument nie ma wektorów — kliknij «Indeksuj»” -->
+    <div class="uwaga">
+      <span class="tytul">Samo wgranie nie wystarczy</span>
+      <p>Po wgraniu plików kolekcja jeszcze nie działa — dokumenty są pocięte, ale
+         niewyszukiwalne. Trzeba kliknąć <strong>Indeksuj</strong>. To najczęstszy powód,
+         dla którego agent „nie widzi” dokumentów, które przecież zostały wgrane.</p>
+    </div>
+
+    <p class="wstep" style="margin:18px 0 0">Agent zobaczy tylko te fragmenty, które wyszukiwarka
+       uzna za pasujące. A fragmenty powstają z twoich plików — dlatego to, jak je przygotujesz,
+       przekłada się wprost na jakość odpowiedzi.</p>
+  </section>
+
+  <!-- ===================== ELEMENT SYGNATUROWY ===================== -->
+  <section class="sekcja">
+    <h2>Tak agent czyta twój dokument</h2>
+    <p class="wstep">Agent nie czyta pliku w całości — dostaje pojedyncze fragmenty, które
+       wyszukiwarka uznała za pasujące. Ten sam regulamin, dwa sposoby zapisania.
+       Kliknij pytanie i zobacz, co wraca.</p>
+
+    <div class="demo">
+      <div class="demoPasek">
+        <span class="etykieta">regulamin-pracy.docx</span>
+        <button class="przelacznik" data-wersja="zle" aria-pressed="true">Bez nagłówków</button>
+        <button class="przelacznik" data-wersja="dobrze" aria-pressed="false">Z nagłówkami</button>
+      </div>
+
+      <div class="demoCialo">
+        <div class="dokument" id="dokument"></div>
+        <div class="panelPytan">
+          <div class="etykieta">Zapytaj agenta</div>
+          <button class="pytanie" data-pyt="sobota" aria-pressed="false">Ile wynosi dodatek za pracę w sobotę?</button>
+          <button class="pytanie" data-pyt="formularz" aria-pressed="false">Na jakim formularzu składa się wniosek?</button>
+          <div class="werdykt pusty" id="werdykt">Wybierz pytanie, żeby zobaczyć wynik.</div>
+        </div>
+      </div>
+    </div>
+    <p class="podDemo">Fragmenty skrócone dla czytelności. W aplikacji mają około 900 znaków, a akapit nigdy nie jest przecinany w środku — chyba że sam przekracza 1400 znaków.</p>
+  </section>
+
+  <!-- ===================== ZASADY ===================== -->
+  <section class="sekcja">
+    <h2>Pięć rzeczy, które robią różnicę</h2>
+    <p class="wstep">Wszystkie sprowadzają się do jednego: fragment musi być zrozumiały
+       sam z siebie, bez reszty dokumentu.</p>
+
+    <div class="zasady" id="zasady"></div>
+  </section>
+
+  <!-- ===================== FORMATY ===================== -->
+  <!-- ŹRÓDŁO: extract.js:568-580 lista rozszerzeń; :55-59 md; :558-559 docx; :126-128 pdf -->
+  <section class="sekcja">
+    <h2>Formaty, które aplikacja czyta</h2>
+    <p class="wstep">Pięć formatów. Różnią się nie tym, <em>czy</em> zostaną przeczytane,
+       tylko tym, czy aplikacja rozpozna w nich strukturę — a od tego zależy trafność
+       wyszukiwania.</p>
+
+    <table class="tabelaFormatow">
+      <thead>
+        <tr><th>Format</th><th>Jak jest czytany</th><th>Rozpoznawanie nagłówków</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="fmt">.md</td>
+          <td>Najlepszy wybór. Struktura zapisana wprost w tekście.</td>
+          <td><span class="znacznik pewne">Pewne</span>po znakach <code>#</code> i <code>##</code></td>
+        </tr>
+        <tr>
+          <td class="fmt">.docx</td>
+          <td>Bardzo dobry, jeśli dokument korzysta ze stylów Worda.</td>
+          <td><span class="znacznik pewne">Pewne</span>ale tylko style „Nagłówek 1/2/3”, nie pogrubiony tekst</td>
+        </tr>
+        <tr>
+          <td class="fmt">.pdf</td>
+          <td>Dobry, o ile plik ma warstwę tekstową. Skan nie zadziała.</td>
+          <td><span class="znacznik zgadywane">Zgadywane</span>z wyglądu linii; § i „Rozdział” pomagają</td>
+        </tr>
+        <tr>
+          <td class="fmt">.txt</td>
+          <td>Czytany bez problemu, dzielony po pustych liniach.</td>
+          <td><span class="znacznik brak">Brak</span>format nie ma jak ich zapisać</td>
+        </tr>
+        <tr>
+          <td class="fmt">.csv</td>
+          <td>Czytany wiersz po wierszu, jako tabela.</td>
+          <td><span class="znacznik pewne">Inaczej</span>pierwszy wiersz to nazwy kolumn, powtarzane przy każdym fragmencie</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="nieczyta">
+      <span class="tytul">Tych aplikacja nie przyjmie</span>
+      <p>Wgranie zakończy się komunikatem o nieobsługiwanym formacie. Zapisz plik
+         w jednym z pięciu powyższych — Word i większość narzędzi ma „Zapisz jako”.
+         Sama zmiana rozszerzenia w nazwie nie wystarczy.</p>
+      <div class="lista">.xlsx · .pptx · .doc · .odt · .rtf · .jpg · .png · .zip</div>
+    </div>
+
+    <!-- ŹRÓDŁO: documents.js:284 status no_text, chunk_count 0; page.js:681 -->
+    <div class="uwaga">
+      <span class="tytul">Skan wgra się bez błędu — i będzie pusty</span>
+      <p>PDF, który powstał ze skanera albo ze zdjęcia, jest dla aplikacji obrazkiem.
+         Nie ma w nim tekstu do przeczytania, a aplikacja nie rozpoznaje pisma z obrazu.</p>
+      <p>Nie zobaczysz czerwonego błędu — plik zostanie przyjęty, a przy dokumencie pojawi się
+         znacznik <code>brak tekstu</code> i informacja, że nie ma fragmentów.
+         <strong>Sprawdź to zawsze po wgraniu.</strong> Prosty test wcześniej: otwórz plik
+         i spróbuj zaznaczyć zdanie myszą. Jeśli się nie da — to skan.</p>
+    </div>
+
+    <!-- ŹRÓDŁO: config.js:64 RAG_MAX_FILE_MB=25; documents.js:207-210 -->
+    <div class="uwaga">
+      <span class="tytul">Limit 25 MB na plik</span>
+      <p>Sprawdzany po tym, jak plik dotrze na serwer — przy bardzo dużym pliku odczekasz
+         całą wysyłkę, zanim zobaczysz odmowę. Liczby plików w kolekcji nic nie ogranicza.</p>
+    </div>
+  </section>
+
+  <!-- ===================== LISTA KONTROLNA ===================== -->
+  <section class="sekcja">
+    <h2>Sprawdź, zanim wgrasz</h2>
+    <p class="wstep">Pięć pytań. Jeśli na każde odpowiesz twierdząco, możesz wgrywać.</p>
+
+    <div class="kontrolna" id="kontrolna"></div>
+
+    <div class="stopka">
+      <span class="postep" id="postep">0 z 5</span>
+      <button class="btnCichy">Wróć do tego później</button>
+      <button class="btnGlowny" id="dalej">Wgraj dokumenty</button>
+    </div>
+  </section>
+
+</div>
+
+<script>
+/* ============================================================
+   DANE — w aplikacji: app/kreator-rag/_lib/demoFragmenty.js
+   Czyste dane, zero DOM, dają się przetestować.
+   ============================================================ */
+const DEMO = {
+  zle: {
+    fragmenty: [
+      { tekst:'Regulamin pracy zdalnej obowiązuje wszystkich pracowników zatrudnionych na umowę o pracę. Pracownik może wykonywać pracę zdalnie po uzgodnieniu z bezpośrednim przełożonym, w wymiarze nieprzekraczającym trzech dni w tygodniu. Za pracę wykonywaną w sobotę przysługuje' },
+      { tekst:'dodatek w wysokości 87 zł za każdy rozpoczęty dzień. W niedzielę oraz w dni ustawowo wolne dodatek nie przysługuje. Wniosek o pracę zdalną składa się na formularzu' },
+      { tekst:'KW-3 dostępnym w intranecie. Rozpatrzenie wniosku trwa do 4 dni roboczych od daty złożenia kompletnych dokumentów.' }
+    ],
+    odp: {
+      sobota:    { trafiony:0, ok:false, tytul:'Agent nie znajdzie odpowiedzi',
+                   tresc:'Wyszukiwarka trafiła we fragment ze słowami „w sobotę przysługuje”, ale kwota 87 zł została odcięta i wylądowała w następnym fragmencie. Agent widzi pytanie i urwane zdanie — nie ma czego odpowiedzieć.' },
+      formularz: { trafiony:1, ok:false, tytul:'Agent nie znajdzie odpowiedzi',
+                   tresc:'To samo w drugą stronę: fragment kończy się na „na formularzu”, a symbol KW-3 jest już w kolejnym. Cięcie przebiegło w środku zdania.' }
+    }
+  },
+  dobrze: {
+    fragmenty: [
+      { tytul:'§ 17. Zasady ogólne', tekst:'Regulamin pracy zdalnej obowiązuje wszystkich pracowników zatrudnionych na umowę o pracę. Pracownik może wykonywać pracę zdalnie po uzgodnieniu z bezpośrednim przełożonym, w wymiarze nieprzekraczającym trzech dni w tygodniu.' },
+      { tytul:'§ 18. Dodatki za pracę w dni wolne', tekst:'Za pracę wykonywaną w sobotę przysługuje dodatek w wysokości <mark>87 zł</mark> za każdy rozpoczęty dzień. W niedzielę oraz w dni ustawowo wolne dodatek nie przysługuje.' },
+      { tytul:'§ 19. Tryb składania wniosku', tekst:'Wniosek o pracę zdalną składa się na formularzu <mark>KW-3</mark> dostępnym w intranecie. Rozpatrzenie trwa do 4 dni roboczych od daty złożenia kompletnych dokumentów.' }
+    ],
+    odp: {
+      sobota:    { trafiony:1, ok:true, tytul:'Agent odpowie: 87 zł',
+                   tresc:'Fragment zawiera i pytanie, i odpowiedź, i nagłówek „§ 18. Dodatki za pracę w dni wolne”. Agent wie, czego dotyczy kwota, i nie pomyli soboty z niedzielą.' },
+      formularz: { trafiony:2, ok:true, tytul:'Agent odpowie: formularz KW-3',
+                   tresc:'Nagłówek „§ 19. Tryb składania wniosku” dołącza się do fragmentu przy indeksowaniu. Dzięki temu zadziała też pytanie „co mówi § 19?”, w którym nie pada ani słowo z treści.' }
+    }
+  }
+};
+
+const ZASADY = [
+  { id:'naglowki', nazwa:'Dodaj nagłówki sekcji', skrot:'najważniejsze',
+    opis:'Przy wyszukiwaniu do każdego fragmentu doklejana jest ścieżka nagłówków, z których pochodzi — na przykład „Regulamin pracy › Rozdział 3 › Urlopy”. Dzięki temu fragment niesie kontekst, nawet gdy sam w sobie jest krótki, a pytanie o numer paragrafu ma się o co zaczepić. W samej odpowiedzi treść zostaje czysta, bez doklejonego nagłówka.',
+    zle:'Dodatek za sobotę wynosi 87 zł.\nW niedzielę nie przysługuje.\nWniosek składa się na KW-3.',
+    dobrze:'## § 18. Dodatki za dni wolne\nDodatek za sobotę wynosi 87 zł.\nW niedzielę nie przysługuje.\n\n## § 19. Tryb składania wniosku\nWniosek składa się na KW-3.' },
+
+  { id:'style', nazwa:'W Wordzie używaj stylów, nie pogrubienia', skrot:'',
+    opis:'To najczęstszy błąd w plikach .docx. Aplikacja rozpozna nagłówek tylko wtedy, gdy w Wordzie jest oznaczony stylem „Nagłówek 1”, „Nagłówek 2” i tak dalej. Tekst ręcznie pogrubiony i powiększony wygląda dla człowieka identycznie, ale dla aplikacji jest zwykłym akapitem — i cała korzyść z poprzedniej zasady przepada. Styl ustawia się na wstążce Narzędzia główne, w galerii stylów.',
+    zle:'W Wordzie:\n\n§ 18. Dodatki   ← pogrubione, 16 pt\n                  styl: Normalny\n\nAplikacja widzi zwykły akapit.',
+    dobrze:'W Wordzie:\n\n§ 18. Dodatki   ← styl: Nagłówek 2\n\nAplikacja widzi nagłówek\ni dokleja go do fragmentów.' },
+
+  { id:'jeden-temat', nazwa:'Jedna sekcja, jeden temat', skrot:'',
+    opis:'Fragment powstaje z ciągłego kawałka tekstu, mniej więcej 900 znaków. Jeśli w jednym akapicie mieszasz urlopy, dodatki i procedurę odwołania, każde wyszukiwanie będzie zwracać ten sam przeładowany kawałek — pasujący do wszystkiego i pomocny w niczym.',
+    zle:'Pracownik ma 26 dni urlopu, a za sobotę\ndostaje 87 zł, natomiast odwołanie składa\nsię w ciągu 14 dni na formularzu KW-3,\nchyba że przełożony postanowi inaczej.',
+    dobrze:'## Urlop\nPracownikowi przysługuje 26 dni urlopu.\n\n## Dodatek za soboty\nZa pracę w sobotę: 87 zł za dzień.\n\n## Odwołanie\nTermin: 14 dni. Formularz: KW-3.' },
+
+  { id:'skroty', nazwa:'Rozwiń zaimki i odwołania', skrot:'',
+    opis:'Fragment jest czytany bez sąsiadów. „Wynosi ona 41 zł” nie znaczy nic, jeśli słowo, do którego odnosi się „ona”, zostało w poprzednim fragmencie. Powtórzenie rzeczownika wygląda niezgrabnie w tekście dla człowieka i ratuje odpowiedź dla agenta. To samo dotyczy odwołań w rodzaju „jak wyżej” albo „zgodnie z poprzednim punktem”.',
+    zle:'Stawka bazowa to 87 zł.\nW przypadku pracy nocnej wynosi ona 41 zł\ni jest naliczana jak wyżej.',
+    dobrze:'Stawka bazowa za sobotę to 87 zł.\nStawka za pracę nocną to 41 zł\ni jest naliczana według tych samych zasad\nco stawka bazowa.' },
+
+  { id:'nazwy', nazwa:'Nazwij plik tym, co w nim jest', skrot:'',
+    opis:'Nazwa pliku trafia wprost do odpowiedzi agenta jako źródło — obok nazwy sekcji i numeru strony. Użytkownik zobaczy dokładnie to, co wpisałeś. Możliwość sprawdzenia źródła jest połową wartości RAG-u, a „dokument (3) kopia final” nie mówi nikomu nic.',
+    zle:'skan_2024 (3) — kopia FINAL v2.pdf\n\nCytat u agenta:\n„skan_2024 (3) — kopia FINAL v2.pdf, s. 4”',
+    dobrze:'regulamin-pracy-zdalnej-2026.pdf\n\nCytat u agenta:\n„regulamin-pracy-zdalnej-2026.pdf ›\n § 18. Dodatki, s. 4”' }
+];
+
+const KONTROLNA = [
+  'Tekst w pliku da się zaznaczyć myszą i skopiować — to nie skan',
+  'Plik ma jedno z rozszerzeń: .md, .docx, .pdf, .txt, .csv',
+  'Dokument ma nagłówki sekcji, a w Wordzie są to prawdziwe style',
+  'Każda sekcja dotyczy jednego tematu',
+  'Nazwa pliku mówi, co jest w środku — zobaczysz ją w cytacie'
+];
+
+/* ============================================================
+   WIDOK — w aplikacji: trzy komponenty React.
+   Poniżej odpowiedniki stanu: wersja / pytanie / rozwiniete.
+   ============================================================ */
+let wersja = 'zle';
+let pytanie = null;
+const rozwiniete = new Set(['naglowki']);
+const zaznaczone = new Set();
+
+function rysujDemo(){
+  const dane = DEMO[wersja];
+  const trafiony = pytanie ? dane.odp[pytanie].trafiony : -1;
+
+  document.getElementById('dokument').innerHTML = dane.fragmenty.map((f,i)=>`
+    <div class="fragment${i===trafiony?' trafiony':''}">
+      <span class="nr">${String(i+1).padStart(2,'0')}</span>
+      ${f.tytul?`<span class="tytul">${f.tytul}</span>`:''}
+      ${f.tekst}
+    </div>`).join('');
+
+  const w = document.getElementById('werdykt');
+  if(!pytanie){
+    w.className = 'werdykt pusty';
+    w.textContent = 'Wybierz pytanie, żeby zobaczyć wynik.';
+  } else {
+    const o = dane.odp[pytanie];
+    w.className = 'werdykt ' + (o.ok?'tak':'nie');
+    w.innerHTML = `<b>${o.tytul}</b>${o.tresc}`;
+  }
+
+  document.querySelectorAll('.przelacznik').forEach(b=>
+    b.setAttribute('aria-pressed', String(b.dataset.wersja===wersja)));
+  document.querySelectorAll('.pytanie').forEach(b=>
+    b.setAttribute('aria-pressed', String(b.dataset.pyt===pytanie)));
+}
+
+function rysujZasady(){
+  document.getElementById('zasady').innerHTML = ZASADY.map(z=>`
+    <div class="zasada${rozwiniete.has(z.id)?' otwarta':''}" data-id="${z.id}">
+      <button class="zasadaGlowa" aria-expanded="${rozwiniete.has(z.id)}">
+        <span class="nazwa">${z.nazwa}</span>
+        ${z.skrot?`<span class="skrot">${z.skrot}</span>`:''}
+        <span class="znak">${rozwiniete.has(z.id)?'–':'+'}</span>
+      </button>
+      <div class="zasadaTresc">
+        <p>${z.opis}</p>
+        <div class="porownanie">
+          <div class="probka zle"><span class="metka">Utrudnia</span><pre>${z.zle}</pre></div>
+          <div class="probka dobrze"><span class="metka">Pomaga</span><pre>${z.dobrze}</pre></div>
+        </div>
+      </div>
+    </div>`).join('');
+}
+
+function rysujKontrolna(){
+  document.getElementById('kontrolna').innerHTML = KONTROLNA.map((t,i)=>`
+    <div class="pozycja${zaznaczone.has(i)?' zaznaczona':''}" data-i="${i}" role="checkbox"
+         tabindex="0" aria-checked="${zaznaczone.has(i)}">
+      <span class="pudelko">✓</span><span class="opis">${t}</span>
+    </div>`).join('');
+  document.getElementById('postep').textContent = `${zaznaczone.size} z ${KONTROLNA.length}`;
+  document.getElementById('dalej').disabled = zaznaczone.size < KONTROLNA.length;
+}
+
+document.addEventListener('click', e=>{
+  const p = e.target.closest('.przelacznik');
+  if(p){ wersja = p.dataset.wersja; rysujDemo(); return; }
+
+  const q = e.target.closest('.pytanie');
+  if(q){ pytanie = (pytanie===q.dataset.pyt) ? null : q.dataset.pyt; rysujDemo(); return; }
+
+  const g = e.target.closest('.zasadaGlowa');
+  if(g){ const id = g.closest('.zasada').dataset.id;
+         rozwiniete.has(id) ? rozwiniete.delete(id) : rozwiniete.add(id);
+         rysujZasady(); return; }
+
+  const k = e.target.closest('.pozycja');
+  if(k){ const i = +k.dataset.i;
+         zaznaczone.has(i) ? zaznaczone.delete(i) : zaznaczone.add(i);
+         rysujKontrolna(); return; }
+});
+
+document.addEventListener('keydown', e=>{
+  if((e.key===' '||e.key==='Enter') && e.target.classList.contains('pozycja')){
+    e.preventDefault(); e.target.click();
+  }
+});
+
+rysujDemo(); rysujZasady(); rysujKontrolna();
+</script>
+</body>
+</html>
