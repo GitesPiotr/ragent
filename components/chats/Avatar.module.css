@@ -50,38 +50,92 @@
   border: 1px dashed #cfcfd6;
 }
 
+/* ============================================================================
+   MOTYW CIEMNY = NOWY WYGLAD (docs/prototyp.html: .avatar / .av-agent / .av-user).
+
+   PROTOTYP MA JEDEN STYL NA RODZINE — .av-agent jest uzywany wszedzie: na
+   liscie rozmow, w naglowku i przy wiadomosciach. Dlatego `soft` i `filled`
+   dostaja tu identyczny wyglad. Prop `tone` zostaje w JSX (jego usuniecie
+   dotknelo by czterech plikow poza zakresem), ale przestaje cokolwiek zmieniac.
+
+   Ramka 1px dochodzi tam, gdzie jej dzis nie ma. Rozmiar sie nie zmieni:
+   awatar ma inline width/height, a globalny reset daje box-sizing: border-box.
+
+   Kolory NIE ida juz przez --purple / --navy — chats.module.css przekierowuje
+   te zmienne na tokeny globalne w bloku ciemnym, wiec te reguly tylko
+   domykaja to, czego przekierowanie samo nie zalatwia (ramki, wariant filled).
+   ============================================================================ */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .user {
-    background: #2a2a31;
-    color: #a1a1aa;
+  :root:not([data-theme="light"]) .circle {
+    font-family: var(--font-data);
   }
 
-  :root:not([data-theme="light"]) .modelSoft {
-    background: #1a2433;
-    color: #9db6d8;
+  :root:not([data-theme="light"]) .ai {
+    font-weight: 600;
+  }
+
+  /* .av-agent — agent to maszyna, wiec cyjan. */
+  :root:not([data-theme="light"]) .agentSoft,
+  :root:not([data-theme="light"]) .agentFilled {
+    border: 1px solid var(--signal-line);
+    background: var(--signal-soft);
+    color: var(--signal-text);
+  }
+
+  /* Sam model bez agenta — fiolet, zgodnie z zasada „FIOLET ZNACZY MODEL". */
+  :root:not([data-theme="light"]) .modelSoft,
+  :root:not([data-theme="light"]) .modelFilled {
+    border: 1px solid var(--model-line);
+    background: var(--model-soft);
+    color: var(--model-text);
+  }
+
+  /* .av-user */
+  :root:not([data-theme="light"]) .user {
+    border: 1px solid var(--line);
+    background: var(--surface-2);
+    color: var(--text-3);
   }
 
   :root:not([data-theme="light"]) .placeholder {
-    background: #26262c;
-    color: #71717a;
-    border-color: #3f3f46;
+    background: transparent;
+    color: var(--text-3);
+    border-color: var(--line);
   }
 }
 
-:root[data-theme="dark"] .user {
-    background: #2a2a31;
-    color: #a1a1aa;
+:root[data-theme="dark"] .circle {
+    font-family: var(--font-data);
   }
 
-:root[data-theme="dark"] .modelSoft {
-    background: #1a2433;
-    color: #9db6d8;
+:root[data-theme="dark"] .ai {
+    font-weight: 600;
+  }
+
+:root[data-theme="dark"] .agentSoft,
+  :root[data-theme="dark"] .agentFilled {
+    border: 1px solid var(--signal-line);
+    background: var(--signal-soft);
+    color: var(--signal-text);
+  }
+
+:root[data-theme="dark"] .modelSoft,
+  :root[data-theme="dark"] .modelFilled {
+    border: 1px solid var(--model-line);
+    background: var(--model-soft);
+    color: var(--model-text);
+  }
+
+:root[data-theme="dark"] .user {
+    border: 1px solid var(--line);
+    background: var(--surface-2);
+    color: var(--text-3);
   }
 
 :root[data-theme="dark"] .placeholder {
-    background: #26262c;
-    color: #71717a;
-    border-color: #3f3f46;
+    background: transparent;
+    color: var(--text-3);
+    border-color: var(--line);
   }
 
 /* themeified */
