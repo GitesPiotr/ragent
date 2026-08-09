@@ -13,20 +13,18 @@
   RAGent — ekran wejściowy Kreatora RAG. Dwie karty: instrukcja i kreator.
   Pokazuje się po kliknięciu "Kreator RAG" w pasku bocznym.
 
-  TRZY STANY, wynikające z danych:
-    brak kolekcji + instrukcja nieprzeczytana  → nacisk na instrukcję
-    brak kolekcji + instrukcja przeczytana     → nacisk na kreator
-    są kolekcje                                → prawa karta pokazuje licznik
+  DWA WARIANTY, oba wynikają z jednej liczby — nic się nie zapamiętuje:
+    brak kolekcji → prawa karta zachęca do zbudowania pierwszej
+    są kolekcje   → prawa karta pokazuje licznik i prowadzi do listy
+
+  Instrukcja jest wyróżniona ZAWSZE. Kto nie chce czytać, klika
+  prawą kartę — jedno kliknięcie, żadnej blokady.
 
   IMPLEMENTACJA:
   · Tokeny z .shell, blok deklaracji poniżej WYPADA w aplikacji.
-  · Stan wyprowadzony z danych, nie z pamięci przeglądarki:
-      liczbaKolekcji  — już masz na tej trasie
-      przeczytana     — jedyna rzecz do zapamiętania; sugeruję
-                        kolumnę w profilu użytkownika, nie localStorage,
-                        żeby przeżyła zmianę przeglądarki
-  · Bez blokady: prawa karta jest klikalna zawsze. Instrukcja jest
-    wyróżniona, nie wymuszona.
+  · Jedyna zmienna to liczbaKolekcji — już jest na tej trasie.
+    Nic nie trafia do localStorage ani do bazy.
+  · Bez blokady: prawa karta jest klikalna zawsze.
   ==========================================================================
 -->
 
@@ -97,10 +95,6 @@
   padding-top:14px; margin-top:14px; border-top:1px solid var(--line-soft)}
 .stanKolekcji b{color:var(--text-2); font-weight:500}
 
-.plakietka{position:absolute; top:22px; right:22px; font-family:var(--font-data);
-  font-size:10.5px; letter-spacing:.06em; padding:4px 9px; border-radius:20px;
-  border:1px solid var(--ok-line); background:var(--ok-soft); color:var(--ok)}
-
 .przypis{margin-top:22px; padding:14px 18px; border-radius:10px;
   border:1px solid var(--warn-line); background:var(--warn-soft);
   font-size:13.5px; color:var(--text-2)}
@@ -125,8 +119,7 @@
 
     <!-- ============ KARTA 1: INSTRUKCJA ============ -->
     <button class="karta wyrozniona" id="kartaInstrukcja">
-      <span class="plakietka" id="plakietka" hidden>Przeczytane</span>
-      <span class="metka" id="metkaInstrukcja">Zacznij tutaj</span>
+      <span class="metka">Zacznij tutaj</span>
 
       <div class="znak">
         <!-- dokument cięty na fragmenty -->
@@ -154,7 +147,7 @@
       </ul>
 
       <div class="dolKarty">
-        <span class="przycisk" id="btnInstrukcja">Czytaj instrukcję</span>
+        <span class="przycisk">Czytaj instrukcję</span>
         <span class="czas">≈ 5 minut</span>
       </div>
     </button>
@@ -207,47 +200,45 @@
 
 <script>
 /* ============================================================
-   W APLIKACJI: te dwie wartości pochodzą z danych, nie stąd.
-     liczbaKolekcji — z zapytania o kolekcje użytkownika
-     przeczytana    — z profilu użytkownika (nie localStorage,
-                      żeby przeżyło zmianę przeglądarki)
-   Poniżej wartości przykładowe: pierwsze wejście.
+   Jedyna zmienna. W aplikacji podstaw liczbę kolekcji
+   użytkownika — pobieraną i tak na tej trasie.
+   Nic się nie zapamiętuje między wizytami.
    ============================================================ */
 const liczbaKolekcji = 0;
-const przeczytana = false;
 
 function rysuj(){
   const maKolekcje = liczbaKolekcji > 0;
 
-  document.getElementById('podtytul').textContent =
-    maKolekcje ? 'Wróć do swoich kolekcji albo załóż nową.'
-    : przeczytana ? 'Instrukcję masz za sobą. Załóż pierwszą kolekcję i wgraj do niej dokumenty.'
+  document.getElementById('podtytul').textContent = maKolekcje
+    ? 'Wróć do swoich kolekcji albo załóż nową. Instrukcja jest zawsze pod ręką.'
     : 'Wgraj własne dokumenty, żeby agent odpowiadał z nich, a nie z pamięci modelu. Zacznij od instrukcji — pięć minut oszczędzi ci godziny zgadywania, dlaczego agent nie znajduje odpowiedzi.';
-
-  /* Wyróżnienie przechodzi z instrukcji na kreator po przeczytaniu.
-     To jest cała "obowiązkowość": nacisk, nie blokada. */
-  document.getElementById('kartaInstrukcja').classList.toggle('wyrozniona', !przeczytana);
-  document.getElementById('kartaKreator').classList.toggle('wyrozniona', przeczytana);
-
-  document.getElementById('plakietka').hidden = !przeczytana;
-  document.getElementById('metkaInstrukcja').textContent = przeczytana ? 'Do wglądu' : 'Zacznij tutaj';
-  document.getElementById('btnInstrukcja').className = przeczytana ? 'przyciskCichy' : 'przycisk';
-  document.getElementById('btnKreator').className = przeczytana ? 'przycisk' : 'przyciskCichy';
 
   document.getElementById('tytulKreator').textContent =
     maKolekcje ? 'Twoje kolekcje' : 'Zbuduj bazę wektorową';
+
   document.getElementById('opisKreator').textContent = maKolekcje
     ? 'Wróć do kolekcji, dołóż dokumenty albo załóż nową bazę dla kolejnego agenta.'
     : 'Załóż kolekcję, wgraj dokumenty i zindeksuj je. Po tym kroku możesz podpiąć bazę do dowolnego agenta i zacząć z nim rozmawiać.';
+
   document.getElementById('btnKreator').textContent =
     maKolekcje ? 'Przejdź do kolekcji' : 'Otwórz Kreator RAG';
 
   document.getElementById('stanKolekcji').innerHTML = maKolekcje
-    ? `<b>${liczbaKolekcji}</b> kolekcje · ostatnia zmiana 2 dni temu`
+    ? `<b>${liczbaKolekcji}</b> ${odmiana(liczbaKolekcji)} · ostatnia zmiana 2 dni temu`
     : 'Nie masz jeszcze żadnej kolekcji.';
 
   /* Przypis o indeksowaniu ma sens tylko dla kogoś, kto jeszcze nie wgrywał. */
   document.getElementById('przypis').hidden = maKolekcje;
+}
+
+/* Odmiana rzeczownika przez liczebnik — 1 kolekcja, 2-4 kolekcje, 5+ kolekcji.
+   Bez tego licznik wypisze "5 kolekcje". */
+function odmiana(n){
+  if(n === 1) return 'kolekcja';
+  const dwie = n % 100;
+  const jedn = n % 10;
+  if(jedn >= 2 && jedn <= 4 && !(dwie >= 12 && dwie <= 14)) return 'kolekcje';
+  return 'kolekcji';
 }
 
 rysuj();
