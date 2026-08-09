@@ -44,6 +44,11 @@ krawędzią widoku. Pod spodem jest wtedy wyłącznie **pusty akapit błędu**
 (`min-height: 14px`) — wszystko, co się klika i czyta, zostaje widoczne:
 przycisk kończy się 44 px nad krawędzią, podpowiedź o adresie 18 px nad.
 
+Potwierdzone na żywo w trybie urządzeń, nie tylko rachunkiem: przy 360 × 640,
+900 × 500, 1200 × 600 i 1400 × 500 przycisk „Zaloguj" jest widoczny bez
+przewijania. Pomiary powyżej robione były w ramce, która nie ma pasków
+przeglądarki — realne okno wypadło tak samo.
+
 Ale **realny komunikat błędu przy tym oknie wyszedłby częściowo pod krawędź.**
 
 Wiąże to podłoga `400px` w `clamp(400px, 62dvh, 460px)` na `.pierscien`.
@@ -134,15 +139,9 @@ nie ma `DEV_LOGIN_EMAIL` ani `DEV_LOGIN_PASSWORD` i endpoint słusznie zwraca
 Żeby sprawdzić: dopisać obie zmienne, zrestartować serwer, wejść na
 `/logowanie`. Przycisk ma się pojawić pod pierścieniem.
 
-### Furtka podglądu w `proxy.js` nie została wywołana
-
-`?podglad=1` znosi przekierowanie zalogowanego z `/logowanie` na `/projekty`,
-ale **tylko poza produkcją**. Sprawdzenie wymaga sesji, więc nowa gałąź warunku
-nie wykonała się ani razu.
-
-Sprawdzone za to, że nic się nie zepsuło bez sesji: `/logowanie` i
-`/logowanie?podglad=1` dają 200, `/rejestracja` 200, `/projekty` i `/czaty`
-odsyłają 307 z poprawnym `?powrot=`, `/api/*` odpowiada 401 JSON-em.
-
-Żeby sprawdzić właściwą ścieżkę: zalogować się, wejść na `/logowanie` (ma
-odesłać na `/projekty`), potem na `/logowanie?podglad=1` (ma pokazać ekran).
+To jedyna pozycja, która została z listy niesprawdzonych po etapie 4b.
+Reszta przeszła na żywo, z sesją i w trybie urządzeń: złe hasło (polski
+komunikat, pola odblokowane), powrót pod `?powrot=/czaty`, Enter w polu hasła,
+furtka `?podglad=1` w obie strony, zaślepka `/rejestracja` oraz cztery rozmiary
+okna — 360 × 640, 900 × 500, 1200 × 600 i 1400 × 500, w każdym przycisk
+„Zaloguj" widoczny bez przewijania.
