@@ -1317,7 +1317,7 @@
 }
 
 :root[data-theme="dark"] .manageLink {
-  color: #c4b5fd;
+  color: var(--signal-text);
 }
 
 /* themeified */

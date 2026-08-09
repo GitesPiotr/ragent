@@ -165,7 +165,7 @@
 
 @media (max-width: 720px) {
   :root[data-theme="dark"] .sidebar {
-      border-bottom-color: #262233;
+      border-bottom-color: var(--line);
     }
 }
 
