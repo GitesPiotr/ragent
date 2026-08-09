@@ -823,6 +823,15 @@
   margin-top: 8px;
 }
 
+/* Znacznik cytujący napis z interfejsu, np. „brak tekstu".
+
+   white-space: nowrap NIE JEST OZDOBĄ. To element liniowy z ramką i tłem,
+   a jego treść zawiera spację — bez tego łamie się między wierszami i wtedy
+   przeglądarka rysuje ramkę DWA RAZY, po kawałku na każdej linii. Wygląda to
+   jak dwa osobne znaczniki i sugeruje, że aplikacja pokazuje dwa różne napisy.
+
+   box-decoration-break: clone nie jest tu potrzebne — ono naprawia WYGLĄD
+   rozbicia (domyka ramkę na obu kawałkach), a my rozbicia w ogóle nie chcemy. */
 .kod {
   font-family: var(--font-data);
   font-size: 12.5px;
@@ -831,6 +840,7 @@
   padding: 1px 6px;
   border-radius: 5px;
   border: 1px solid var(--line);
+  white-space: nowrap;
 }
 
 /* ============================================================================
