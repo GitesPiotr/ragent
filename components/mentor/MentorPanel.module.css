@@ -818,7 +818,7 @@
 
   :root:not([data-theme="light"]) .summaryWarn {
     color: var(--warn);
-    background: rgba(216, 180, 106, 0.08);
+    background: var(--warn-soft);
     border-left: 2px solid var(--warn);
   }
 
@@ -1126,7 +1126,7 @@
 
 :root[data-theme="dark"] .summaryWarn {
     color: var(--warn);
-    background: rgba(216, 180, 106, 0.08);
+    background: var(--warn-soft);
     border-left: 2px solid var(--warn);
   }
 

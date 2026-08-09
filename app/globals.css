@@ -60,6 +60,12 @@
     --ok: #52f0bf;
     --warn: #d8b46a;
 
+    /* Tla i ramki ostrzezen — z tego samego powodu co --err-soft / --err-line
+       nizej: bez nich rgba(216, 180, 106, ...) stoi rozpisane na skladowe
+       w kilkunastu miejscach i --warn jest zmienna, ktorej zmiana nie dziala. */
+    --warn-soft: rgba(216, 180, 106, 0.08);
+    --warn-line: rgba(216, 180, 106, 0.4);
+
     /* --err: #ff68ad;  <- wartosc z prototypu, HSL(333, 100%, 70%).
        Zamieniona na cieplejsza czerwien o TYM SAMYM nasyceniu i jasnosci
        (HSL 355, 100%, 70%) — zmienia sie tylko odcien, wiec kontrast na
@@ -104,6 +110,8 @@
 
   --ok: #52f0bf;
   --warn: #d8b46a;
+  --warn-soft: rgba(216, 180, 106, 0.08);
+  --warn-line: rgba(216, 180, 106, 0.4);
 
   /* --err: #ff68ad;  <- wartosc z prototypu, patrz komentarz w bloku @media. */
   --err: #ff6673;
