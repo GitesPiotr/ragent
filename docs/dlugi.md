@@ -104,6 +104,38 @@ liście projektów. Jeśli tylko wtedy, dług jest węższy, niż się wydaje.
 
 ---
 
+## Dane
+
+### `rag_collections.updated_at` nie znaczy „ostatnia praca"
+
+Kolumna **nie ma wyzwalacza** — w `supabase/rag/session-2-schema.sql:50` to zwykłe
+`timestamptz not null default now()`. Rusza ją **jedno** miejsce w całym kodzie:
+`setCollectionStatus` w `lib/rag/collections.js:169`, czyli archiwizacja
+i przywracanie kolekcji.
+
+**Czego NIE zmienia:** wgrania dokumentu, zaindeksowania, usunięcia pliku,
+wyciągnięcia pojęć, przeliczenia mapy. Wszystkie te operacje dotykają
+`rag_documents` i `rag_chunks`, nie wiersza kolekcji.
+
+Znaleziono przy projektowaniu ekranu wejściowego Kreatora RAG: prototyp pokazywał
+„ostatnia zmiana 2 dni temu", a ta data byłaby datą utworzenia albo ostatniego
+archiwizowania. Dla kogoś, kto wczoraj wgrał dwadzieścia plików, po prostu
+nieprawdziwa. **Datę usunięto z ekranu, został sam licznik kolekcji.**
+
+Druga pułapka w tym samym miejscu: `listCollections` sortuje po **`created_at`**
+(`lib/rag/collections.js:121`), nie po `updated_at`. Nawet gdyby data była
+prawdziwa, `kolekcje[0].updatedAt` **nie jest** najświeższą — trzeba liczyć
+maksimum z całej tablicy.
+
+Trzy drogi, gdyby data kiedyś była potrzebna:
+- liczyć `max(rag_documents.updated_at)` — drugie zapytanie albo endpoint
+  podsumowania;
+- dorobić wyzwalacz na `rag_collections` — nowa migracja, i dopiero od jej
+  wykonania dane są prawdziwe (starych nie odtworzy);
+- zostawić bez daty, jak teraz.
+
+---
+
 ## Nazwa
 
 ### `AIdeas` w około 179 miejscach
