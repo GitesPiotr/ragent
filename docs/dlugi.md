@@ -127,6 +127,17 @@ zapasowy motywu jasnego, widoczny dopóki jasny nie zostanie przerobiony.
 
 ---
 
+## Publikacja
+
+### Brak pliku LICENSE
+
+Repozytorium jest publiczne od 2026-08-09. Publiczne repozytorium **bez pliku
+`LICENSE` oznacza domyślnie „wszystkie prawa zastrzeżone"** — nikt nie może
+legalnie użyć, skopiować ani zmodyfikować kodu, mimo że go widzi. Jeśli to nie
+jest zamierzone, trzeba dopisać licencję.
+
+---
+
 ## Weryfikacja
 
 ### Skrót logowania deweloperskiego nigdy nie został wykonany
