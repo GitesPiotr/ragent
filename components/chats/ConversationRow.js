@@ -185,7 +185,14 @@ export function ConversationRow({
               compact
               className={styles.runnerGrow}
             />
-            <span className={styles.convDate}>· {formatDate(conv.updated_at)}</span>
+            {/* Kropka rozdziela nazwe od daty, wiec bez nazwy nie ma czego
+                rozdzielac — zostalaby samotna przy prawej krawedzi. Nazwa
+                znika w wierszach, w ktorych rozmowca sie nie zmienil
+                (patrz renderRow w app/czaty/page.js). */}
+            <span className={styles.convDate}>
+              {runnerName ? "· " : ""}
+              {formatDate(conv.updated_at)}
+            </span>
           </span>
         </span>
       </button>

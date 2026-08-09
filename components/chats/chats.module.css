@@ -106,10 +106,12 @@
   border-color: #a78bfa;
 }
 
+/* gap: 0 — wiersze rozdziela teraz kreska (.convItem::after). Dwa mechanizmy
+   rozdzielania naraz robily balagan. */
 .convList {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 0;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
@@ -125,13 +127,31 @@
   width: 100%;
   min-width: 0;
   overflow: hidden;
-  /* 9px 10px za prototypem (.convItem). Razem z gap: 4px na .convList daje
-     22px miedzy tekstem sasiednich wierszy — wczesniej bylo 19px i wiersze
-     zlewaly sie ze soba. */
-  padding: 9px 10px;
+  padding: 10px;
   border-left: 3px solid transparent;
   border-radius: 8px;
   background: transparent;
+}
+
+/* KRESKA MIEDZY WIERSZAMI jako pseudoelement, nie border-bottom.
+   Wsunieta o padding, wiec nie dotyka krawedzi i NIE jedzie po
+   border-radius: 8px — zaokraglenie zostaje dla tla hover i wiersza
+   aktywnego, a linia jest prosta. */
+.convItem::after {
+  content: "";
+  position: absolute;
+  left: 10px;
+  right: 10px;
+  bottom: 0;
+  height: 1px;
+  background: #f4f4f5;
+}
+
+/* Dzieci .convList to [naglowek?, ...przypiete, naglowek?, ...reszta], wiec
+   :last-child trafia w ostatni wiersz calej listy. Ostatni wiersz grupy
+   „Przypiete" kreske zachowuje — oddziela ja od naglowka „Ostatnie". */
+.convItem:last-child::after {
+  display: none;
 }
 
 .convItem:hover {
@@ -279,9 +299,12 @@
   overflow: hidden;
 }
 
+/* TYTUL MA DOMINOWAC. 14px/600 w kolorze tekstu glownego, a wszystko pod nim
+   cofa sie do 11.5px w kolorze przygaszonym. Wczesniej tytul mial 13px, a
+   nazwa rozmowcy dokladnie ten sam kolor i te sama wage — i tytul ginal. */
 .convTitle {
   display: block;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: #18181b;
   overflow: hidden;
@@ -296,7 +319,7 @@
   margin-top: 2px;
   min-width: 0;
   font-size: 11.5px;
-  color: #71717a;
+  color: #a1a1aa;
 }
 
 .convDate {
@@ -509,8 +532,15 @@
   display: none;
 }
 
+/* NAZWA ROZMOWCY W WIERSZU LISTY COFA SIE ZA TYTUL.
+   Bazowa .runnerName ma wage 600 i kolor tekstu glownego — i tak ma zostac
+   w naglowku rozmowy, w przycisku wyboru rozmowcy i na liscie rozwijanej.
+   Tutaj, pod tytulem, ta sama waga i ten sam kolor sprawialy, ze nazwa
+   konkurowala z tytulem. `color: inherit` bierze przygaszony kolor z .convMeta. */
 .runnerCompact .runnerName {
   font-size: 11.5px;
+  font-weight: 400;
+  color: inherit;
 }
 
 .headerRight {
@@ -947,11 +977,27 @@
     color: var(--text-3);
   }
 
-  /* .data .mut — metadane ida krojem danych. */
-  :root:not([data-theme="light"]) .convMeta,
+  /* MONO WYLACZNIE NA DACIE. Wczesniej --font-data siedzialo na .convMeta
+     i schodzilo dziedziczeniem takze na nazwe rozmowcy — mono jest szersze
+     i ciezsze, wiec nazwa konkurowala z tytulem. */
+  :root:not([data-theme="light"]) .convMeta {
+    color: var(--text-3);
+  }
+
   :root:not([data-theme="light"]) .convDate {
     color: var(--text-3);
     font-family: var(--font-data);
+  }
+
+  /* Przebija :root:not(...) .runnerName { color: var(--text) } z etapu 3
+     (swoistosc 0,4,0 kontra 0,3,0) — tylko w wierszu listy. */
+  :root:not([data-theme="light"]) .runnerCompact .runnerName {
+    color: inherit;
+    font-weight: 400;
+  }
+
+  :root:not([data-theme="light"]) .convItem::after {
+    background: var(--line-soft);
   }
 
   /* .eyebrow */
@@ -1226,10 +1272,22 @@
     color: var(--text-3);
   }
 
-:root[data-theme="dark"] .convMeta,
-  :root[data-theme="dark"] .convDate {
+:root[data-theme="dark"] .convMeta {
+    color: var(--text-3);
+  }
+
+:root[data-theme="dark"] .convDate {
     color: var(--text-3);
     font-family: var(--font-data);
+  }
+
+:root[data-theme="dark"] .runnerCompact .runnerName {
+    color: inherit;
+    font-weight: 400;
+  }
+
+:root[data-theme="dark"] .convItem::after {
+    background: var(--line-soft);
   }
 
 :root[data-theme="dark"] .groupLabel,

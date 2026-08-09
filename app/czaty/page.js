@@ -130,7 +130,10 @@ export default function ChatsPage() {
     side: "left",
     min: 200,
     max: 420,
-    defaultWidth: 260,
+    // Kto ma juz zapisana szerokosc, zobaczy swoja — hook czyta localStorage
+    // po zamontowaniu. Nowa domyslna dziala w nowej przegladarce albo po
+    // podwojnym klinieciu w uchwyt (reset do defaultWidth).
+    defaultWidth: 300,
     storageKey: "czaty:sidebarWidth",
   });
 
@@ -426,21 +429,46 @@ export default function ChatsPage() {
   const pinnedList = filtered.filter((c) => c.pinned);
   const restList = filtered.filter((c) => !c.pinned);
 
-  const renderRow = (c) => (
-    <ConversationRow
-      key={c.id}
-      conv={c}
-      active={selectedId === c.id}
-      kind={conversationKind(c)}
-      runnerName={conversationRunnerName(c)}
-      deleted={isDeletedAgent(c)}
-      formatDate={formatDate}
-      onOpen={openConversation}
-      onRename={handleRename}
-      onTogglePin={handleTogglePin}
-      onDelete={setDeleting}
-    />
-  );
+  // NAZWA ROZMOWCY POJAWIA SIE TYLKO PRZY ZMIANIE.
+  //
+  // Przy osmiu rozmowach z tym samym agentem nazwa stala osiem razy pod rzad
+  // i zagluszala tytuly. Data zostaje w kazdym wierszu.
+  //
+  // Porownanie idzie po SASIEDZIE W RENDEROWANEJ TABLICY, nie po pozycji
+  // w pelnej liscie — `arr` jest juz przefiltrowane przez wyszukiwarke, wiec
+  // wynik zawsze zgadza sie z tym, co widac. Grupy „Przypiete" i „Ostatnie"
+  // to dwa osobne .map, wiec pierwszy wiersz kazdej grupy pokazuje nazwe.
+  //
+  // USUNIETY AGENT POKAZUJE NAZWE ZAWSZE: czerwona plakietka bez nazwy nie
+  // mowi, ktorego agenta zabraklo, a to ostrzezenie ma byc czytelne.
+  const renderRow = (c, i, arr) => {
+    const nazwa = conversationRunnerName(c);
+    const usuniety = isDeletedAgent(c);
+    const poprzedni = arr[i - 1];
+
+    const powtorzenie =
+      !usuniety &&
+      poprzedni != null &&
+      !isDeletedAgent(poprzedni) &&
+      conversationKind(poprzedni) === conversationKind(c) &&
+      conversationRunnerName(poprzedni) === nazwa;
+
+    return (
+      <ConversationRow
+        key={c.id}
+        conv={c}
+        active={selectedId === c.id}
+        kind={conversationKind(c)}
+        runnerName={powtorzenie ? "" : nazwa}
+        deleted={usuniety}
+        formatDate={formatDate}
+        onOpen={openConversation}
+        onRename={handleRename}
+        onTogglePin={handleTogglePin}
+        onDelete={setDeleting}
+      />
+    );
+  };
 
   return (
     <div
