@@ -135,110 +135,185 @@
   color: #3f3f46;
 }
 
+/* ============================================================================
+   MOTYW CIEMNY = NOWY WYGLAD (docs/prototyp.html, ekran s-wiedza).
+
+   Strefa wgrywania idzie na cyjan: wskazanie miejsca, w ktore maszyna przyjmie
+   plik, to rodzina --signal. Karta pliku dostaje te sama konwencje co karty
+   projektow i agentow (--surface / --line, hover --text-3 / --surface-2).
+
+   Przycisk „Usun" NIE JEST tutaj — bierze .dangerButton z
+   ../projekty/workspace.module.css, gdzie od etapu 1 jest juz obrysowy
+   na --err. Tu nic z nim nie robimy.
+   ============================================================================ */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .fileName {
-    color: #ededed;
-  }
-
-  :root:not([data-theme="light"]) .fileCard {
-    background: #131318;
-    border-color: #27272a;
-  }
-
+  /* 1px, nie 2px — tyle ma .dropZone w prototypie i tyle dostala juz
+     blizniacza strefa w sekcji „Baza wiedzy" kreatora (etap 2). */
   :root:not([data-theme="light"]) .dropZone {
-    background: #17132a;
-    border-color: #4c3a86;
-    color: #c4b5fd;
+    border: 1px dashed var(--signal-line);
+    border-radius: var(--r-card);
+    background: var(--signal-soft);
+    color: var(--signal-text);
+    font-weight: 500;
   }
 
   :root:not([data-theme="light"]) .dropZone:hover {
-    background: #1e1838;
-    border-color: #7c3aed;
+    border-color: var(--signal);
+    background: var(--signal-soft);
   }
 
-  :root:not([data-theme="light"]) .usage,
-  :root:not([data-theme="light"]) .uploadHint,
-  :root:not([data-theme="light"]) .modalAgentList {
-    color: #a1a1aa;
+  :root:not([data-theme="light"]) .fileCard {
+    border-radius: var(--r-card);
+    border-color: var(--line);
+    background: var(--surface);
+    transition: border-color 0.16s var(--ease), background 0.16s var(--ease);
   }
 
-  :root:not([data-theme="light"]) .agentTag {
-    background: #221a45;
-    color: #c4b5fd;
+  :root:not([data-theme="light"]) .fileCard:hover {
+    border-color: var(--text-3);
+    background: var(--surface-2);
   }
 
-  :root:not([data-theme="light"]) .agentTagArchived {
-    background: #27272a;
-    color: #a1a1aa;
+  :root:not([data-theme="light"]) .fileName {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  /* Rozmiar i data to dane — stad kroj techniczny. Etykieta statusu wraca
+     na kroj interfejsu, bo to slowo, nie liczba. */
+  :root:not([data-theme="light"]) .fileMeta {
+    color: var(--text-3);
+    font-family: var(--font-data);
+  }
+
+  :root:not([data-theme="light"]) .statusReady,
+  :root:not([data-theme="light"]) .statusWarn,
+  :root:not([data-theme="light"]) .statusError {
+    font-family: var(--font-ui);
+    font-weight: 500;
   }
 
   :root:not([data-theme="light"]) .statusReady {
-    color: #4ade80;
+    color: var(--ok);
   }
 
   :root:not([data-theme="light"]) .statusWarn,
-  :root:not([data-theme="light"]) .usageUnknown {
-    color: #fbbf24;
+  :root:not([data-theme="light"]) .usageUnknown,
+  :root:not([data-theme="light"]) .fileNote {
+    color: var(--warn);
   }
 
   :root:not([data-theme="light"]) .statusError {
-    color: #ff8f8f;
+    color: var(--err);
   }
 
-  :root:not([data-theme="light"]) .fileNote {
-    color: #fbbf24;
+  :root:not([data-theme="light"]) .uploadHint,
+  :root:not([data-theme="light"]) .usage,
+  :root:not([data-theme="light"]) .modalAgentList {
+    color: var(--text-2);
   }
-}
 
-:root[data-theme="dark"] .fileName {
-  color: #ededed;
-}
+  /* „Nie uzywa go zaden agent" ma byc slabsze niz lista uzywajacych —
+     i inne niz „nie wiadomo", bo tylko jedno z nich zaprasza do skasowania. */
+  :root:not([data-theme="light"]) .usageNone {
+    color: var(--text-3);
+  }
 
-:root[data-theme="dark"] .fileCard {
-  background: #131318;
-  border-color: #27272a;
+  /* Plakietka agenta: agent = maszyna = cyjan, jak chipAgent w Czatach.
+     Byla fioletowa (#221a45 / #c4b5fd) — resztka starej palety. */
+  :root:not([data-theme="light"]) .agentTag {
+    border: 1px solid var(--signal-line);
+    background: var(--signal-soft);
+    color: var(--signal-text);
+    font-family: var(--font-data);
+    font-weight: 400;
+    letter-spacing: 0.04em;
+  }
+
+  :root:not([data-theme="light"]) .agentTagArchived {
+    border-color: var(--line);
+    background: transparent;
+    color: var(--text-3);
+  }
 }
 
 :root[data-theme="dark"] .dropZone {
-  background: #17132a;
-  border-color: #4c3a86;
-  color: #c4b5fd;
+  border: 1px dashed var(--signal-line);
+  border-radius: var(--r-card);
+  background: var(--signal-soft);
+  color: var(--signal-text);
+  font-weight: 500;
 }
 
 :root[data-theme="dark"] .dropZone:hover {
-  background: #1e1838;
-  border-color: #7c3aed;
+  border-color: var(--signal);
+  background: var(--signal-soft);
 }
 
-:root[data-theme="dark"] .usage,
-:root[data-theme="dark"] .uploadHint,
-:root[data-theme="dark"] .modalAgentList {
-  color: #a1a1aa;
+:root[data-theme="dark"] .fileCard {
+  border-radius: var(--r-card);
+  border-color: var(--line);
+  background: var(--surface);
+  transition: border-color 0.16s var(--ease), background 0.16s var(--ease);
 }
 
-:root[data-theme="dark"] .agentTag {
-  background: #221a45;
-  color: #c4b5fd;
+:root[data-theme="dark"] .fileCard:hover {
+  border-color: var(--text-3);
+  background: var(--surface-2);
 }
 
-:root[data-theme="dark"] .agentTagArchived {
-  background: #27272a;
-  color: #a1a1aa;
+:root[data-theme="dark"] .fileName {
+  color: var(--text);
+  font-weight: 600;
+}
+
+:root[data-theme="dark"] .fileMeta {
+  color: var(--text-3);
+  font-family: var(--font-data);
+}
+
+:root[data-theme="dark"] .statusReady,
+:root[data-theme="dark"] .statusWarn,
+:root[data-theme="dark"] .statusError {
+  font-family: var(--font-ui);
+  font-weight: 500;
 }
 
 :root[data-theme="dark"] .statusReady {
-  color: #4ade80;
+  color: var(--ok);
 }
 
 :root[data-theme="dark"] .statusWarn,
-:root[data-theme="dark"] .usageUnknown {
-  color: #fbbf24;
+:root[data-theme="dark"] .usageUnknown,
+:root[data-theme="dark"] .fileNote {
+  color: var(--warn);
 }
 
 :root[data-theme="dark"] .statusError {
-  color: #ff8f8f;
+  color: var(--err);
 }
 
-:root[data-theme="dark"] .fileNote {
-  color: #fbbf24;
+:root[data-theme="dark"] .uploadHint,
+:root[data-theme="dark"] .usage,
+:root[data-theme="dark"] .modalAgentList {
+  color: var(--text-2);
+}
+
+:root[data-theme="dark"] .usageNone {
+  color: var(--text-3);
+}
+
+:root[data-theme="dark"] .agentTag {
+  border: 1px solid var(--signal-line);
+  background: var(--signal-soft);
+  color: var(--signal-text);
+  font-family: var(--font-data);
+  font-weight: 400;
+  letter-spacing: 0.04em;
+}
+
+:root[data-theme="dark"] .agentTagArchived {
+  border-color: var(--line);
+  background: transparent;
+  color: var(--text-3);
 }
