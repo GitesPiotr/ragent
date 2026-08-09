@@ -59,7 +59,19 @@
 
     --ok: #52f0bf;
     --warn: #d8b46a;
-    --err: #ff68ad;
+
+    /* --err: #ff68ad;  <- wartosc z prototypu, HSL(333, 100%, 70%).
+       Zamieniona na cieplejsza czerwien o TYM SAMYM nasyceniu i jasnosci
+       (HSL 355, 100%, 70%) — zmienia sie tylko odcien, wiec kontrast na
+       granatowym tle zostaje bez zmian. Powrot to jedna linia. */
+    --err: #ff6673;
+
+    /* Tla i ramki bledow BIORA SIE Z --err, a nie z wpisanego recznie rgba.
+       Wczesniej w osmiu plikach stalo rgba(255, 104, 173, ...) rozlozone na
+       skladowe starego --err — zmiana samego tokenu zostawilaby rozowe tla
+       pod czerwonym tekstem. Wzorowane na --signal-soft / --signal-line. */
+    --err-soft: rgba(255, 102, 115, 0.07);
+    --err-line: rgba(255, 102, 115, 0.4);
   }
 }
 
@@ -92,7 +104,11 @@
 
   --ok: #52f0bf;
   --warn: #d8b46a;
-  --err: #ff68ad;
+
+  /* --err: #ff68ad;  <- wartosc z prototypu, patrz komentarz w bloku @media. */
+  --err: #ff6673;
+  --err-soft: rgba(255, 102, 115, 0.07);
+  --err-line: rgba(255, 102, 115, 0.4);
 }
 
 :root[data-theme="light"] {

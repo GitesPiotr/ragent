@@ -870,8 +870,8 @@
 
   :root:not([data-theme="light"]) .error {
     border-radius: var(--r-control);
-    border-color: rgba(255, 104, 173, 0.4);
-    background: rgba(255, 104, 173, 0.07);
+    border-color: var(--err-line);
+    background: var(--err-soft);
     color: var(--err);
   }
 }
@@ -1178,8 +1178,8 @@
 
 :root[data-theme="dark"] .error {
     border-radius: var(--r-control);
-    border-color: rgba(255, 104, 173, 0.4);
-    background: rgba(255, 104, 173, 0.07);
+    border-color: var(--err-line);
+    background: var(--err-soft);
     color: var(--err);
   }
 

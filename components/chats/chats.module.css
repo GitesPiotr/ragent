@@ -1147,7 +1147,7 @@
   :root:not([data-theme="light"]) .deletedText,
   :root:not([data-theme="light"]) .runnerDeleted,
   :root:not([data-theme="light"]) .runnerDeletedTag {
-    border-color: rgba(255, 104, 173, 0.4);
+    border-color: var(--err-line);
     background: transparent;
     color: var(--err);
   }
@@ -1197,7 +1197,7 @@
 
   :root:not([data-theme="light"]) .actionDanger:hover,
   :root:not([data-theme="light"]) .actionItemActive.actionDanger {
-    background: rgba(255, 104, 173, 0.07);
+    background: var(--err-soft);
   }
 
   :root:not([data-theme="light"]) .msgBox {
@@ -1244,8 +1244,8 @@
   :root:not([data-theme="light"]) .error,
   :root:not([data-theme="light"]) .dropdownError {
     border-radius: var(--r-control);
-    border-color: rgba(255, 104, 173, 0.4);
-    background: rgba(255, 104, 173, 0.07);
+    border-color: var(--err-line);
+    background: var(--err-soft);
     color: var(--err);
   }
 
@@ -1433,7 +1433,7 @@
   :root[data-theme="dark"] .deletedText,
   :root[data-theme="dark"] .runnerDeleted,
   :root[data-theme="dark"] .runnerDeletedTag {
-    border-color: rgba(255, 104, 173, 0.4);
+    border-color: var(--err-line);
     background: transparent;
     color: var(--err);
   }
@@ -1481,7 +1481,7 @@
 
 :root[data-theme="dark"] .actionDanger:hover,
   :root[data-theme="dark"] .actionItemActive.actionDanger {
-    background: rgba(255, 104, 173, 0.07);
+    background: var(--err-soft);
   }
 
 :root[data-theme="dark"] .msgBox {
@@ -1527,8 +1527,8 @@
 :root[data-theme="dark"] .error,
 :root[data-theme="dark"] .dropdownError {
     border-radius: var(--r-control);
-    border-color: rgba(255, 104, 173, 0.4);
-    background: rgba(255, 104, 173, 0.07);
+    border-color: var(--err-line);
+    background: var(--err-soft);
     color: var(--err);
   }
 
