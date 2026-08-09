@@ -58,6 +58,47 @@ nic nie rezerwuje miejsca, ale komunikat nachodzi na kreski pierścienia.
 
 ---
 
+### Logo w pasku bocznym jest LCP na `/projekty` i ładuje się leniwie
+
+Next zgłasza ostrzeżenie: obraz `/ragent-pelne.png` w `components/workspace/Sidebar.js`
+został wykryty jako największy element pierwszego malowania, a nie ma `priority`.
+
+**Dlaczego `priority` zostało zdjęte.** Przy logo 24 px (`ragent-napis.png`)
+`priority` dokładało do `<head>` wstępne pobranie obrazu, którego motyw jasny
+nigdy nie pokazuje — z ostrzeżeniem w konsoli o nieużytym preloadzie. Przy
+152 × 195 bilans się odwrócił: obraz jest teraz na tyle duży, że sam wyznacza
+LCP w motywie ciemnym.
+
+**Ile to realnie waży.** Źródło ma 171 KB, ale to nie jest to, co leci po sieci —
+`next/image` obsługuje pliki z `public/` i przekodowuje je:
+
+| żądanie | odpowiedź |
+|---|---|
+| `/_next/image?url=…&w=256` | 37 578 B WebP |
+| `/_next/image?url=…&w=384` | 64 274 B WebP |
+| surowy `/ragent-pelne.png` | 175 029 B PNG |
+
+**Z tego wynika, że rekompresja źródła nic nie da** — Next i tak koduje od nowa.
+To odpada jako rozwiązanie, choć wygląda kusząco.
+
+**Opcje i ich realny koszt:**
+
+- `loading="eager"` — ładuje od razu, ale **nie** dokłada `<link rel=preload>`,
+  więc nie ma ostrzeżenia o nieużytym preloadzie. Cena: leniwy obraz pod
+  `display: none` nigdy się nie pobiera (brak pudełka = brak przecięcia
+  z widokiem), a `eager` pobiera zawsze. Motyw jasny zapłaciłby ~37 KB
+  za obraz, którego nie widać.
+- `priority` z warunkiem na motyw — wymaga odczytu motywu w JS. To dokładnie
+  to, czego unikaliśmy: przy pierwszym renderze atrybutu `data-theme` jeszcze
+  nie ma, a przy ustawieniu „Automatyczny" nie ma go nigdy, więc zgadywanie
+  kończy się migotaniem albo złym wyborem.
+
+**Czego nie sprawdziłem:** samego ostrzeżenia — `/projekty` wymaga zalogowania.
+Warto przy okazji zobaczyć, czy logo jest LCP zawsze, czy tylko przy krótkiej
+liście projektów. Jeśli tylko wtedy, dług jest węższy, niż się wydaje.
+
+---
+
 ## Nazwa
 
 ### `AIdeas` w około 179 miejscach
