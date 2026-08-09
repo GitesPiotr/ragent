@@ -1,0 +1,285 @@
+/* ============================================================================
+   SAMOUCZEK „JAK PRZYGOTOWAĆ DOKUMENTY" — z docs/prototyp-samouczek-rag.html.
+
+   CZTERY RZECZY, KTÓRYCH NIE WOLNO TU RUSZAĆ BEZ CZYTANIA:
+
+   1. EKRAN JEST ZAWSZE CIEMNY, tak jak logowanie. Paleta to LITERAŁY, nie
+      tokeny aplikacji — motyw nie ma na co wpłynąć. Nazwy są celowo zgodne
+      z globalnymi (--surface, --line, --text…), ale stoją na .samouczek
+      i NIGDY w :root: gdyby --line trafiło do :root, każda ramka w aplikacji
+      zrobiłaby się turkusowa.
+
+   2. TE TOKENY W MOTYWIE JASNYM NIE ISTNIEJĄ. Policzone: samouczek używa
+      26 tokenów, z czego 20 jest zadeklarowanych WYŁĄCZNIE w blokach ciemnych
+      app/globals.css, a --ok-soft i --ok-line nie istnieją nigdzie. Dlatego
+      paleta jest tutaj przepisana w całości, a nie dziedziczona.
+
+   3. --ok-soft I --ok-line SĄ LITERAŁAMI ŚWIADOMIE. Brakuje ich w globals.css
+      i jest to zapisany dług (docs/dlugi.md, „Brakujące tokeny"). Spłata
+      wymagałaby przerobienia czterech istniejących miejsc z surowym rgba,
+      więc została odłożona — tutaj nie udajemy, że tokeny są.
+
+   4. KONWENCJA DWUBLOKOWA MIMO LITERAŁÓW — i to jest najmniej oczywiste.
+      Ten ekran siedzi wewnątrz .panel (layout modułu wiesza tę klasę na tym
+      samym elemencie co .content), a .panel stylizuje ELEMENTY: button, h1,
+      input, textarea, label. Reguły elementowe .panel mają wyższą
+      specyficzność niż zwykła klasa modułu:
+
+          .panel button                       (0,1,1) w jasnym
+          :root[data-theme="dark"] .panel …   (0,3,1) w ciemnym
+          .samouczek .przelacznik             (0,2,0)  ← przegrywa w ciemnym
+
+      Dlatego nadpisania elementów muszą powtarzać prefiks motywu, mimo że
+      paleta jest stała. Dotyczy WYŁĄCZNIE button i h1 — input, textarea
+      i label nie występują na tym ekranie (lista kontrolna to
+      div role="checkbox", nie input).
+   ============================================================================ */
+
+.samouczek {
+  /* --- paleta prototypu, literały --- */
+  --bg: #040611;
+  --bg-2: #080d1d;
+  --surface: #0c1428;
+  --surface-2: #101c36;
+  --line: #213b63;
+  --line-soft: #16294a;
+  --text: #f3fbff;
+  --text-2: #9db3c9;
+  --text-3: #7890aa;
+  --ink: #f3fbff;
+  --on-ink: #040611;
+  --signal: #35dcff;
+  --signal-soft: rgba(53, 220, 255, 0.1);
+  --signal-line: rgba(53, 220, 255, 0.35);
+  --model: #8a6cff;
+  --model-soft: rgba(138, 108, 255, 0.1);
+  --warn: #d8b46a;
+  --warn-soft: rgba(216, 180, 106, 0.1);
+  --warn-line: rgba(216, 180, 106, 0.32);
+  --err: #ff6673;
+  --err-soft: rgba(255, 102, 115, 0.1);
+  --err-line: rgba(255, 102, 115, 0.32);
+
+  /* --ok PRZESŁANIA wartość z .panel, i o to chodzi. .panel jest przodkiem
+     tego elementu i nadaje --ok inny kolor w każdym motywie (#52f0bf w ciemnym,
+     #15803d w jasnym). Deklaracja tutaj jest literałem, nie var(--ok), więc nie
+     jest cykliczna — po prostu ustala jedną wartość dla całego poddrzewa.
+     --ok-soft i --ok-line nie istnieją nigdzie w aplikacji (dług). */
+  --ok: #52f0bf;
+  --ok-soft: rgba(82, 240, 191, 0.1);
+  --ok-line: rgba(82, 240, 191, 0.32);
+
+  /* Z prototypu, NIE z globalnego --r-card (tam jest 10px). */
+  --r-card: 12px;
+
+  font-family: var(--font-ui);
+  color: var(--text);
+  background: var(--bg);
+  max-width: 940px;
+  margin: 0 auto;
+  padding: 48px 24px 96px;
+  line-height: 1.55;
+}
+
+.samouczek * {
+  box-sizing: border-box;
+}
+
+/* NAWIGACJA. Strukturę (flex, odstępy, ramki, strzałka w ::before) bierzemy
+   z kreator-rag.module.css, żeby pasek wyglądał jak w reszcie modułu. Ale tamte
+   reguły biorą KOLOR z motywu (.nawigacja a → var(--przygaszony), czyli #71717a
+   w jasnym), a nasz ekran jest zawsze ciemny. Przypinamy więc same kolory —
+   dwie klasy (0,2,0) biją .nawigacja a (0,1,1) w obu motywach. */
+.samouczek .nawigacjaOdnosnik {
+  color: var(--text-3);
+  text-decoration: none;
+}
+
+.samouczek .nawigacjaOdnosnik:hover {
+  color: var(--text-2);
+}
+
+.samouczek .nawigacjaMiejsce {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* ---------- nagłówek ---------- */
+
+.naglowek {
+  margin-bottom: 40px;
+}
+
+.nadtytul {
+  font-family: var(--font-data);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: 10px;
+}
+
+/* .samouczek .tytul, a nie .naglowek h1 — bo .panel h1 (0,1,1) ustawia 22px
+   i wygrałoby z regułą o tej samej specyficzności rozstrzyganą kolejnością
+   plików, która przy modułach CSS nie jest niczym gwarantowana. */
+.samouczek .tytul {
+  font-size: 34px;
+  line-height: 1.15;
+  margin: 0 0 12px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.naglowek p {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 16px;
+  max-width: 62ch;
+}
+
+/* ---------- sekcje ---------- */
+
+.sekcja {
+  margin-top: 56px;
+}
+
+.sekcjaPierwsza {
+  margin-top: 0;
+}
+
+.sekcja > .podtytulSekcji {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0 0 6px;
+  letter-spacing: -0.005em;
+}
+
+.wstep {
+  margin: 0 0 22px;
+  color: var(--text-2);
+  max-width: 64ch;
+}
+
+.wstepPoUwadze {
+  margin: 18px 0 0;
+}
+
+/* ---------- czym jest RAG ---------- */
+
+.wyjasnienie {
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  padding: 22px 24px;
+}
+
+.wyjasnienie p {
+  margin: 0 0 12px;
+  color: var(--text-2);
+  font-size: 15px;
+  max-width: 70ch;
+}
+
+.wyjasnienie p:last-of-type {
+  margin-bottom: 0;
+}
+
+.wyjasnienie strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.rozwiniecie {
+  font-family: var(--font-data);
+  font-size: 12px;
+  color: var(--text-3);
+  padding-top: 14px;
+  margin-top: 16px;
+  border-top: 1px solid var(--line-soft);
+}
+
+/* ---------- trzy kroki ---------- */
+
+.kroki {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 14px;
+}
+
+@media (max-width: 700px) {
+  .kroki {
+    grid-template-columns: 1fr;
+  }
+}
+
+.krok {
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  padding: 16px 18px;
+}
+
+.krokNr {
+  font-family: var(--font-data);
+  font-size: 11px;
+  color: var(--signal);
+  letter-spacing: 0.1em;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.krok h3 {
+  font-size: 14.5px;
+  margin: 0 0 5px;
+  font-weight: 600;
+}
+
+.krok p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-3);
+  line-height: 1.55;
+}
+
+/* ---------- uwaga ---------- */
+
+.uwaga {
+  border: 1px solid var(--warn-line);
+  background: var(--warn-soft);
+  border-radius: var(--r-card);
+  padding: 16px 18px;
+  margin-top: 16px;
+}
+
+.uwagaTytul {
+  display: block;
+  font-weight: 600;
+  font-size: 14.5px;
+  color: var(--warn);
+  margin-bottom: 6px;
+}
+
+.uwaga p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-2);
+  max-width: 70ch;
+}
+
+.uwaga p + p {
+  margin-top: 10px;
+}
+
+.uwaga strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* ---------- ognisko klawiatury ---------- */
+
+.samouczek :focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 3px;
+  border-radius: 10px;
+}
