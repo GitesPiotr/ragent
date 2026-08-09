@@ -17,6 +17,25 @@ test("tabela formatów opisuje DOKŁADNIE te formaty, które przyjmuje dyspozyto
   assert.deepEqual(wTabeli, [...FORMATY].sort());
 });
 
+test("opis nagłówków to lista części, a każda część jest tekstem albo kodem", () => {
+  for (const f of FORMATY_OPIS) {
+    assert.ok(Array.isArray(f.naglowki), `${f.ext}: naglowki musi być listą`);
+    assert.ok(f.naglowki.length > 0, `${f.ext}: pusta lista części`);
+    for (const cz of f.naglowki) {
+      const poprawna = typeof cz === "string" || (cz && typeof cz.kod === "string");
+      assert.ok(poprawna, `${f.ext}: część nie jest ani napisem, ani { kod }`);
+    }
+  }
+});
+
+test("wiersz .md pokazuje znaki # i ## DOSŁOWNIE, jako kod", () => {
+  // Ta kolumna mówi, po czym aplikacja rozpoznaje nagłówek (extract.js:55-59),
+  // więc zapis musi być dosłowny. Spłaszczenie do zwykłego tekstu gubi treść.
+  const md = FORMATY_OPIS.find((f) => f.ext === ".md");
+  const kody = md.naglowki.filter((cz) => typeof cz !== "string").map((cz) => cz.kod);
+  assert.deepEqual(kody, ["#", "##"]);
+});
+
 test("żaden format z tabeli nie trafił na listę nieobsługiwanych", () => {
   for (const f of FORMATY_OPIS) {
     assert.ok(

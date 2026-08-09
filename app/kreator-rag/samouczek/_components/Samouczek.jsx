@@ -353,7 +353,18 @@ export function Samouczek({ rozmiarFragmentu, progTwardegoCiecia, limitMb }) {
                   <span className={`${styles.znacznik} ${styles[ZNACZNIK_KLASA[f.pewnosc]]}`}>
                     {f.etykieta}
                   </span>
-                  {f.naglowki}
+                  {/* Części: zwykły napis albo { kod } — patrz komentarz przy
+                      FORMATY_OPIS. Znaki # i ## muszą być widoczne jako
+                      dosłowne znaki, bo o nich właśnie mówi ta kolumna. */}
+                  {f.naglowki.map((cz, i) =>
+                    typeof cz === "string" ? (
+                      <span key={i}>{cz}</span>
+                    ) : (
+                      <code key={i} className={styles.kod}>
+                        {cz.kod}
+                      </code>
+                    )
+                  )}
                 </td>
               </tr>
             ))}

@@ -96,41 +96,48 @@ export const KONTROLNA = [
 // Formaty w tabeli. `pewnosc` steruje kolorem znacznika i jest ODDZIELONA od
 // jego napisu, bo .csv ma nagłówki „inaczej", nie „pewnie" — kolor ten sam,
 // słowo inne.
+//
+// `naglowki` TO LISTA CZĘŚCI, nie zwykły napis. Zwykły ciąg znaków (tekst) albo
+// { kod: "…" } dla fragmentu składanego krojem maszynowym. Powód jest
+// merytoryczny, nie estetyczny: ta kolumna mówi, PO CZYM aplikacja rozpoznaje
+// nagłówek, więc dosłowność zapisu jest treścią. „po znakach # i ##" złożone
+// tym samym krojem co zdanie obok gubi informację, że chodzi o dokładnie te
+// znaki na początku linii.
 export const FORMATY_OPIS = [
   {
     ext: ".md",
     czytanie: "Najlepszy wybór. Struktura zapisana wprost w tekście.",
     pewnosc: "pewne",
     etykieta: "Pewne",
-    naglowki: "po znakach # i ##",
+    naglowki: ["po znakach ", { kod: "#" }, " i ", { kod: "##" }],
   },
   {
     ext: ".docx",
     czytanie: "Bardzo dobry, jeśli dokument korzysta ze stylów Worda.",
     pewnosc: "pewne",
     etykieta: "Pewne",
-    naglowki: "ale tylko style „Nagłówek 1/2/3”, nie pogrubiony tekst",
+    naglowki: ["ale tylko style „Nagłówek 1/2/3”, nie pogrubiony tekst"],
   },
   {
     ext: ".pdf",
     czytanie: "Dobry, o ile plik ma warstwę tekstową. Skan nie zadziała.",
     pewnosc: "zgadywane",
     etykieta: "Zgadywane",
-    naglowki: "z wyglądu linii; § i „Rozdział” pomagają",
+    naglowki: ["z wyglądu linii; § i „Rozdział” pomagają"],
   },
   {
     ext: ".txt",
     czytanie: "Czytany bez problemu, dzielony po pustych liniach.",
     pewnosc: "brak",
     etykieta: "Brak",
-    naglowki: "format nie ma jak ich zapisać",
+    naglowki: ["format nie ma jak ich zapisać"],
   },
   {
     ext: ".csv",
     czytanie: "Czytany wiersz po wierszu, jako tabela.",
     pewnosc: "pewne",
     etykieta: "Inaczej",
-    naglowki: "pierwszy wiersz to nazwy kolumn, powtarzane przy każdym fragmencie",
+    naglowki: ["pierwszy wiersz to nazwy kolumn, powtarzane przy każdym fragmencie"],
   },
 ];
 
