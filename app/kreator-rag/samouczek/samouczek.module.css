@@ -314,6 +314,272 @@
   font-weight: 600;
 }
 
+/* ============================================================================
+   DEMO CIĘCIA
+
+   TU ZACZYNAJĄ SIĘ PRZYCISKI, czyli miejsce, w którym ścigamy się z .panel.
+   .panel button ustawia DZIEWIĘĆ właściwości — tło, kolor, ramkę, promień,
+   dopełnienie, rozmiar i grubość kroju, kursor oraz margin-bottom: 20px —
+   i robi to na wyższej specyficzności niż zwykła klasa modułu:
+
+       .panel button                                      (0,1,1)  motyw jasny
+       :root[data-theme="dark"] .panel button             (0,3,1)  ciemny wymuszony
+       :root:not([data-theme="light"]) .panel button      (0,3,1)  ciemny z systemu
+       .samouczek .przelacznik                            (0,2,0)  ← przegrywa w ciemnym
+
+   Stąd POTRÓJNY SELEKTOR przy każdej regule dotykającej przycisku. Trzy
+   selektory, JEDEN blok deklaracji — nie trzy kopie tych samych wartości.
+   Każdy wygrywa w swoim kontekście:
+
+       .samouczek .X                                   (0,2,0) > (0,1,1)  jasny
+       :root[data-theme="dark"] .samouczek .X          (0,4,0) > (0,3,1)  ciemny
+       :root:not([data-theme="light"]) .samouczek .X   (0,4,0) > (0,3,1)  auto
+
+   Trzeci selektor NIE JEST opakowany w @media, choć panelowy jest. Nie musi:
+   wartości są identyczne we wszystkich motywach (ekran jest zawsze ciemny),
+   więc zadziałanie go także w jasnym niczego nie zmienia.
+
+   PUŁAPKA NA :hover. .panel button:hover:not(:disabled) to (0,3,1) w jasnym
+   i (0,5,1) w ciemnym. Nasze :hover BEZ :not(:disabled) dałoby (0,3,0) i (0,5,0)
+   — remis na klasach, przegrana na kolumnie elementów. Dlatego po naszej stronie
+   :not(:disabled) też musi być, mimo że żaden z tych przycisków nie bywa
+   wyłączony.
+   ============================================================================ */
+
+.demo {
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.demoPasek {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--bg-2);
+}
+
+.etykieta {
+  font-family: var(--font-data);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.etykietaPliku {
+  margin-right: auto;
+}
+
+/* --- przełącznik wersji dokumentu --- */
+
+.samouczek .przelacznik,
+:root[data-theme="dark"] .samouczek .przelacznik,
+:root:not([data-theme="light"]) .samouczek .przelacznik {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 12px;
+  margin: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-2);
+}
+
+.samouczek .przelacznik:hover:not(:disabled),
+:root[data-theme="dark"] .samouczek .przelacznik:hover:not(:disabled),
+:root:not([data-theme="light"]) .samouczek .przelacznik:hover:not(:disabled) {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text);
+}
+
+.samouczek .przelacznik[aria-pressed="true"],
+:root[data-theme="dark"] .samouczek .przelacznik[aria-pressed="true"],
+:root:not([data-theme="light"]) .samouczek .przelacznik[aria-pressed="true"] {
+  background: var(--surface-2);
+  border-color: var(--line);
+  color: var(--text);
+}
+
+/* --- dwie kolumny: dokument i pytania --- */
+
+.demoCialo {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+}
+
+@media (max-width: 760px) {
+  .demoCialo {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dokument {
+  padding: 18px;
+  border-right: 1px solid var(--line-soft);
+}
+
+@media (max-width: 760px) {
+  .dokument {
+    border-right: 0;
+    border-bottom: 1px solid var(--line-soft);
+  }
+}
+
+.fragment {
+  position: relative;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  padding: 12px 12px 12px 44px;
+  margin-bottom: 8px;
+  font-size: 13.5px;
+  color: var(--text-2);
+  line-height: 1.6;
+  transition: border-color 0.18s, background 0.18s, color 0.18s;
+}
+
+.fragmentNr {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  font-family: var(--font-data);
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.fragmentTytul {
+  display: block;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 3px;
+  font-size: 13.5px;
+}
+
+.trafiony {
+  border-style: solid;
+  border-color: var(--signal-line);
+  background: var(--signal-soft);
+  color: var(--text);
+}
+
+.trafiony .fragmentNr {
+  color: var(--signal);
+}
+
+/* <mark> ma własne tło od przeglądarki (żółte) — nadpisujemy w całości. */
+.wyroznione {
+  background: rgba(53, 220, 255, 0.22);
+  color: var(--text);
+  border-radius: 3px;
+  padding: 0 2px;
+}
+
+.panelPytan {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.etykietaPytan {
+  margin-bottom: 2px;
+}
+
+/* --- pytania --- */
+
+.samouczek .pytanie,
+:root[data-theme="dark"] .samouczek .pytanie,
+:root:not([data-theme="light"]) .samouczek .pytanie {
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 400;
+  text-align: left;
+  cursor: pointer;
+  padding: 10px 12px;
+  margin: 0;
+  border-radius: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  color: var(--text-2);
+}
+
+.samouczek .pytanie:hover:not(:disabled),
+:root[data-theme="dark"] .samouczek .pytanie:hover:not(:disabled),
+:root:not([data-theme="light"]) .samouczek .pytanie:hover:not(:disabled) {
+  background: var(--surface-2);
+  border-color: var(--signal-line);
+  color: var(--text);
+}
+
+.samouczek .pytanie[aria-pressed="true"],
+:root[data-theme="dark"] .samouczek .pytanie[aria-pressed="true"],
+:root:not([data-theme="light"]) .samouczek .pytanie[aria-pressed="true"] {
+  border-color: var(--signal-line);
+  color: var(--text);
+  background: var(--signal-soft);
+}
+
+/* --- werdykt --- */
+
+.werdykt {
+  margin-top: 6px;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.55;
+  border: 1px solid var(--line);
+  background: var(--bg-2);
+  color: var(--text-2);
+}
+
+.werdykt b {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 13px;
+}
+
+.werdyktTak {
+  border-color: var(--ok-line);
+  background: var(--ok-soft);
+}
+
+.werdyktTak b {
+  color: var(--ok);
+}
+
+.werdyktNie {
+  border-color: var(--err-line);
+  background: var(--err-soft);
+}
+
+.werdyktNie b {
+  color: var(--err);
+}
+
+.werdyktPusty {
+  color: var(--text-3);
+  font-style: italic;
+}
+
+.podDemo {
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  color: var(--text-3);
+  font-family: var(--font-data);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fragment {
+    transition: none;
+  }
+}
+
 /* ---------- ognisko klawiatury ---------- */
 
 .samouczek :focus-visible {

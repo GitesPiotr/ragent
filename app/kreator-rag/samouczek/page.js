@@ -26,5 +26,10 @@ export const metadata = {
 export default function SamouczekPage() {
   const config = getConfig();
 
-  return <Samouczek rozmiarFragmentu={config.chunk.size} />;
+  return (
+    <Samouczek
+      rozmiarFragmentu={config.chunk.size}
+      progTwardegoCiecia={config.chunk.max}
+    />
+  );
 }
