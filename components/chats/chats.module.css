@@ -127,15 +127,17 @@
   width: 100%;
   min-width: 0;
   overflow: hidden;
-  /* WYSOKOSC WIERSZA ≈ 90px, liczona od tytulu do tytulu nastepnego wiersza.
+  /* WYSOKOSC WIERSZA ≈ 81px, liczona od tytulu do tytulu nastepnego wiersza.
      Blok tekstu ma 44.6px (19.6 tytul + 6 odstep + 19 metadane — patrz
-     .convTitle i .convMeta), wiec 2 × 23px paddingu daje 90.6px.
+     .convTitle i .convMeta), wiec 2 × 18px paddingu daje 80.6px.
+     Punkt odniesienia: 62px przed ta seria poprawek, czyli 130%.
 
      min-height jest zabezpieczeniem dla TRYBU ZMIANY NAZWY: tam zamiast
      dwuliniowego tekstu stoi jednoliniowe pole (~28px) i bez tego wiersz
-     kurczylby sie o kilkanascie pikseli w trakcie edycji. */
-  padding: 23px 10px;
-  min-height: 90px;
+     kurczylby sie o kilkanascie pikseli w trakcie edycji. Trzymac zgodnie
+     z paddingiem: min-height ≈ blok tekstu + 2 × padding. */
+  padding: 18px 10px;
+  min-height: 80px;
   border-left: 3px solid transparent;
   border-radius: 8px;
   background: transparent;
