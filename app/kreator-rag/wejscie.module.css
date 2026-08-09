@@ -1,0 +1,265 @@
+/* ============================================================================
+   EKRAN WEJŚCIOWY KREATORA RAG — z docs/prototyp-wejscie-kreator-rag.html.
+
+   Te same trzy zasady co w samouczku:
+     1. paleta LITERAŁAMI na .wejscie, nigdy w :root — ekran jest zawsze ciemny,
+        a tokeny globalne istnieją tylko w blokach ciemnych;
+     2. tło na cały obszar treści przez main:has() — .panel maluje <main> bielą
+        w motywie jasnym, a rodzica nie da się pomalować z dziecka;
+     3. --r-card z prototypu (14px), nie globalne 10px.
+
+   CZEGO TU NIE MA, a jest w samouczku: potrójnych selektorów przeciw
+   .panel button. Karty są odnośnikami (<Link>), nie przyciskami, więc reguły
+   elementowe .panel ich nie dotykają. Zostaje jedno nadpisanie — na <h1>.
+   ============================================================================ */
+
+/* Uzasadnienie tej reguły w całości: app/kreator-rag/samouczek/samouczek.module.css. */
+:global(main):has(.wejscie) {
+  background: #040611;
+}
+
+.wejscie {
+  --bg: #040611;
+  --bg-2: #080d1d;
+  --surface: #0c1428;
+  --surface-2: #101c36;
+  --line: #213b63;
+  --line-soft: #16294a;
+  --text: #f3fbff;
+  --text-2: #9db3c9;
+  --text-3: #7890aa;
+  --ink: #f3fbff;
+  --on-ink: #040611;
+  --signal: #35dcff;
+  --signal-soft: rgba(53, 220, 255, 0.1);
+  --signal-line: rgba(53, 220, 255, 0.35);
+  --warn: #d8b46a;
+  --warn-soft: rgba(216, 180, 106, 0.1);
+  --warn-line: rgba(216, 180, 106, 0.32);
+
+  /* Z prototypu. Globalne --r-card to 10px. */
+  --r-card: 14px;
+
+  font-family: var(--font-ui);
+  color: var(--text);
+  background: var(--bg);
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 56px 24px 80px;
+  line-height: 1.55;
+}
+
+.wejscie * {
+  box-sizing: border-box;
+}
+
+/* ---------- nagłówek ---------- */
+
+.naglowek {
+  margin-bottom: 32px;
+}
+
+.nadtytul {
+  font-family: var(--font-data);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: 10px;
+}
+
+/* Dwie klasy, bo .panel h1 (0,1,1) ustawia 22px i wygrałoby ze zwykłą klasą. */
+.wejscie .tytul {
+  font-size: 32px;
+  line-height: 1.15;
+  margin: 0 0 10px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.naglowek p {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 16px;
+  max-width: 64ch;
+}
+
+/* ---------- karty ---------- */
+
+.karty {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 820px) {
+  .karty {
+    grid-template-columns: 1fr;
+  }
+}
+
+.karta {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  padding: 26px 26px 24px;
+  text-align: left;
+  color: inherit;
+  text-decoration: none;
+  cursor: pointer;
+  transition: border-color 0.18s, background 0.18s, transform 0.18s;
+}
+
+.karta:hover {
+  border-color: var(--signal-line);
+  background: var(--surface-2);
+  transform: translateY(-2px);
+}
+
+.wyrozniona {
+  border-color: var(--signal-line);
+}
+
+.metka {
+  font-family: var(--font-data);
+  font-size: 10.5px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: 16px;
+  display: block;
+}
+
+.wyrozniona .metka {
+  color: var(--signal);
+}
+
+.znak {
+  margin-bottom: 18px;
+  height: 52px;
+  display: flex;
+  align-items: flex-end;
+}
+
+.znak svg {
+  display: block;
+  overflow: visible;
+}
+
+.karta h2 {
+  font-size: 20px;
+  margin: 0 0 8px;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+}
+
+.opisKarty {
+  margin: 0 0 18px;
+  color: var(--text-2);
+  font-size: 14.5px;
+  max-width: 42ch;
+}
+
+.punkty {
+  list-style: none;
+  margin: 0 0 22px;
+  padding: 0;
+}
+
+.punkty li {
+  font-size: 13.5px;
+  color: var(--text-3);
+  padding: 6px 0 6px 18px;
+  position: relative;
+}
+
+.punkty li::before {
+  content: "·";
+  position: absolute;
+  left: 4px;
+  color: var(--text-3);
+}
+
+.dolKarty {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+/* Wyglądają jak przyciski, ale są zwykłymi napisami wewnątrz odnośnika —
+   zagnieżdżony przycisk w odnośniku byłby błędem w budowie strony. */
+.przycisk {
+  font: inherit;
+  font-weight: 600;
+  font-size: 14px;
+  padding: 10px 18px;
+  border-radius: 9px;
+  background: var(--ink);
+  color: var(--on-ink);
+}
+
+.przyciskCichy {
+  font: inherit;
+  font-weight: 500;
+  font-size: 14px;
+  padding: 10px 18px;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  color: var(--text);
+}
+
+.czas {
+  font-family: var(--font-data);
+  font-size: 11.5px;
+  color: var(--text-3);
+}
+
+.stanKolekcji {
+  font-family: var(--font-data);
+  font-size: 11.5px;
+  color: var(--text-3);
+  padding-top: 14px;
+  margin-top: 14px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.stanKolekcji b {
+  color: var(--text-2);
+  font-weight: 500;
+}
+
+.przypis {
+  margin-top: 22px;
+  padding: 14px 18px;
+  border-radius: 10px;
+  border: 1px solid var(--warn-line);
+  background: var(--warn-soft);
+  font-size: 13.5px;
+  color: var(--text-2);
+}
+
+.przypis b {
+  color: var(--warn);
+  font-weight: 600;
+}
+
+.wejscie :focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 3px;
+  border-radius: 10px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .karta {
+    transition: none;
+  }
+
+  .karta:hover {
+    transform: none;
+  }
+}

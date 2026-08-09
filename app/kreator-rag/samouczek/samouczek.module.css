@@ -1,0 +1,983 @@
+/* ============================================================================
+   SAMOUCZEK „JAK PRZYGOTOWAĆ DOKUMENTY" — z docs/prototyp-samouczek-rag.html.
+
+   CZTERY RZECZY, KTÓRYCH NIE WOLNO TU RUSZAĆ BEZ CZYTANIA:
+
+   1. EKRAN JEST ZAWSZE CIEMNY, tak jak logowanie. Paleta to LITERAŁY, nie
+      tokeny aplikacji — motyw nie ma na co wpłynąć. Nazwy są celowo zgodne
+      z globalnymi (--surface, --line, --text…), ale stoją na .samouczek
+      i NIGDY w :root: gdyby --line trafiło do :root, każda ramka w aplikacji
+      zrobiłaby się turkusowa.
+
+   2. TE TOKENY W MOTYWIE JASNYM NIE ISTNIEJĄ. Policzone: samouczek używa
+      26 tokenów, z czego 20 jest zadeklarowanych WYŁĄCZNIE w blokach ciemnych
+      app/globals.css, a --ok-soft i --ok-line nie istnieją nigdzie. Dlatego
+      paleta jest tutaj przepisana w całości, a nie dziedziczona.
+
+   3. --ok-soft I --ok-line SĄ LITERAŁAMI ŚWIADOMIE. Brakuje ich w globals.css
+      i jest to zapisany dług (docs/dlugi.md, „Brakujące tokeny"). Spłata
+      wymagałaby przerobienia czterech istniejących miejsc z surowym rgba,
+      więc została odłożona — tutaj nie udajemy, że tokeny są.
+
+   4. KONWENCJA DWUBLOKOWA MIMO LITERAŁÓW — i to jest najmniej oczywiste.
+      Ten ekran siedzi wewnątrz .panel (layout modułu wiesza tę klasę na tym
+      samym elemencie co .content), a .panel stylizuje ELEMENTY: button, h1,
+      input, textarea, label. Reguły elementowe .panel mają wyższą
+      specyficzność niż zwykła klasa modułu:
+
+          .panel button                       (0,1,1) w jasnym
+          :root[data-theme="dark"] .panel …   (0,3,1) w ciemnym
+          .samouczek .przelacznik             (0,2,0)  ← przegrywa w ciemnym
+
+      Dlatego nadpisania elementów muszą powtarzać prefiks motywu, mimo że
+      paleta jest stała. Dotyczy WYŁĄCZNIE button i h1 — input, textarea
+      i label nie występują na tym ekranie (lista kontrolna to
+      div role="checkbox", nie input).
+   ============================================================================ */
+
+/* ----------------------------------------------------------------------------
+   TŁO NA CAŁY OBSZAR TREŚCI.
+
+   Problem: .samouczek ma max-width 940px, więc w motywie jasnym ciemny prostokąt
+   wisiał na białym tle z pasami po bokach i krawędzią u dołu. Tło maluje .panel
+   (`background: var(--tlo)`, biel w jasnym), a .panel siedzi NA TYM SAMYM
+   elemencie co .content — czyli na <main>, rodzicu tego komponentu.
+
+   Dziecko nie może pomalować rodzica, a rodzic jest wspólny dla całego modułu,
+   więc trzeba było wybrać jedno z trzech:
+
+     a) ujemne marginesy zjadające padding .content — ODRZUCONE. Wymagałoby
+        przepisania 32/28/64 px oraz 20/16/48 px z app/projekty/layout.module.css,
+        czyli z arkusza WSPÓŁDZIELONEGO przez /agenty, /wiedza, /czaty
+        i /ustawienia. Dokładnie ten sam powód, dla którego odrzucił je autor
+        layoutu modułu (komentarz w app/kreator-rag/layout.js).
+     b) grupa tras z osobnym layoutem — działa, ale przenosi kolekcje,
+        diagnostykę i korzeń do nowego katalogu dla jednego koloru tła.
+     c) TO PONIŻEJ.
+
+   Selektor czyta się: „element <main>, który zawiera nasz samouczek". Stosuje się
+   WYŁĄCZNIE na tej trasie — na kolekcjach i diagnostyce .samouczek nie istnieje,
+   więc reguła nie ma czego złapać. Zero duplikacji wartości, zero zmian
+   w plikach wspólnych.
+
+   Specyficzność: (0,1,1) — element `main` plus klasa z :has(). Bije .panel
+   (0,1,0), a to jedyna reguła, z którą się tu ściga.
+
+   LITERAŁ, NIE var(--bg): zmienne palety są zadeklarowane na .samouczek, czyli
+   na DZIECKU tego elementu. Na <main> jeszcze nie istnieją.
+
+   W MOTYWIE CIEMNYM NIC SIĘ NIE ZMIENIA — tam .panel i tak maluje --tlo, które
+   równa się --bg, czyli tej samej barwie #040611.
+   ---------------------------------------------------------------------------- */
+:global(main):has(.samouczek) {
+  background: #040611;
+}
+
+.samouczek {
+  /* --- paleta prototypu, literały --- */
+  --bg: #040611;
+  --bg-2: #080d1d;
+  --surface: #0c1428;
+  --surface-2: #101c36;
+  --line: #213b63;
+  --line-soft: #16294a;
+  --text: #f3fbff;
+  --text-2: #9db3c9;
+  --text-3: #7890aa;
+  --ink: #f3fbff;
+  --on-ink: #040611;
+  --signal: #35dcff;
+  --signal-soft: rgba(53, 220, 255, 0.1);
+  --signal-line: rgba(53, 220, 255, 0.35);
+  --model: #8a6cff;
+  --model-soft: rgba(138, 108, 255, 0.1);
+  --warn: #d8b46a;
+  --warn-soft: rgba(216, 180, 106, 0.1);
+  --warn-line: rgba(216, 180, 106, 0.32);
+  --err: #ff6673;
+  --err-soft: rgba(255, 102, 115, 0.1);
+  --err-line: rgba(255, 102, 115, 0.32);
+
+  /* --ok PRZESŁANIA wartość z .panel, i o to chodzi. .panel jest przodkiem
+     tego elementu i nadaje --ok inny kolor w każdym motywie (#52f0bf w ciemnym,
+     #15803d w jasnym). Deklaracja tutaj jest literałem, nie var(--ok), więc nie
+     jest cykliczna — po prostu ustala jedną wartość dla całego poddrzewa.
+     --ok-soft i --ok-line nie istnieją nigdzie w aplikacji (dług). */
+  --ok: #52f0bf;
+  --ok-soft: rgba(82, 240, 191, 0.1);
+  --ok-line: rgba(82, 240, 191, 0.32);
+
+  /* Z prototypu, NIE z globalnego --r-card (tam jest 10px). */
+  --r-card: 12px;
+
+  font-family: var(--font-ui);
+  color: var(--text);
+  background: var(--bg);
+  max-width: 940px;
+  margin: 0 auto;
+  padding: 48px 24px 96px;
+  line-height: 1.55;
+}
+
+.samouczek * {
+  box-sizing: border-box;
+}
+
+/* NAWIGACJA. Strukturę (flex, odstępy, ramki, strzałka w ::before) bierzemy
+   z kreator-rag.module.css, żeby pasek wyglądał jak w reszcie modułu. Ale tamte
+   reguły biorą KOLOR z motywu (.nawigacja a → var(--przygaszony), czyli #71717a
+   w jasnym), a nasz ekran jest zawsze ciemny. Przypinamy więc same kolory —
+   dwie klasy (0,2,0) biją .nawigacja a (0,1,1) w obu motywach. */
+.samouczek .nawigacjaOdnosnik {
+  color: var(--text-3);
+  text-decoration: none;
+}
+
+.samouczek .nawigacjaOdnosnik:hover {
+  color: var(--text-2);
+}
+
+.samouczek .nawigacjaMiejsce {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* ---------- nagłówek ---------- */
+
+.naglowek {
+  margin-bottom: 40px;
+}
+
+.nadtytul {
+  font-family: var(--font-data);
+  font-size: 11px;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  margin-bottom: 10px;
+}
+
+/* .samouczek .tytul, a nie .naglowek h1 — bo .panel h1 (0,1,1) ustawia 22px
+   i wygrałoby z regułą o tej samej specyficzności rozstrzyganą kolejnością
+   plików, która przy modułach CSS nie jest niczym gwarantowana. */
+.samouczek .tytul {
+  font-size: 34px;
+  line-height: 1.15;
+  margin: 0 0 12px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.naglowek p {
+  margin: 0;
+  color: var(--text-2);
+  font-size: 16px;
+  max-width: 62ch;
+}
+
+/* ---------- sekcje ---------- */
+
+.sekcja {
+  margin-top: 56px;
+}
+
+.sekcjaPierwsza {
+  margin-top: 0;
+}
+
+.sekcja > .podtytulSekcji {
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0 0 6px;
+  letter-spacing: -0.005em;
+}
+
+.wstep {
+  margin: 0 0 22px;
+  color: var(--text-2);
+  max-width: 64ch;
+}
+
+.wstepPoUwadze {
+  margin: 18px 0 0;
+}
+
+/* ---------- czym jest RAG ---------- */
+
+.wyjasnienie {
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  padding: 22px 24px;
+}
+
+.wyjasnienie p {
+  margin: 0 0 12px;
+  color: var(--text-2);
+  font-size: 15px;
+  max-width: 70ch;
+}
+
+.wyjasnienie p:last-of-type {
+  margin-bottom: 0;
+}
+
+.wyjasnienie strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+.rozwiniecie {
+  font-family: var(--font-data);
+  font-size: 12px;
+  color: var(--text-3);
+  padding-top: 14px;
+  margin-top: 16px;
+  border-top: 1px solid var(--line-soft);
+}
+
+/* ---------- trzy kroki ---------- */
+
+.kroki {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  margin-top: 14px;
+}
+
+@media (max-width: 700px) {
+  .kroki {
+    grid-template-columns: 1fr;
+  }
+}
+
+.krok {
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  padding: 16px 18px;
+}
+
+.krokNr {
+  font-family: var(--font-data);
+  font-size: 11px;
+  color: var(--signal);
+  letter-spacing: 0.1em;
+  display: block;
+  margin-bottom: 8px;
+}
+
+.krok h3 {
+  font-size: 14.5px;
+  margin: 0 0 5px;
+  font-weight: 600;
+}
+
+.krok p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-3);
+  line-height: 1.55;
+}
+
+/* ---------- uwaga ---------- */
+
+.uwaga {
+  border: 1px solid var(--warn-line);
+  background: var(--warn-soft);
+  border-radius: var(--r-card);
+  padding: 16px 18px;
+  margin-top: 16px;
+}
+
+.uwagaTytul {
+  display: block;
+  font-weight: 600;
+  font-size: 14.5px;
+  color: var(--warn);
+  margin-bottom: 6px;
+}
+
+.uwaga p {
+  margin: 0;
+  font-size: 14px;
+  color: var(--text-2);
+  max-width: 70ch;
+}
+
+.uwaga p + p {
+  margin-top: 10px;
+}
+
+.uwaga strong {
+  color: var(--text);
+  font-weight: 600;
+}
+
+/* ============================================================================
+   DEMO CIĘCIA
+
+   TU ZACZYNAJĄ SIĘ PRZYCISKI, czyli miejsce, w którym ścigamy się z .panel.
+   .panel button ustawia DZIEWIĘĆ właściwości — tło, kolor, ramkę, promień,
+   dopełnienie, rozmiar i grubość kroju, kursor oraz margin-bottom: 20px —
+   i robi to na wyższej specyficzności niż zwykła klasa modułu:
+
+       .panel button                                      (0,1,1)  motyw jasny
+       :root[data-theme="dark"] .panel button             (0,3,1)  ciemny wymuszony
+       :root:not([data-theme="light"]) .panel button      (0,3,1)  ciemny z systemu
+       .samouczek .przelacznik                            (0,2,0)  ← przegrywa w ciemnym
+
+   Stąd POTRÓJNY SELEKTOR przy każdej regule dotykającej przycisku. Trzy
+   selektory, JEDEN blok deklaracji — nie trzy kopie tych samych wartości.
+   Każdy wygrywa w swoim kontekście:
+
+       .samouczek .X                                   (0,2,0) > (0,1,1)  jasny
+       :root[data-theme="dark"] .samouczek .X          (0,4,0) > (0,3,1)  ciemny
+       :root:not([data-theme="light"]) .samouczek .X   (0,4,0) > (0,3,1)  auto
+
+   Trzeci selektor NIE JEST opakowany w @media, choć panelowy jest. Nie musi:
+   wartości są identyczne we wszystkich motywach (ekran jest zawsze ciemny),
+   więc zadziałanie go także w jasnym niczego nie zmienia.
+
+   PUŁAPKA NA :hover. .panel button:hover:not(:disabled) to (0,3,1) w jasnym
+   i (0,5,1) w ciemnym. Nasze :hover BEZ :not(:disabled) dałoby (0,3,0) i (0,5,0)
+   — remis na klasach, przegrana na kolumnie elementów. Dlatego po naszej stronie
+   :not(:disabled) też musi być, mimo że żaden z tych przycisków nie bywa
+   wyłączony.
+   ============================================================================ */
+
+.demo {
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.demoPasek {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line-soft);
+  background: var(--bg-2);
+}
+
+.etykieta {
+  font-family: var(--font-data);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-3);
+}
+
+.etykietaPliku {
+  margin-right: auto;
+}
+
+/* --- przełącznik wersji dokumentu --- */
+
+.samouczek .przelacznik,
+:root[data-theme="dark"] .samouczek .przelacznik,
+:root:not([data-theme="light"]) .samouczek .przelacznik {
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 12px;
+  margin: 0;
+  border-radius: 8px;
+  cursor: pointer;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-2);
+}
+
+.samouczek .przelacznik:hover:not(:disabled),
+:root[data-theme="dark"] .samouczek .przelacznik:hover:not(:disabled),
+:root:not([data-theme="light"]) .samouczek .przelacznik:hover:not(:disabled) {
+  background: transparent;
+  border-color: transparent;
+  color: var(--text);
+}
+
+.samouczek .przelacznik[aria-pressed="true"],
+:root[data-theme="dark"] .samouczek .przelacznik[aria-pressed="true"],
+:root:not([data-theme="light"]) .samouczek .przelacznik[aria-pressed="true"] {
+  background: var(--surface-2);
+  border-color: var(--line);
+  color: var(--text);
+}
+
+/* --- dwie kolumny: dokument i pytania --- */
+
+.demoCialo {
+  display: grid;
+  grid-template-columns: 1.35fr 1fr;
+}
+
+@media (max-width: 760px) {
+  .demoCialo {
+    grid-template-columns: 1fr;
+  }
+}
+
+.dokument {
+  padding: 18px;
+  border-right: 1px solid var(--line-soft);
+}
+
+@media (max-width: 760px) {
+  .dokument {
+    border-right: 0;
+    border-bottom: 1px solid var(--line-soft);
+  }
+}
+
+.fragment {
+  position: relative;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  padding: 12px 12px 12px 44px;
+  margin-bottom: 8px;
+  font-size: 13.5px;
+  color: var(--text-2);
+  line-height: 1.6;
+  transition: border-color 0.18s, background 0.18s, color 0.18s;
+}
+
+.fragmentNr {
+  position: absolute;
+  left: 12px;
+  top: 12px;
+  font-family: var(--font-data);
+  font-size: 11px;
+  color: var(--text-3);
+}
+
+.fragmentTytul {
+  display: block;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 3px;
+  font-size: 13.5px;
+}
+
+.trafiony {
+  border-style: solid;
+  border-color: var(--signal-line);
+  background: var(--signal-soft);
+  color: var(--text);
+}
+
+.trafiony .fragmentNr {
+  color: var(--signal);
+}
+
+/* <mark> ma własne tło od przeglądarki (żółte) — nadpisujemy w całości. */
+.wyroznione {
+  background: rgba(53, 220, 255, 0.22);
+  color: var(--text);
+  border-radius: 3px;
+  padding: 0 2px;
+}
+
+.panelPytan {
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.etykietaPytan {
+  margin-bottom: 2px;
+}
+
+/* --- pytania --- */
+
+.samouczek .pytanie,
+:root[data-theme="dark"] .samouczek .pytanie,
+:root:not([data-theme="light"]) .samouczek .pytanie {
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 400;
+  text-align: left;
+  cursor: pointer;
+  padding: 10px 12px;
+  margin: 0;
+  border-radius: 8px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  color: var(--text-2);
+}
+
+.samouczek .pytanie:hover:not(:disabled),
+:root[data-theme="dark"] .samouczek .pytanie:hover:not(:disabled),
+:root:not([data-theme="light"]) .samouczek .pytanie:hover:not(:disabled) {
+  background: var(--surface-2);
+  border-color: var(--signal-line);
+  color: var(--text);
+}
+
+.samouczek .pytanie[aria-pressed="true"],
+:root[data-theme="dark"] .samouczek .pytanie[aria-pressed="true"],
+:root:not([data-theme="light"]) .samouczek .pytanie[aria-pressed="true"] {
+  border-color: var(--signal-line);
+  color: var(--text);
+  background: var(--signal-soft);
+}
+
+/* --- werdykt --- */
+
+.werdykt {
+  margin-top: 6px;
+  padding: 12px;
+  border-radius: 8px;
+  font-size: 13px;
+  line-height: 1.55;
+  border: 1px solid var(--line);
+  background: var(--bg-2);
+  color: var(--text-2);
+}
+
+.werdykt b {
+  display: block;
+  margin-bottom: 3px;
+  font-size: 13px;
+}
+
+.werdyktTak {
+  border-color: var(--ok-line);
+  background: var(--ok-soft);
+}
+
+.werdyktTak b {
+  color: var(--ok);
+}
+
+.werdyktNie {
+  border-color: var(--err-line);
+  background: var(--err-soft);
+}
+
+.werdyktNie b {
+  color: var(--err);
+}
+
+.werdyktPusty {
+  color: var(--text-3);
+  font-style: italic;
+}
+
+.podDemo {
+  margin: 10px 0 0;
+  font-size: 12.5px;
+  color: var(--text-3);
+  font-family: var(--font-data);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fragment {
+    transition: none;
+  }
+}
+
+/* ============================================================================
+   PIĘĆ ZASAD — rozwijane
+   ============================================================================ */
+
+.zasady {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.zasada {
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+/* Potrójny selektor — powód opisany wyżej, przy przełączniku demo. */
+.samouczek .zasadaGlowa,
+:root[data-theme="dark"] .samouczek .zasadaGlowa,
+:root:not([data-theme="light"]) .samouczek .zasadaGlowa {
+  width: 100%;
+  font: inherit;
+  font-weight: 400;
+  font-size: 15px;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 16px 18px;
+  margin: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  color: var(--text);
+}
+
+.samouczek .zasadaGlowa:hover:not(:disabled),
+:root[data-theme="dark"] .samouczek .zasadaGlowa:hover:not(:disabled),
+:root:not([data-theme="light"]) .samouczek .zasadaGlowa:hover:not(:disabled) {
+  background: var(--surface-2);
+  border-color: transparent;
+  color: var(--text);
+}
+
+.zasadaNazwa {
+  font-weight: 600;
+  font-size: 15px;
+  flex: 1;
+}
+
+.zasadaSkrot {
+  color: var(--text-3);
+  font-size: 13px;
+  font-weight: 400;
+}
+
+.zasadaZnak {
+  color: var(--text-3);
+  font-family: var(--font-data);
+  font-size: 13px;
+}
+
+.zasadaTresc {
+  padding: 0 18px 18px;
+}
+
+.zasadaTresc p {
+  margin: 0 0 14px;
+  color: var(--text-2);
+  font-size: 14px;
+  max-width: 66ch;
+}
+
+.porownanie {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+@media (max-width: 640px) {
+  .porownanie {
+    grid-template-columns: 1fr;
+  }
+}
+
+.probka {
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 12px;
+  background: var(--bg-2);
+}
+
+.probkaMetka {
+  font-family: var(--font-data);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+  display: block;
+}
+
+.probkaZle {
+  border-color: var(--err-line);
+}
+
+.probkaZle .probkaMetka {
+  color: var(--err);
+}
+
+.probkaDobrze {
+  border-color: var(--ok-line);
+}
+
+.probkaDobrze .probkaMetka {
+  color: var(--ok);
+}
+
+.probka pre {
+  margin: 0;
+  font-family: var(--font-data);
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--text-2);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* ============================================================================
+   TABELA FORMATÓW
+   ============================================================================ */
+
+.tabelaFormatow {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  overflow: hidden;
+  background: var(--surface);
+  font-size: 14px;
+}
+
+.tabelaFormatow th {
+  text-align: left;
+  font-family: var(--font-data);
+  font-size: 10.5px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-3);
+  font-weight: 500;
+  padding: 12px 16px;
+  background: var(--bg-2);
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.tabelaFormatow td {
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--line-soft);
+  color: var(--text-2);
+  vertical-align: top;
+}
+
+.tabelaFormatow tr:last-child td {
+  border-bottom: 0;
+}
+
+.fmt {
+  font-family: var(--font-data);
+  color: var(--text);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.znacznik {
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+  display: block;
+  margin-bottom: 3px;
+}
+
+.znacznikPewne {
+  color: var(--ok);
+}
+
+.znacznikZgadywane {
+  color: var(--warn);
+}
+
+.znacznikBrak {
+  color: var(--text-3);
+}
+
+/* Poniżej 700px tabela składa się do bloków — nagłówek kolumn znika, bo przy
+   jednej kolumnie nie ma czego opisywać. */
+@media (max-width: 700px) {
+  .tabelaFormatow thead {
+    display: none;
+  }
+
+  .tabelaFormatow td {
+    display: block;
+    border-bottom: 0;
+    padding: 4px 16px;
+  }
+
+  .tabelaFormatow tr {
+    display: block;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--line-soft);
+  }
+}
+
+.nieczyta {
+  margin-top: 12px;
+  border: 1px solid var(--err-line);
+  background: var(--err-soft);
+  border-radius: var(--r-card);
+  padding: 14px 18px;
+}
+
+.nieczytaTytul {
+  display: block;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--err);
+  margin-bottom: 6px;
+}
+
+.nieczyta p {
+  margin: 0;
+  font-size: 13.5px;
+  color: var(--text-2);
+}
+
+.nieczytaLista {
+  font-family: var(--font-data);
+  font-size: 13px;
+  color: var(--text);
+  margin-top: 8px;
+}
+
+/* Znacznik cytujący napis z interfejsu, np. „brak tekstu".
+
+   white-space: nowrap NIE JEST OZDOBĄ. To element liniowy z ramką i tłem,
+   a jego treść zawiera spację — bez tego łamie się między wierszami i wtedy
+   przeglądarka rysuje ramkę DWA RAZY, po kawałku na każdej linii. Wygląda to
+   jak dwa osobne znaczniki i sugeruje, że aplikacja pokazuje dwa różne napisy.
+
+   box-decoration-break: clone nie jest tu potrzebne — ono naprawia WYGLĄD
+   rozbicia (domyka ramkę na obu kawałkach), a my rozbicia w ogóle nie chcemy. */
+.kod {
+  font-family: var(--font-data);
+  font-size: 12.5px;
+  color: var(--text);
+  background: var(--bg-2);
+  padding: 1px 6px;
+  border-radius: 5px;
+  border: 1px solid var(--line);
+  white-space: nowrap;
+}
+
+/* ============================================================================
+   LISTA KONTROLNA
+   ============================================================================ */
+
+.kontrolna {
+  border: 1px solid var(--line);
+  border-radius: var(--r-card);
+  background: var(--surface);
+  padding: 8px 18px 18px;
+}
+
+/* Pozycja to div z role="checkbox", NIE <input> — dlatego reguły .panel input
+   jej nie dotyczą i nie trzeba tu potrójnego selektora. */
+.pozycja {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 0;
+  border-top: 1px solid var(--line-soft);
+  cursor: pointer;
+}
+
+.pozycja:first-of-type {
+  border-top: 0;
+}
+
+.pudelko {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  border-radius: 5px;
+  border: 1px solid var(--line);
+  background: var(--bg-2);
+  display: grid;
+  place-items: center;
+  font-family: var(--font-data);
+  font-size: 11px;
+  color: transparent;
+}
+
+.zaznaczona .pudelko {
+  border-color: var(--ok-line);
+  background: var(--ok-soft);
+  color: var(--ok);
+}
+
+.pozycjaOpis {
+  font-size: 14px;
+  color: var(--text);
+}
+
+.zaznaczona .pozycjaOpis {
+  color: var(--text-2);
+}
+
+.stopka {
+  margin-top: 20px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.postep {
+  font-family: var(--font-data);
+  font-size: 12px;
+  color: var(--text-3);
+  margin-right: auto;
+}
+
+.samouczek .btnGlowny,
+:root[data-theme="dark"] .samouczek .btnGlowny,
+:root:not([data-theme="light"]) .samouczek .btnGlowny {
+  font: inherit;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 11px 20px;
+  margin: 0;
+  border-radius: 9px;
+  border: 0;
+  background: var(--ink);
+  color: var(--on-ink);
+}
+
+.samouczek .btnGlowny:hover:not(:disabled),
+:root[data-theme="dark"] .samouczek .btnGlowny:hover:not(:disabled),
+:root:not([data-theme="light"]) .samouczek .btnGlowny:hover:not(:disabled) {
+  background: var(--ink);
+  border-color: transparent;
+  color: var(--on-ink);
+  filter: brightness(1.08);
+}
+
+/* .panel button:disabled też ustawia tło, kolor i ramkę — stąd trójka i tutaj. */
+.samouczek .btnGlowny:disabled,
+:root[data-theme="dark"] .samouczek .btnGlowny:disabled,
+:root:not([data-theme="light"]) .samouczek .btnGlowny:disabled {
+  background: var(--ink);
+  color: var(--on-ink);
+  border-color: transparent;
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.samouczek .btnCichy,
+:root[data-theme="dark"] .samouczek .btnCichy,
+:root:not([data-theme="light"]) .samouczek .btnCichy {
+  font: inherit;
+  font-size: 14px;
+  font-weight: 400;
+  cursor: pointer;
+  padding: 11px 4px;
+  margin: 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+  color: var(--text-2);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.samouczek .btnCichy:hover:not(:disabled),
+:root[data-theme="dark"] .samouczek .btnCichy:hover:not(:disabled),
+:root:not([data-theme="light"]) .samouczek .btnCichy:hover:not(:disabled) {
+  background: none;
+  border-color: transparent;
+  color: var(--text);
+}
+
+/* ---------- ognisko klawiatury ---------- */
+
+.samouczek :focus-visible {
+  outline: 2px solid var(--signal);
+  outline-offset: 3px;
+  border-radius: 10px;
+}
