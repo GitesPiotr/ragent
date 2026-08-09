@@ -86,10 +86,31 @@ function MapaZParametrem() {
   return (
     <main className={styles["strona-szeroka"]}>
       <div className={styles["pasek-gorny"]}>
+        {/* „Graf wiedzy" idzie po PRAWEJ, bo to widok siostrzany, nie przodek. */}
         <nav className={styles.nawigacja}>
-          <Link href="/kreator-rag/kolekcje">Kolekcje</Link>
-          <Link href={`/kreator-rag/kolekcje/${id}`}>{nazwa || 'Kolekcja'}</Link>
-          <span className={styles.aktywny}>Mapa</span>
+          <div className={styles["nawigacja-slad"]}>
+            <Link
+              href="/kreator-rag/kolekcje"
+              className={styles["nawigacja-powrot"]}
+            >
+              Kolekcje
+            </Link>
+            <Link
+              href={`/kreator-rag/kolekcje/${id}`}
+              className={styles["nawigacja-powrot"]}
+            >
+              {nazwa || 'Kolekcja'}
+            </Link>
+            <span className={styles["nawigacja-miejsce"]}>Mapa fragmentów</span>
+          </div>
+          <div className={styles["nawigacja-widoki"]}>
+            <Link
+              href={`/kreator-rag/kolekcje/${id}/graf`}
+              className={styles["nawigacja-widok"]}
+            >
+              Graf wiedzy →
+            </Link>
+          </div>
         </nav>
         <PrzyciskDiagnostyki />
       </div>

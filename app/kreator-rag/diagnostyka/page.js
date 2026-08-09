@@ -65,7 +65,16 @@ export default function DiagnostykaPage() {
           ślepym zaułkiem: wejście jest jednym kliknięciem z każdego miejsca panelu,
           wyjście wymagałoby przycisku „wstecz" przeglądarki. */}
       <nav className={styles.nawigacja}>
-        <Link href="/kreator-rag/kolekcje">← Kolekcje</Link>
+        <div className={styles["nawigacja-slad"]}>
+          {/* Strzalka nie jest juz wpisana w tekst — daje ja .nawigacja-powrot,
+              wiec wszystkie powroty w module wygladaja tak samo. */}
+          <Link
+            href="/kreator-rag/kolekcje"
+            className={styles["nawigacja-powrot"]}
+          >
+            Kolekcje
+          </Link>
+        </div>
       </nav>
 
       <h1>Diagnostyka</h1>

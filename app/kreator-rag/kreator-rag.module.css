@@ -297,12 +297,61 @@
   flex: 0 0 auto;
 }
 
+/* PASEK NAWIGACJI — TRZY ROLE, NIE CZTERY RÓWNORZĘDNE LINKI.
+   Ślad powrotu po lewej (najcichszy), bieżące miejsce obok niego (mocne,
+   nieklikalne), przejścia do widoków siostrzanych po prawej jako przyciski.
+
+   Układ jest regułą BAZOWĄ, bo wynika ze struktury znaczników wspólnej dla obu
+   motywów. Kolory, ramki i kreska pod paskiem siedzą w blokach ciemnych. */
 .nawigacja {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
   gap: 16px;
   margin-bottom: 24px;
   font-size: 14px;
 }
+
+/* flex: 1 jest konieczne. .nawigacja siedzi w .pasek-gorny obok przycisku
+   diagnostyki, więc bez tego jest wymiarowana treścią i space-between nie ma
+   czego rozpychać — tak samo, jak dotąd nic nie robił marginLeft: auto
+   wpisany stylem inline przy „Mapa fragmentów". */
+.pasek-gorny .nawigacja {
+  flex: 1;
+  min-width: 0;
+}
+
+.nawigacja-slad {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  min-width: 0;
+}
+
+.nawigacja-widoki {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+/* Strzałka z CSS, nie z tekstu — dzięki temu każdy powrót w module wygląda
+   tak samo i nie trzeba jej pamiętać przy każdym nowym linku. */
+.nawigacja-powrot::before {
+  content: "← ";
+}
+
+.nawigacja-widok {
+  display: inline-flex;
+  align-items: center;
+  padding: 6px 11px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
 .nawigacja a {
   color: var(--przygaszony);
   text-decoration: none;
@@ -310,6 +359,8 @@
 .nawigacja a:hover {
   color: var(--tekst);
 }
+/* Zostaje dla zgodności — w pasku zastąpiła ją .nawigacja-miejsce, ale reguła
+   nic nie kosztuje, a jej usunięcie byłoby zmianą w motywie jasnym. */
 .nawigacja a.aktywny {
   color: var(--tekst);
   font-weight: 600;
@@ -1426,6 +1477,35 @@
     font-family: var(--font-ui);
   }
 
+  /* TRZY ROLE PASKA NAWIGACJI. Powrót najcichszy, miejsce najmocniejsze,
+     przejścia jako .btn-quiet z prototypu. */
+  :root:not([data-theme="light"]) .nawigacja-powrot {
+    color: var(--text-3);
+  }
+  :root:not([data-theme="light"]) .nawigacja-powrot:hover {
+    color: var(--text-2);
+  }
+  :root:not([data-theme="light"]) .nawigacja-miejsce {
+    color: var(--text);
+    font-weight: 600;
+  }
+  :root:not([data-theme="light"]) .nawigacja-widok {
+    border-color: var(--obwod);
+    background: transparent;
+    color: var(--tekst);
+  }
+  :root:not([data-theme="light"]) .nawigacja-widok:hover {
+    border-color: var(--text-3);
+    background: var(--surface-2);
+    color: var(--tekst);
+  }
+  /* Kreska oddziela nawigację od tytułu strony. Tylko w ciemnym — w jasnym
+     byłaby zmianą wyglądu, a nie układu. */
+  :root:not([data-theme="light"]) .pasek-gorny {
+    padding-bottom: 14px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+
   :root:not([data-theme="light"]) .graf-suwak input[type='range'] {
     accent-color: var(--signal);
   }
@@ -1634,6 +1714,31 @@
 
 :root[data-theme="dark"] .panel {
   font-family: var(--font-ui);
+}
+
+:root[data-theme="dark"] .nawigacja-powrot {
+  color: var(--text-3);
+}
+:root[data-theme="dark"] .nawigacja-powrot:hover {
+  color: var(--text-2);
+}
+:root[data-theme="dark"] .nawigacja-miejsce {
+  color: var(--text);
+  font-weight: 600;
+}
+:root[data-theme="dark"] .nawigacja-widok {
+  border-color: var(--obwod);
+  background: transparent;
+  color: var(--tekst);
+}
+:root[data-theme="dark"] .nawigacja-widok:hover {
+  border-color: var(--text-3);
+  background: var(--surface-2);
+  color: var(--tekst);
+}
+:root[data-theme="dark"] .pasek-gorny {
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--line-soft);
 }
 
 :root[data-theme="dark"] .graf-suwak input[type='range'] {
