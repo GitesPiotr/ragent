@@ -125,12 +125,18 @@ export function Sidebar() {
         {/* Kolekcje RAG naleza do konta, nie do projektu — link tak samo jak
             „Baza wiedzy” nie niesie kontekstu projektu.
 
-            Link celuje WPROST w /kreator-rag/kolekcje, a nie w korzen modulu:
-            korzen i tak przekierowuje tutaj, wiec celowanie w niego kosztowaloby
-            jeden skok przy kazdym wejsciu do zakladki. Podswietlenie dziala,
-            bo `onKreatorRag` sprawdza startsWith, nie rownosc. */}
+            LINK CELUJE W KORZEN MODULU, nie w liste kolekcji. Poprzednio bylo
+            odwrotnie, z uzasadnieniem „korzen i tak przekierowuje na kolekcje,
+            wiec celowanie w niego kosztowaloby jeden skok". To przestalo
+            obowiazywac: /kreator-rag nie jest juz przekierowaniem, tylko ekranem
+            wejsciowym z wyborem — instrukcja albo praca. Skoku nie ma, jest
+            osobna tresc.
+
+            Podswietlenie dziala bez zmian, bo `onKreatorRag` sprawdza startsWith,
+            wiec obejmuje /kreator-rag, /samouczek, /kolekcje, /kolekcje/[id],
+            /mapa, /graf i /diagnostyka. */}
         <Link
-          href="/kreator-rag/kolekcje"
+          href="/kreator-rag"
           className={`${styles.link} ${onKreatorRag ? styles.active : ""}`}
         >
           Kreator RAG
