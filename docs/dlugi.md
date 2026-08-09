@@ -92,3 +92,16 @@ nie ma `DEV_LOGIN_EMAIL` ani `DEV_LOGIN_PASSWORD` i endpoint słusznie zwraca
 
 Żeby sprawdzić: dopisać obie zmienne, zrestartować serwer, wejść na
 `/logowanie`. Przycisk ma się pojawić pod pierścieniem.
+
+### Furtka podglądu w `proxy.js` nie została wywołana
+
+`?podglad=1` znosi przekierowanie zalogowanego z `/logowanie` na `/projekty`,
+ale **tylko poza produkcją**. Sprawdzenie wymaga sesji, więc nowa gałąź warunku
+nie wykonała się ani razu.
+
+Sprawdzone za to, że nic się nie zepsuło bez sesji: `/logowanie` i
+`/logowanie?podglad=1` dają 200, `/rejestracja` 200, `/projekty` i `/czaty`
+odsyłają 307 z poprawnym `?powrot=`, `/api/*` odpowiada 401 JSON-em.
+
+Żeby sprawdzić właściwą ścieżkę: zalogować się, wejść na `/logowanie` (ma
+odesłać na `/projekty`), potem na `/logowanie?podglad=1` (ma pokazać ekran).
