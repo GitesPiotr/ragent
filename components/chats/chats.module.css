@@ -127,7 +127,7 @@
   width: 100%;
   min-width: 0;
   overflow: hidden;
-  padding: 10px;
+  padding: 15px 10px;
   border-left: 3px solid transparent;
   border-radius: 8px;
   background: transparent;
@@ -312,11 +312,15 @@
   white-space: nowrap;
 }
 
+/* gap: 0, nie 5px — w wierszu z wytlumiona nazwa blok rozmowcy ma zerowa
+   szerokosc, ale gap i tak by go liczyl i data zaczynalaby sie 5px od lewej,
+   czyli nie rowno z tytulem. Odstep przed data przywraca .runnerName
+   (margin-right nizej) tylko wtedy, gdy nazwa faktycznie jest. */
 .convMeta {
   display: flex;
   align-items: center;
-  gap: 5px;
-  margin-top: 2px;
+  gap: 0;
+  margin-top: 4px;
   min-width: 0;
   font-size: 11.5px;
   color: #a1a1aa;
@@ -540,7 +544,26 @@
 .runnerCompact .runnerName {
   font-size: 11.5px;
   font-weight: 400;
-  color: inherit;
+  /* Mocniejsza od daty: nazwa pojawia sie tylko przy ZMIANIE rozmowcy, wiec
+     kiedy juz stoi, cos znaczy. Data stoi w kazdym wierszu i zostaje slabsza. */
+  color: #71717a;
+}
+
+/* Odstep przed data — zamiast gap na .convMeta, ktory liczyl sie takze przy
+   pustej nazwie. `:not(:empty)` bo w wytlumionych wierszach renderRow
+   przekazuje runnerName="" i React nie tworzy wtedy wezla tekstowego. */
+.runnerCompact .runnerName:not(:empty) {
+  margin-right: 5px;
+}
+
+/* Blok rozmowcy NIE rozpycha sie w wierszu listy — inaczej data ladowala przy
+   prawej krawedzi, a w wierszach z wytlumiona nazwa zostawala tam sama,
+   oderwana od tytulu. W przycisku wyboru rozmowcy i na liscie rozwijanej
+   `flex: 1` zostaje (tam blok ma wypelniac szerokosc kontrolki), dlatego
+   selektor jest zlozony z .runnerCompact — ta klasa trafia tylko na wiersz
+   listy (ConversationRow.js:185). */
+.runnerCompact.runnerGrow {
+  flex: 0 1 auto;
 }
 
 .headerRight {
@@ -990,9 +1013,10 @@
   }
 
   /* Przebija :root:not(...) .runnerName { color: var(--text) } z etapu 3
-     (swoistosc 0,4,0 kontra 0,3,0) — tylko w wierszu listy. */
+     (swoistosc 0,4,0 kontra 0,3,0) — tylko w wierszu listy.
+     --text-2, nie --text-3: nazwa ma byc mocniejsza od daty. */
   :root:not([data-theme="light"]) .runnerCompact .runnerName {
-    color: inherit;
+    color: var(--text-2);
     font-weight: 400;
   }
 
@@ -1282,7 +1306,7 @@
   }
 
 :root[data-theme="dark"] .runnerCompact .runnerName {
-    color: inherit;
+    color: var(--text-2);
     font-weight: 400;
   }
 
