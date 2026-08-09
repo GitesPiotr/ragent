@@ -132,6 +132,22 @@ html {
 html,
 body {
   max-width: 100vw;
+}
+
+/* overflow-x TYLKO na html, NIE na body — i to jest warunek dzialania
+   przypietego paska bocznego (components/workspace/Sidebar.module.css).
+
+   Gdy jedna os ma hidden, a druga visible, to visible WYLICZA SIE NA auto.
+   body dostawalo wiec overflow-y: auto i stawalo sie kontenerem przewijania.
+   Element przyklejony szuka najblizszego przewijalnego przodka — znajdowal
+   body, nie okno. A body ma tylko min-height: 100% i rosnie z trescia, wiec
+   nigdy nie ma czego w sobie przewijac: zakres przyklejenia wychodzil zerowy
+   i sticky nie dzialalo w ogole.
+
+   Na html jest bezpiecznie: to element glowny, a jego overflow jest
+   PROPAGOWANY NA OKNO, wiec poziome przewijanie dalej jest obcinane tak samo.
+   Linia na body byla nadmiarowa. */
+html {
   overflow-x: hidden;
 }
 
