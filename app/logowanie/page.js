@@ -2,9 +2,16 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
 import { supabase, isSupabaseConfigured, SUPABASE_CONFIG_ERROR } from "@/lib/supabase/client";
-import styles from "./auth.module.css";
+import { Glowa } from "./_components/Glowa.jsx";
+import { Pierscien } from "./_components/Pierscien.jsx";
+import { ZnakRAGent } from "./_components/ZnakRAGent.jsx";
+import styles from "./logowanie.module.css";
+
+// Adres, pod ktory idzie uzytkownik bez hasla. W aplikacji nie ma zadnego
+// mechanizmu resetu — prototyp mial tu odnosnik „Nie pamietam hasla"
+// prowadzacy donikad, wiec zamiast slepego wyjscia stoi zywy kontakt.
+const ADRES_ADMINISTRATORA = "pit321@op.pl";
 
 // Tlumaczy komunikaty Supabase Auth na polski (wzorem lib/data/errors.js).
 function readableAuthError(error) {
@@ -27,24 +34,22 @@ function readableAuthError(error) {
 
 // Szkielet formularza na czas, gdy sam formularz jeszcze sie nie renderuje.
 //
-// Ma DOKLADNIE te sama budowe co prawdziwy formularz (dwa pola + przycisk),
-// zeby karta logowania nie zmieniala wysokosci w momencie podmiany.
-// aria-hidden, bo to atrapa — czytnik ekranu nie ma czego z niej odczytac,
-// a pola sa wylaczone, wiec nie da sie w nie wejsc tabulatorem.
-function LoginFormFallback() {
+// Ma DOKLADNIE te sama budowe co prawdziwy formularz (tytul, dwa pola,
+// przycisk), zeby zawartosc pierscienia nie zmieniala wysokosci w momencie
+// podmiany — a wysrodkowana w kole zmiana wysokosci widac natychmiast.
+// aria-hidden, bo to atrapa; pola sa wylaczone, wiec nie da sie w nie wejsc
+// tabulatorem.
+function FormularzZastepczy() {
   return (
-    <div className={styles.form} aria-hidden="true">
-      <div className={styles.field}>
-        <span className={styles.label}>Email</span>
-        <input className={styles.input} type="email" disabled />
-      </div>
-
-      <div className={styles.field}>
-        <span className={styles.label}>Hasło</span>
-        <input className={styles.input} type="password" disabled />
-      </div>
-
-      <button className={styles.button} type="button" disabled>
+    <div className={styles.formularz} aria-hidden="true">
+      <h1 className={styles.tytul}>Logowanie</h1>
+      <label className={styles.pole}>
+        <input className={styles.wejscie} type="email" placeholder="E-mail" disabled />
+      </label>
+      <label className={styles.pole}>
+        <input className={styles.wejscie} type="password" placeholder="Hasło" disabled />
+      </label>
+      <button className={styles.przycisk} type="button" disabled>
         Wczytuję…
       </button>
     </div>
@@ -52,7 +57,7 @@ function LoginFormFallback() {
 }
 
 // CZESC ZALEZNA OD ADRESU — wydzielona celowo, patrz komentarz przy LoginPage.
-function LoginForm() {
+function FormularzLogowania() {
   const router = useRouter();
   const searchParams = useSearchParams();
   // Dokad wrocic po zalogowaniu (ustawia proxy.js przy przekierowaniu).
@@ -62,25 +67,6 @@ function LoginForm() {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-
-  // Czy pokazac przycisk logowania deweloperskiego. Decyduje SERWER
-  // (tryb dev + obecnosc DEV_LOGIN_* w .env.local) — klient nie zna tych danych.
-  const [devAvailable, setDevAvailable] = useState(false);
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        const res = await fetch("/api/auth/dev-login", { cache: "no-store" });
-        const data = await res.json();
-        if (alive) setDevAvailable(Boolean(data.available));
-      } catch {
-        /* brak informacji -> przycisk sie nie pokazuje */
-      }
-    })();
-    return () => {
-      alive = false;
-    };
-  }, []);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -110,9 +96,99 @@ function LoginForm() {
     router.refresh();
   }
 
-  async function handleDevLogin() {
+  // PRAWDZIWY <form onSubmit>, nie luzne pola jak w prototypie. Tam brak
+  // formularza byl obejsciem na otwieranie pliku z dysku (file://); tutaj
+  // aplikacja chodzi po HTTP, a formularz daje za darmo Enter w polu
+  // i propozycje zapisu w menedzerze hasel.
+  return (
+    <form
+      className={`${styles.formularz} ${loading ? styles.zajety : ""}`}
+      onSubmit={handleSubmit}
+    >
+      <h1 className={styles.tytul}>Logowanie</h1>
+
+      <label className={styles.pole}>
+        <input
+          className={styles.wejscie}
+          type="email"
+          placeholder="E-mail"
+          aria-label="Adres email"
+          autoComplete="email"
+          required
+          disabled={loading}
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+        />
+      </label>
+
+      <label className={styles.pole}>
+        <input
+          className={styles.wejscie}
+          type="password"
+          placeholder="Hasło"
+          aria-label="Hasło"
+          autoComplete="current-password"
+          required
+          disabled={loading}
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+        />
+      </label>
+
+      <button className={styles.przycisk} type="submit" disabled={loading}>
+        {loading ? "Logowanie…" : "Zaloguj"}
+      </button>
+
+      <p className={styles.podpowiedz}>
+        Nie pamiętasz hasła? Napisz do{" "}
+        <a className={styles.podpowiedzAdres} href={`mailto:${ADRES_ADMINISTRATORA}`}>
+          {ADRES_ADMINISTRATORA}
+        </a>
+      </p>
+
+      <p className={styles.blad} role="alert">
+        {error}
+      </p>
+    </form>
+  );
+}
+
+// SKROT DEWELOPERSKI — pod pierscieniem, bo w jego wolnym polu nie ma miejsca.
+//
+// Osobny komponent, a nie kawalek formularza, wlasnie z powodu polozenia.
+// Wlasna bariera Suspense, bo tez potrzebuje „powrot" z adresu, a skorupa
+// strony ma zostac prerenderowalna.
+//
+// Czy przycisk w ogole sie pokaze, decyduje SERWER (tryb dev + obecnosc
+// DEV_LOGIN_* w .env.local) — klient nie zna tych danych.
+function SkrotDeweloperski() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const powrot = searchParams.get("powrot") || "/projekty";
+
+  const [dostepny, setDostepny] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [blad, setBlad] = useState(null);
+
+  useEffect(() => {
+    let alive = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/auth/dev-login", { cache: "no-store" });
+        const data = await res.json();
+        if (alive) setDostepny(Boolean(data.available));
+      } catch {
+        /* brak informacji -> przycisk sie nie pokazuje */
+      }
+    })();
+    return () => {
+      alive = false;
+    };
+  }, []);
+
+  async function zaloguj() {
     if (loading) return;
-    setError(null);
+    setBlad(null);
     setLoading(true);
 
     try {
@@ -120,7 +196,7 @@ function LoginForm() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(data.error || "Logowanie deweloperskie nie powiodło się.");
+        setBlad(data.error || "Logowanie deweloperskie nie powiodło się.");
         setLoading(false);
         return;
       }
@@ -128,74 +204,28 @@ function LoginForm() {
       router.replace(powrot);
       router.refresh();
     } catch {
-      setError("Nie udało się połączyć z serwerem.");
+      setBlad("Nie udało się połączyć z serwerem.");
       setLoading(false);
     }
   }
 
+  if (!dostepny) return null;
+
   return (
-    <>
-      <form className={styles.form} onSubmit={handleSubmit}>
-        {error && (
-          <div className={styles.error} role="alert">
-            {error}
-          </div>
-        )}
-
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="login-email">
-            Email
-          </label>
-          <input
-            id="login-email"
-            className={styles.input}
-            type="email"
-            autoComplete="email"
-            required
-            disabled={loading}
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-          />
-        </div>
-
-        <div className={styles.field}>
-          <label className={styles.label} htmlFor="login-password">
-            Hasło
-          </label>
-          <input
-            id="login-password"
-            className={styles.input}
-            type="password"
-            autoComplete="current-password"
-            required
-            disabled={loading}
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-          />
-        </div>
-
-        <button className={styles.button} type="submit" disabled={loading}>
-          {loading ? "Logowanie…" : "Zaloguj się"}
-        </button>
-      </form>
-
-      {devAvailable && (
-        <div className={styles.devBlock}>
-          <button
-            type="button"
-            className={styles.devButton}
-            onClick={handleDevLogin}
-            disabled={loading}
-          >
-            Zaloguj jako deweloper
-          </button>
-          <span className={styles.devHint}>
-            Skrót dostępny tylko lokalnie. Loguje przez zwykły mechanizm
-            Supabase, danymi z pliku .env.local.
-          </span>
-        </div>
+    <div className={styles.skrot}>
+      <button type="button" className={styles.skrotPrzycisk} onClick={zaloguj} disabled={loading}>
+        Zaloguj jako deweloper
+      </button>
+      <span className={styles.skrotOpis}>
+        Skrót dostępny tylko lokalnie. Loguje przez zwykły mechanizm Supabase,
+        danymi z pliku .env.local.
+      </span>
+      {blad && (
+        <span className={styles.blad} role="alert">
+          {blad}
+        </span>
       )}
-    </>
+    </div>
   );
 }
 
@@ -212,29 +242,29 @@ function LoginForm() {
 // Tryb deweloperski tego nie widzial, bo tam nic sie nie prerenderuje —
 // bledu nie bylo widac az do `npm run build`.
 //
-// Skorupa karty (logo, tytul, opis, stopka) nie zaglada do adresu, wiec
-// zostaje POZA bariera i trafia do gotowego HTML-a. Wewnatrz jest tylko to,
-// co naprawde zalezy od "?powrot=": formularz i skrot deweloperski.
+// Scena (glowa, napis, pierscien) nie zaglada do adresu, wiec zostaje POZA
+// bariera i trafia do gotowego HTML-a. Wewnatrz jest tylko to, co naprawde
+// zalezy od "?powrot=": formularz i skrot deweloperski.
 export default function LoginPage() {
   return (
-    <div className={styles.screen}>
-      <div className={styles.card}>
-        <div className={styles.brand}>AIdeas</div>
-        <h1 className={styles.title}>Zaloguj się</h1>
-        <p className={styles.subtitle}>
-          Podaj email i hasło, aby przejść do swoich projektów i agentów.
-        </p>
+    <div className={styles.ekran}>
+      <div className={styles.uklad}>
+        <section className={styles.scena}>
+          <Glowa />
+          <ZnakRAGent />
+        </section>
 
-        <Suspense fallback={<LoginFormFallback />}>
-          <LoginForm />
-        </Suspense>
+        <section className={styles.kolumnaPanelu}>
+          <Pierscien>
+            <Suspense fallback={<FormularzZastepczy />}>
+              <FormularzLogowania />
+            </Suspense>
+          </Pierscien>
 
-        <div className={styles.footer}>
-          Nie masz jeszcze konta?{" "}
-          <Link className={styles.link} href="/rejestracja">
-            Zarejestruj się
-          </Link>
-        </div>
+          <Suspense fallback={null}>
+            <SkrotDeweloperski />
+          </Suspense>
+        </section>
       </div>
     </div>
   );
