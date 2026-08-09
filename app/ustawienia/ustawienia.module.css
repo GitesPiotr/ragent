@@ -53,6 +53,18 @@
   }
 }
 
+/* PRAWA KOLUMNA. Klasy dotad NIE BYLO w arkuszu, mimo ze page.js:484 ja
+   renderuje — atrybut wychodzil jako class="undefined" i kolumna nie miala
+   zadnych stylow. Stad karty katalogu modeli stykajace sie krawedziami.
+
+   To regula BAZOWA, nie ciemna: brakujacej klasy nie da sie naprawic tylko
+   w jednym motywie. Odpowiednik w prototypie to .setCol. */
+.content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 .nav {
   position: sticky;
   top: 20px;
@@ -403,216 +415,461 @@
   font-size: 13px;
 }
 
+/* ============================================================================
+   MOTYW CIEMNY = NOWY WYGLAD (docs/prototyp.html, ekran s-ustawienia).
+
+   ODPOWIEDNIKI: .card→.setCard, .cardHead→.setCardHead, .content→.setCol,
+   .banner→.banner, .navItem→.navItem, .row→.row, .toggle→.switch,
+   .segmented→.segment, .statusTag i .modelChip→.tag, .textInput→.input,
+   .secondaryButton→.btn-quiet.
+
+   .statusTag, .dot* , .slider i .sliderValue NIE MIALY dotad zadnej reguly
+   ciemnej — swiecily kolorami z motywu jasnego. Tutaj sa dopisane od zera.
+   ============================================================================ */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .pageTitle,
   :root:not([data-theme="light"]) .cardTitle,
-  :root:not([data-theme="light"]) .rowLabel,
   :root:not([data-theme="light"]) .statusName {
-    color: #ededed;
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  :root:not([data-theme="light"]) .rowLabel {
+    color: var(--text);
+    font-weight: 500;
   }
 
   :root:not([data-theme="light"]) .rowDesc,
   :root:not([data-theme="light"]) .statusDetail {
-    color: #a1a1aa;
+    color: var(--text-3);
   }
 
+  /* Byl jedynym niebieskim w calej aplikacji (#10233f / #1e3a5f / #93c5fd).
+     Prototypowy .banner to neutralna karta z dwupikselowym pasem --signal
+     z lewej. .banner jest juz display: flex, wiec pas wchodzi jako pierwsze
+     dziecko — tak samo jak .roleNote w etapie 2. */
   :root:not([data-theme="light"]) .banner {
-    background: #10233f;
-    border-color: #1e3a5f;
+    border-radius: var(--r-card);
+    border-color: var(--line);
+    background: var(--surface);
+  }
+
+  :root:not([data-theme="light"]) .banner::before {
+    content: "";
+    width: 2px;
+    border-radius: 2px;
+    background: var(--signal);
+    flex-shrink: 0;
+    align-self: stretch;
   }
 
   :root:not([data-theme="light"]) .bannerText {
-    color: #93c5fd;
+    color: var(--text-2);
   }
 
   :root:not([data-theme="light"]) .navItem {
-    color: #c9c9d4;
+    color: var(--text-2);
+    font-weight: 500;
   }
 
   :root:not([data-theme="light"]) .navItem:hover {
-    background: #1c1730;
-    color: #c4b5fd;
+    background: var(--surface-2);
+    color: var(--text);
   }
 
   :root:not([data-theme="light"]) .navItemActive {
-    background: #221a45;
-    color: #c4b5fd;
+    background: var(--surface-2);
+    color: var(--signal-text);
   }
 
   :root:not([data-theme="light"]) .card {
-    background: #131318;
-    border-color: #27272a;
+    border-radius: var(--r-shell);
+    border-color: var(--line);
+    background: var(--surface);
+    box-shadow: none;
   }
 
   :root:not([data-theme="light"]) .cardHead {
-    border-bottom-color: #27272a;
+    border-bottom-color: var(--line);
+    background: transparent;
   }
 
   :root:not([data-theme="light"]) .row,
   :root:not([data-theme="light"]) .statusRow {
-    border-bottom-color: #1f1f24;
+    border-bottom-color: var(--line-soft);
   }
 
-  :root:not([data-theme="light"]) .rowsDivider,
-  :root:not([data-theme="light"]) .cardHead {
+  :root:not([data-theme="light"]) .rowsDivider {
+    background: var(--line-soft);
+  }
+
+  /* KROPKA I PLAKIETKA DZIELA TE SAME KLASY MODYFIKUJACE (.dotOk itd.),
+     wiec rozdziela je swoistosc: .dot.dotOk (0,3,0) maluje kropke tlem,
+     .statusTag.dotOk (0,3,0, ale pozniej w pliku) maluje plakietke tekstem. */
+  :root:not([data-theme="light"]) .dot.dotOk {
+    background: var(--ok);
+  }
+
+  :root:not([data-theme="light"]) .dot.dotWarn {
+    background: var(--warn);
+  }
+
+  :root:not([data-theme="light"]) .dot.dotError {
+    background: var(--err);
+  }
+
+  /* .tag-ok / .tag-warn z prototypu: ramka przezroczysta, kolor niesie
+     sam tekst. Wersaliki i waga 700 schodza — tak jak przy .badge w etapie 1. */
+  :root:not([data-theme="light"]) .statusTag {
+    border: 1px solid transparent;
     background: transparent;
+    font-family: var(--font-data);
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    text-transform: none;
+  }
+
+  :root:not([data-theme="light"]) .statusTag.dotOk {
+    background: transparent;
+    color: var(--ok);
+  }
+
+  :root:not([data-theme="light"]) .statusTag.dotWarn {
+    background: transparent;
+    color: var(--warn);
+  }
+
+  :root:not([data-theme="light"]) .statusTag.dotError {
+    background: transparent;
+    color: var(--err);
+  }
+
+  /* Nazwy wykrytych modeli lokalnych — neutralna .tag. Ani --signal
+     (to nie sygnal maszyny), ani --model (tam idzie WYBOR modelu). */
+  :root:not([data-theme="light"]) .modelChip {
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--text-2);
+    font-family: var(--font-data);
+    font-weight: 400;
+    letter-spacing: 0.04em;
   }
 
   :root:not([data-theme="light"]) .select,
   :root:not([data-theme="light"]) .textInput,
-  :root:not([data-theme="light"]) .numberInput,
+  :root:not([data-theme="light"]) .numberInput {
+    border-radius: var(--r-control);
+    border-color: var(--line);
+    background: var(--bg-2);
+    color: var(--text);
+    transition: border-color 0.16s var(--ease);
+  }
+
+  :root:not([data-theme="light"]) .select:hover,
+  :root:not([data-theme="light"]) .textInput:hover,
+  :root:not([data-theme="light"]) .numberInput:hover {
+    border-color: var(--text-3);
+  }
+
+  :root:not([data-theme="light"]) .select:focus,
+  :root:not([data-theme="light"]) .textInput:focus,
+  :root:not([data-theme="light"]) .numberInput:focus {
+    outline-color: var(--signal);
+    border-color: var(--signal-line);
+  }
+
+  /* Dotad dzielil regule z polami i wygladal jak pole, nie jak przycisk. */
   :root:not([data-theme="light"]) .secondaryButton {
-    background: #17171c;
-    border-color: #3f3f46;
-    color: #ededed;
+    border-radius: var(--r-control);
+    border-color: var(--line);
+    background: transparent;
+    color: var(--text);
+    font-weight: 500;
   }
 
   :root:not([data-theme="light"]) .secondaryButton:hover:not(:disabled) {
-    color: #c4b5fd;
+    border-color: var(--text-3);
+    background: var(--surface-2);
+    color: var(--text);
   }
 
   :root:not([data-theme="light"]) .segmented {
-    background: #17171c;
-    border-color: #3f3f46;
+    border-radius: var(--r-card);
+    border-color: var(--line);
+    background: var(--bg-2);
   }
 
   :root:not([data-theme="light"]) .segment {
-    color: #a1a1aa;
+    color: var(--text-2);
+    font-weight: 500;
   }
 
   :root:not([data-theme="light"]) .segment:hover {
-    color: #ededed;
+    color: var(--text);
   }
 
   :root:not([data-theme="light"]) .segmentActive {
-    background: #2a2440;
-    color: #c4b5fd;
+    background: var(--ink);
+    color: var(--on-ink);
     box-shadow: none;
   }
 
+  /* .switch z prototypu — te same wymiary co blizniaczy przelacznik
+     w sections.module.css (etap 2): tor 40x22, galka 16x16. */
   :root:not([data-theme="light"]) .toggle {
-    background: #3f3f46;
+    width: 40px;
+    height: 22px;
+    background: var(--line);
+    transition: background 0.18s var(--ease);
+  }
+
+  :root:not([data-theme="light"]) .toggleKnob {
+    width: 16px;
+    height: 16px;
+    background: var(--text-2);
+    transition: transform 0.18s var(--ease), background 0.18s var(--ease);
   }
 
   :root:not([data-theme="light"]) .toggleOn {
-    background: #7c3aed;
+    background: rgba(53, 220, 255, 0.22);
   }
 
-  :root:not([data-theme="light"]) .modelChip {
-    background: #221a45;
-    color: #c4b5fd;
+  :root:not([data-theme="light"]) .toggleOn .toggleKnob {
+    background: var(--signal);
+    box-shadow: 0 0 10px var(--signal);
+  }
+
+  :root:not([data-theme="light"]) .slider {
+    accent-color: var(--signal);
+  }
+
+  :root:not([data-theme="light"]) .sliderValue {
+    border-radius: var(--r-control);
+    background: var(--surface-2);
+    color: var(--text);
   }
 
   :root:not([data-theme="light"]) .error {
-    background: #2a1212;
-    border-color: #5a2a2a;
-    color: #ff8f8f;
+    border-radius: var(--r-card);
+    border-color: var(--err-line);
+    background: var(--err-soft);
+    color: var(--err);
   }
 }
 
 :root[data-theme="dark"] .pageTitle,
   :root[data-theme="dark"] .cardTitle,
-  :root[data-theme="dark"] .rowLabel,
   :root[data-theme="dark"] .statusName {
-    color: #ededed;
+    color: var(--text);
+    font-weight: 600;
+  }
+
+:root[data-theme="dark"] .rowLabel {
+    color: var(--text);
+    font-weight: 500;
   }
 
 :root[data-theme="dark"] .rowDesc,
   :root[data-theme="dark"] .statusDetail {
-    color: #a1a1aa;
+    color: var(--text-3);
   }
 
 :root[data-theme="dark"] .banner {
-    background: #10233f;
-    border-color: #1e3a5f;
+    border-radius: var(--r-card);
+    border-color: var(--line);
+    background: var(--surface);
+  }
+
+:root[data-theme="dark"] .banner::before {
+    content: "";
+    width: 2px;
+    border-radius: 2px;
+    background: var(--signal);
+    flex-shrink: 0;
+    align-self: stretch;
   }
 
 :root[data-theme="dark"] .bannerText {
-    color: #93c5fd;
+    color: var(--text-2);
   }
 
 :root[data-theme="dark"] .navItem {
-    color: #c9c9d4;
+    color: var(--text-2);
+    font-weight: 500;
   }
 
 :root[data-theme="dark"] .navItem:hover {
-    background: #1c1730;
-    color: #c4b5fd;
+    background: var(--surface-2);
+    color: var(--text);
   }
 
 :root[data-theme="dark"] .navItemActive {
-    background: #221a45;
-    color: #c4b5fd;
+    background: var(--surface-2);
+    color: var(--signal-text);
   }
 
 :root[data-theme="dark"] .card {
-    background: #131318;
-    border-color: #27272a;
+    border-radius: var(--r-shell);
+    border-color: var(--line);
+    background: var(--surface);
+    box-shadow: none;
   }
 
 :root[data-theme="dark"] .cardHead {
-    border-bottom-color: #27272a;
+    border-bottom-color: var(--line);
+    background: transparent;
   }
 
 :root[data-theme="dark"] .row,
   :root[data-theme="dark"] .statusRow {
-    border-bottom-color: #1f1f24;
+    border-bottom-color: var(--line-soft);
   }
 
-:root[data-theme="dark"] .rowsDivider,
-  :root[data-theme="dark"] .cardHead {
+:root[data-theme="dark"] .rowsDivider {
+    background: var(--line-soft);
+  }
+
+:root[data-theme="dark"] .dot.dotOk {
+    background: var(--ok);
+  }
+
+:root[data-theme="dark"] .dot.dotWarn {
+    background: var(--warn);
+  }
+
+:root[data-theme="dark"] .dot.dotError {
+    background: var(--err);
+  }
+
+:root[data-theme="dark"] .statusTag {
+    border: 1px solid transparent;
     background: transparent;
+    font-family: var(--font-data);
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    text-transform: none;
+  }
+
+:root[data-theme="dark"] .statusTag.dotOk {
+    background: transparent;
+    color: var(--ok);
+  }
+
+:root[data-theme="dark"] .statusTag.dotWarn {
+    background: transparent;
+    color: var(--warn);
+  }
+
+:root[data-theme="dark"] .statusTag.dotError {
+    background: transparent;
+    color: var(--err);
+  }
+
+:root[data-theme="dark"] .modelChip {
+    border: 1px solid var(--line);
+    background: transparent;
+    color: var(--text-2);
+    font-family: var(--font-data);
+    font-weight: 400;
+    letter-spacing: 0.04em;
   }
 
 :root[data-theme="dark"] .select,
   :root[data-theme="dark"] .textInput,
-  :root[data-theme="dark"] .numberInput,
-  :root[data-theme="dark"] .secondaryButton {
-    background: #17171c;
-    border-color: #3f3f46;
-    color: #ededed;
+  :root[data-theme="dark"] .numberInput {
+    border-radius: var(--r-control);
+    border-color: var(--line);
+    background: var(--bg-2);
+    color: var(--text);
+    transition: border-color 0.16s var(--ease);
+  }
+
+:root[data-theme="dark"] .select:hover,
+  :root[data-theme="dark"] .textInput:hover,
+  :root[data-theme="dark"] .numberInput:hover {
+    border-color: var(--text-3);
+  }
+
+:root[data-theme="dark"] .select:focus,
+  :root[data-theme="dark"] .textInput:focus,
+  :root[data-theme="dark"] .numberInput:focus {
+    outline-color: var(--signal);
+    border-color: var(--signal-line);
+  }
+
+:root[data-theme="dark"] .secondaryButton {
+    border-radius: var(--r-control);
+    border-color: var(--line);
+    background: transparent;
+    color: var(--text);
+    font-weight: 500;
   }
 
 :root[data-theme="dark"] .secondaryButton:hover:not(:disabled) {
-    color: #c4b5fd;
+    border-color: var(--text-3);
+    background: var(--surface-2);
+    color: var(--text);
   }
 
 :root[data-theme="dark"] .segmented {
-    background: #17171c;
-    border-color: #3f3f46;
+    border-radius: var(--r-card);
+    border-color: var(--line);
+    background: var(--bg-2);
   }
 
 :root[data-theme="dark"] .segment {
-    color: #a1a1aa;
+    color: var(--text-2);
+    font-weight: 500;
   }
 
 :root[data-theme="dark"] .segment:hover {
-    color: #ededed;
+    color: var(--text);
   }
 
 :root[data-theme="dark"] .segmentActive {
-    background: #2a2440;
-    color: #c4b5fd;
+    background: var(--ink);
+    color: var(--on-ink);
     box-shadow: none;
   }
 
 :root[data-theme="dark"] .toggle {
-    background: #3f3f46;
+    width: 40px;
+    height: 22px;
+    background: var(--line);
+    transition: background 0.18s var(--ease);
+  }
+
+:root[data-theme="dark"] .toggleKnob {
+    width: 16px;
+    height: 16px;
+    background: var(--text-2);
+    transition: transform 0.18s var(--ease), background 0.18s var(--ease);
+  }
+
+:root[data-theme="dark"] .slider {
+    accent-color: var(--signal);
+  }
+
+:root[data-theme="dark"] .sliderValue {
+    border-radius: var(--r-control);
+    background: var(--surface-2);
+    color: var(--text);
   }
 
 :root[data-theme="dark"] .toggleOn {
-    background: #7c3aed;
+    background: rgba(53, 220, 255, 0.22);
   }
 
-:root[data-theme="dark"] .modelChip {
-    background: #221a45;
-    color: #c4b5fd;
+:root[data-theme="dark"] .toggleOn .toggleKnob {
+    background: var(--signal);
+    box-shadow: 0 0 10px var(--signal);
   }
 
 :root[data-theme="dark"] .error {
-    background: #2a1212;
-    border-color: #5a2a2a;
-    color: #ff8f8f;
+    border-radius: var(--r-card);
+    border-color: var(--err-line);
+    background: var(--err-soft);
+    color: var(--err);
   }
 
 /* themeified */
