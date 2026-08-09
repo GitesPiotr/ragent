@@ -69,8 +69,25 @@ export async function proxy(request) {
     return withSessionCookies(NextResponse.redirect(url), response);
   }
 
+  // FURTKA PODGLADU. Bez niej ekranu logowania NIE DA SIE obejrzec, bedac
+  // zalogowanym — regula nizej odsyla na /projekty, wiec przy kazdej poprawce
+  // wygladu trzeba by sie wylogowywac i logowac z powrotem.
+  //
+  // DWA WARUNKI, NIE JEDEN, i to jest cala ostroznosc tego miejsca:
+  //   • NODE_ENV — na produkcji furtki nie ma w ogole,
+  //   • jawny parametr — sam NODE_ENV znosilby przekierowanie przy KAZDEJ
+  //     pracy lokalnej, wiec gdyby to przekierowanie sie zepsulo, nikt by tego
+  //     nie zauwazyl az do wdrozenia. Z parametrem regula dziala lokalnie tak
+  //     samo jak na produkcji, dopoki jej swiadomie nie ominiemy.
+  //
+  // Zmienna NODE_ENV ustawia Next.js: "development" przy `next dev`,
+  // "production" po `next build`. Nie da sie jej podac z zewnatrz w zadaniu.
+  const podglad =
+    process.env.NODE_ENV !== "production" &&
+    request.nextUrl.searchParams.get("podglad") === "1";
+
   // Zalogowany na ekranie logowania/rejestracji -> do aplikacji.
-  if (user && PUBLIC_PATHS.includes(pathname)) {
+  if (user && PUBLIC_PATHS.includes(pathname) && !podglad) {
     const url = request.nextUrl.clone();
     url.pathname = "/projekty";
     url.search = "";

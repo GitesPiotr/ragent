@@ -27,7 +27,55 @@ function readableAuthError(error) {
   return msg || "Nie udało się utworzyć konta.";
 }
 
+// REJESTRACJA JEST WYLACZONA PO STRONIE SUPABASE
+// (Authentication -> Providers -> Allow new users to sign up = off).
+//
+// Trasa zostaje, formularz nie. Powody, zeby nie kasowac calego katalogu:
+//   • /rejestracja jest wpisana w PUBLIC_PATHS w proxy.js, wiec usuniecie
+//     strony zostawiloby publiczna trase prowadzaca w 404,
+//   • adres moze byc w czyichs zakladkach i w historii, a 404 nic nie tlumaczy,
+//   • formularz nizej DZIALA. Wlaczenie rejestracji z powrotem to przestawienie
+//     przelacznika w Supabase i tej jednej stalej — nie pisanie 180 linii
+//     od nowa.
+//
+// Gdyby rejestracja wracala na stale: `readableAuthError` nizej NIE MA wzorca
+// na odmowe „signups not allowed", wiec przy wylaczonym przelaczniku uzytkownik
+// zobaczylby surowy angielski komunikat. Warto go wtedy dopisac.
+const REJESTRACJA_WYLACZONA = true;
+
+// Zaslepka. Korzysta z tego samego arkusza co formularz, wiec zostaje
+// w motywie jasnym — patrz docs/dlugi.md.
+function RejestracjaWylaczona() {
+  return (
+    <div className={styles.screen}>
+      <div className={styles.card}>
+        <div className={styles.brand}>AIdeas</div>
+        <h1 className={styles.title}>Rejestracja jest wyłączona</h1>
+        <p className={styles.subtitle}>
+          Konta zakłada administrator. Jeśli potrzebujesz dostępu, napisz na{" "}
+          <a className={styles.link} href="mailto:pit321@op.pl">
+            pit321@op.pl
+          </a>
+          .
+        </p>
+
+        <div className={styles.footer}>
+          <Link className={styles.link} href="/logowanie">
+            Wróć do logowania
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function SignUpPage() {
+  return REJESTRACJA_WYLACZONA ? <RejestracjaWylaczona /> : <FormularzRejestracji />;
+}
+
+// PONIZEJ NIC SIE NIE ZMIENILO poza nazwa komponentu. Caly przeplyw signUp,
+// walidacja i mapa bledow czekaja w calosci na wypadek wlaczenia rejestracji.
+function FormularzRejestracji() {
   const router = useRouter();
 
   const [email, setEmail] = useState("");
