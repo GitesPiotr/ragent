@@ -6,12 +6,60 @@
   color-scheme: light;
 }
 
-/* Auto — ciemny gdy OS ciemny i user NIE wymusil jasnego. */
+/* TOKENY NIEZALEZNE OD MOTYWU (docs/prototyp.html, blok :root).
+   Kroje, promienie i krzywa przejscia sa takie same w kazdym motywie, wiec
+   stoja tutaj, a nie w blokach ciemnych. Motyw jasny ich dzis nie czyta —
+   dolozenie ich niczego w nim nie zmienia. */
+:root {
+  --font-ui: var(--font-instrument-sans), system-ui, sans-serif;
+  --font-data: var(--font-ibm-plex-mono), ui-monospace, monospace;
+
+  --r-control: 8px;
+  --r-card: 10px;
+  --r-shell: 14px;
+  --r-pill: 999px;
+  --ease: cubic-bezier(0.2, 0.6, 0.25, 1);
+}
+
+/* PALETA MOTYWU CIEMNEGO — przepisana doslownie z docs/prototyp.html.
+   Zasada prototypu: CYJAN ZNACZY MASZYNE, FIOLET ZNACZY MODEL, dzialania
+   uzytkownika sa neutralne (--ink na --on-ink).
+
+   UWAGA na --ok: te sama nazwe deklaruje kreator-rag.module.css na .panel
+   (linie 51 / 1294 / 1466). .panel siedzi na <main> calego modulu, wiec jego
+   lokalna deklaracja przeslania te globalna dla kazdego potomka — paleta
+   plotna mapy i grafu zostaje nietknieta. Nie zmieniac tego bez sprawdzenia
+   mapy i grafu na zywo. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --background: #0a0a0a;
     --foreground: #ededed;
     color-scheme: dark;
+
+    --bg: #040611;
+    --bg-2: #080d1d;
+    --surface: #0c1428;
+    --surface-2: #101c36;
+    --line: #213b63;
+    --line-soft: #16294a;
+    --text: #f3fbff;
+    --text-2: #9db3c9;
+    --text-3: #7890aa;
+    --ink: #f3fbff;
+    --on-ink: #040611;
+
+    --signal: #35dcff;
+    --signal-2: #8a6cff;
+    --signal-soft: rgba(53, 220, 255, 0.09);
+    --signal-line: rgba(53, 220, 255, 0.34);
+    --signal-text: #7fe9ff;
+    --model-soft: rgba(138, 108, 255, 0.08);
+    --model-line: rgba(138, 108, 255, 0.4);
+    --model-text: #b6a4ff;
+
+    --ok: #52f0bf;
+    --warn: #d8b46a;
+    --err: #ff68ad;
   }
 }
 
@@ -20,6 +68,31 @@
   --background: #0a0a0a;
   --foreground: #ededed;
   color-scheme: dark;
+
+  --bg: #040611;
+  --bg-2: #080d1d;
+  --surface: #0c1428;
+  --surface-2: #101c36;
+  --line: #213b63;
+  --line-soft: #16294a;
+  --text: #f3fbff;
+  --text-2: #9db3c9;
+  --text-3: #7890aa;
+  --ink: #f3fbff;
+  --on-ink: #040611;
+
+  --signal: #35dcff;
+  --signal-2: #8a6cff;
+  --signal-soft: rgba(53, 220, 255, 0.09);
+  --signal-line: rgba(53, 220, 255, 0.34);
+  --signal-text: #7fe9ff;
+  --model-soft: rgba(138, 108, 255, 0.08);
+  --model-line: rgba(138, 108, 255, 0.4);
+  --model-text: #b6a4ff;
+
+  --ok: #52f0bf;
+  --warn: #d8b46a;
+  --err: #ff68ad;
 }
 
 :root[data-theme="light"] {
@@ -47,6 +120,27 @@ body {
   font-family: Arial, Helvetica, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* POSWIATA U GORY EKRANU — docs/prototyp.html, regula body.
+   #0d1c38 jest w prototypie wpisane wprost, nie przez token, wiec zostaje
+   literalem. Warstwy w kolejnosci: najpierw gradient, pod nim --bg.
+
+   ZEBY TO BYLO WIDOCZNE, .shell w projekty/layout.module.css musi byc
+   przezroczysty w ciemnym — inaczej przykrywa body na kazdym ekranie
+   z paskiem bocznym. W prototypie .shell nie ma zadnego tla. */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) body {
+    background:
+      radial-gradient(120% 70% at 50% -10%, #0d1c38 0%, transparent 60%),
+      var(--bg);
+  }
+}
+
+:root[data-theme="dark"] body {
+  background:
+    radial-gradient(120% 70% at 50% -10%, #0d1c38 0%, transparent 60%),
+    var(--bg);
 }
 
 * {

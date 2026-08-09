@@ -75,50 +75,92 @@
   }
 }
 
+/* ============================================================================
+   MOTYW CIEMNY = NOWY WYGLAD (docs/prototyp.html, sekcja POWLOKA).
+   Pozycja aktywna dostaje lewa krawedz --signal — w prototypie to jedyny
+   wskaznik "tutaj jestes" poza kolorem tekstu. Krawedz jest zadeklarowana
+   takze w stanie spoczynku (przezroczysta), zeby wejscie w pozycje aktywna
+   nie przesuwalo tekstu o 2px.
+   Linki sa dziecmi kontenera flex, wiec sa blokowane — border-left dziala.
+   ============================================================================ */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .sidebar {
-    background: #0d0b16;
-    border-right-color: #262233;
+    background: var(--surface);
+    border-right-color: var(--line);
+  }
+
+  :root:not([data-theme="light"]) .brand {
+    color: var(--signal-text);
+    font-weight: 700;
+  }
+
+  :root:not([data-theme="light"]) .groupLabel {
+    color: var(--text-3);
+    font-family: var(--font-data);
+    font-weight: 500;
+    letter-spacing: 0.14em;
   }
 
   :root:not([data-theme="light"]) .link {
-    color: #c9c9d4;
+    border-left: 2px solid transparent;
+    border-radius: var(--r-control);
+    color: var(--text-2);
+    font-weight: 500;
+    transition: background 0.16s var(--ease), color 0.16s var(--ease);
   }
 
   :root:not([data-theme="light"]) .link:hover {
-    background: #1c1730;
-    color: #c4b5fd;
+    background: var(--surface-2);
+    color: var(--text);
   }
 
   :root:not([data-theme="light"]) .active {
-    background: #221a45;
-    color: #c4b5fd;
+    background: var(--surface-2);
+    color: var(--signal-text);
+    border-left-color: var(--signal);
   }
 
   @media (max-width: 720px) {
     :root:not([data-theme="light"]) .sidebar {
-      border-bottom-color: #262233;
+      border-bottom-color: var(--line);
     }
   }
 }
 
 :root[data-theme="dark"] .sidebar {
-    background: #0d0b16;
-    border-right-color: #262233;
+    background: var(--surface);
+    border-right-color: var(--line);
+  }
+
+:root[data-theme="dark"] .brand {
+    color: var(--signal-text);
+    font-weight: 700;
+  }
+
+:root[data-theme="dark"] .groupLabel {
+    color: var(--text-3);
+    font-family: var(--font-data);
+    font-weight: 500;
+    letter-spacing: 0.14em;
   }
 
 :root[data-theme="dark"] .link {
-    color: #c9c9d4;
+    border-left: 2px solid transparent;
+    border-radius: var(--r-control);
+    color: var(--text-2);
+    font-weight: 500;
+    transition: background 0.16s var(--ease), color 0.16s var(--ease);
   }
 
 :root[data-theme="dark"] .link:hover {
-    background: #1c1730;
-    color: #c4b5fd;
+    background: var(--surface-2);
+    color: var(--text);
   }
 
 :root[data-theme="dark"] .active {
-    background: #221a45;
-    color: #c4b5fd;
+    background: var(--surface-2);
+    color: var(--signal-text);
+    border-left-color: var(--signal);
   }
 
 @media (max-width: 720px) {
@@ -129,12 +171,12 @@
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .bottom {
-    border-top-color: #262233;
+    border-top-color: var(--line);
   }
 }
 
 :root[data-theme="dark"] .bottom {
-  border-top-color: #262233;
+  border-top-color: var(--line);
 }
 
 /* themeified */
@@ -180,30 +222,61 @@
   cursor: not-allowed;
 }
 
+/* Wylogowanie to w prototypie .btn .btn-quiet .btn-sm. */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .account {
-    border-top-color: #262233;
+    border-top-color: var(--line);
   }
+
+  :root:not([data-theme="light"]) .accountEmail {
+    color: var(--text-3);
+  }
+
   :root:not([data-theme="light"]) .logoutButton {
-    border-color: #3f3a4d;
-    color: #a1a1aa;
+    border-radius: var(--r-control);
+    border-color: var(--line);
+    background: transparent;
+    color: var(--text);
+    font-weight: 500;
+    transition: background 0.16s var(--ease), border-color 0.16s var(--ease);
   }
+
   :root:not([data-theme="light"]) .logoutButton:hover:not(:disabled) {
-    background: #211d2c;
-    color: #ededed;
+    border-color: var(--text-3);
+    background: var(--surface-2);
+    color: var(--text);
+  }
+
+  :root:not([data-theme="light"]) .logoutButton:disabled {
+    color: var(--text-3);
+    opacity: 0.4;
   }
 }
 
 :root[data-theme="dark"] .account {
-  border-top-color: #262233;
+  border-top-color: var(--line);
+}
+
+:root[data-theme="dark"] .accountEmail {
+  color: var(--text-3);
 }
 
 :root[data-theme="dark"] .logoutButton {
-  border-color: #3f3a4d;
-  color: #a1a1aa;
+  border-radius: var(--r-control);
+  border-color: var(--line);
+  background: transparent;
+  color: var(--text);
+  font-weight: 500;
+  transition: background 0.16s var(--ease), border-color 0.16s var(--ease);
 }
 
 :root[data-theme="dark"] .logoutButton:hover:not(:disabled) {
-  background: #211d2c;
-  color: #ededed;
+  border-color: var(--text-3);
+  background: var(--surface-2);
+  color: var(--text);
+}
+
+:root[data-theme="dark"] .logoutButton:disabled {
+  color: var(--text-3);
+  opacity: 0.4;
 }
