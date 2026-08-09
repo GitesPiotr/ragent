@@ -35,6 +35,44 @@
       div role="checkbox", nie input).
    ============================================================================ */
 
+/* ----------------------------------------------------------------------------
+   TŁO NA CAŁY OBSZAR TREŚCI.
+
+   Problem: .samouczek ma max-width 940px, więc w motywie jasnym ciemny prostokąt
+   wisiał na białym tle z pasami po bokach i krawędzią u dołu. Tło maluje .panel
+   (`background: var(--tlo)`, biel w jasnym), a .panel siedzi NA TYM SAMYM
+   elemencie co .content — czyli na <main>, rodzicu tego komponentu.
+
+   Dziecko nie może pomalować rodzica, a rodzic jest wspólny dla całego modułu,
+   więc trzeba było wybrać jedno z trzech:
+
+     a) ujemne marginesy zjadające padding .content — ODRZUCONE. Wymagałoby
+        przepisania 32/28/64 px oraz 20/16/48 px z app/projekty/layout.module.css,
+        czyli z arkusza WSPÓŁDZIELONEGO przez /agenty, /wiedza, /czaty
+        i /ustawienia. Dokładnie ten sam powód, dla którego odrzucił je autor
+        layoutu modułu (komentarz w app/kreator-rag/layout.js).
+     b) grupa tras z osobnym layoutem — działa, ale przenosi kolekcje,
+        diagnostykę i korzeń do nowego katalogu dla jednego koloru tła.
+     c) TO PONIŻEJ.
+
+   Selektor czyta się: „element <main>, który zawiera nasz samouczek". Stosuje się
+   WYŁĄCZNIE na tej trasie — na kolekcjach i diagnostyce .samouczek nie istnieje,
+   więc reguła nie ma czego złapać. Zero duplikacji wartości, zero zmian
+   w plikach wspólnych.
+
+   Specyficzność: (0,1,1) — element `main` plus klasa z :has(). Bije .panel
+   (0,1,0), a to jedyna reguła, z którą się tu ściga.
+
+   LITERAŁ, NIE var(--bg): zmienne palety są zadeklarowane na .samouczek, czyli
+   na DZIECKU tego elementu. Na <main> jeszcze nie istnieją.
+
+   W MOTYWIE CIEMNYM NIC SIĘ NIE ZMIENIA — tam .panel i tak maluje --tlo, które
+   równa się --bg, czyli tej samej barwie #040611.
+   ---------------------------------------------------------------------------- */
+:global(main):has(.samouczek) {
+  background: #040611;
+}
+
 .samouczek {
   /* --- paleta prototypu, literały --- */
   --bg: #040611;
