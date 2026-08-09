@@ -109,7 +109,7 @@
 .convList {
   display: flex;
   flex-direction: column;
-  gap: 3px;
+  gap: 4px;
   flex: 1;
   min-height: 0;
   overflow-y: auto;
@@ -125,7 +125,10 @@
   width: 100%;
   min-width: 0;
   overflow: hidden;
-  padding: 8px 6px 8px 10px;
+  /* 9px 10px za prototypem (.convItem). Razem z gap: 4px na .convList daje
+     22px miedzy tekstem sasiednich wierszy — wczesniej bylo 19px i wiersze
+     zlewaly sie ze soba. */
+  padding: 9px 10px;
   border-left: 3px solid transparent;
   border-radius: 8px;
   background: transparent;
@@ -488,6 +491,22 @@
 .runnerCompact .chip {
   font-size: 10px;
   padding: 1px 6px;
+}
+
+/* PLAKIETKA „AGENT" ZNIKA Z WIERSZA LISTY.
+   Wszystkie rozmowy na tej liscie sa z agentem, a role niesie juz awatar —
+   plakietka tylko zabierala miejsce w linii metadanych, ktora ma zmiescic
+   nazwe i date w kolumnie szerokiej na 260px.
+
+   `.runnerCompact` trafia WYLACZNIE na wiersz listy (ConversationRow.js:185 —
+   jedyne miejsce, gdzie RunnerLabel dostaje `compact`), wiec naglowek rozmowy,
+   przycisk wyboru rozmowcy i lista rozwijana zachowuja plakietke. Tam odroznia
+   ona agenta od golego modelu, czyli niesie informacje.
+
+   .chipModel i .chipDeleted ZOSTAJA: „Model AI" mowi cos, czego awatar nie mowi,
+   a czerwone „Agent" przy usunietym agencie to ostrzezenie, nie etykieta typu. */
+.runnerCompact .chipAgent {
+  display: none;
 }
 
 .runnerCompact .runnerName {

@@ -22,11 +22,38 @@ import { Avatar } from "@/components/chats/Avatar";
 import { FormModal } from "@/components/workspace/FormModal";
 import styles from "@/components/chats/chats.module.css";
 
+// DATA W WIERSZU LISTY ROZMOW (docs/prototyp.html: „Korneliusz · 12:41").
+//
+// Pelne „9.08.2026, 14:30" bylo za mocne: stalo w jednej linii z nazwa rozmowcy
+// w kolumnie szerokiej na 260px i przykrywalo tytul. Dzisiejsze rozmowy pokazuja
+// sama godzine, starsze dzien i miesiac.
+//
+// ROK DOCHODZI TYLKO PRZY ROZMOWIE Z INNEGO ROKU. Lista rozmow zyje dlugo,
+// a samo „9 sie" sprzed roku wygladaloby jak sprzed tygodnia.
+//
+// Uzywane w jednym miejscu — jako prop `formatDate` dla ConversationRow.
+// Pozostale ekrany maja wlasne, niezalezne kopie tej funkcji.
 function formatDate(value) {
   if (!value) return "";
-  return new Date(value).toLocaleString("pl-PL", {
-    dateStyle: "short",
-    timeStyle: "short",
+  const d = new Date(value);
+  const teraz = new Date();
+
+  const dzisiaj =
+    d.getFullYear() === teraz.getFullYear() &&
+    d.getMonth() === teraz.getMonth() &&
+    d.getDate() === teraz.getDate();
+
+  if (dzisiaj) {
+    return d.toLocaleTimeString("pl-PL", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }
+
+  return d.toLocaleDateString("pl-PL", {
+    day: "numeric",
+    month: "short",
+    ...(d.getFullYear() === teraz.getFullYear() ? {} : { year: "numeric" }),
   });
 }
 
