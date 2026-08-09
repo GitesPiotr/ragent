@@ -71,9 +71,90 @@
   outline: none;
 }
 
+/* Gorne 60px odpadlo razem z plywajacym „Zamknij mentora" — przycisk siedzi
+   teraz w naglowku (docs/prototyp.html: .mentorHead). Plywajacy zostal tylko
+   do OTWIERANIA, wiec nie ma juz czego omijac. */
 .header {
-  padding: 60px 20px 12px;
+  padding: 16px 20px 12px;
   border-bottom: 1px solid #eee;
+}
+
+/* --- Naglowek: tytul z kropka po lewej, akcje po prawej ---
+   Klasy dodane w etapie 2. Wymagaja regul BAZOWYCH, bo JSX jest wspolny dla
+   obu motywow — inaczej w jasnym staly by nieostylowane. */
+.headRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.mentorTitle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.headActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.pulse {
+  position: relative;
+  flex-shrink: 0;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #7c3aed;
+}
+
+.pulse::after {
+  content: "";
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 1px solid #c4b5fd;
+  animation: ping 2.4s cubic-bezier(0.2, 0.6, 0.25, 1) infinite;
+}
+
+@keyframes ping {
+  0% {
+    transform: scale(0.7);
+    opacity: 1;
+  }
+  70%,
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pulse::after {
+    animation: none;
+  }
+}
+
+.closeButton {
+  flex-shrink: 0;
+  padding: 6px 11px;
+  border: 1px solid #d4d4d8;
+  border-radius: 8px;
+  background: transparent;
+  color: #52525b;
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.closeButton:hover {
+  background: #f4f4f5;
+  color: #18181b;
 }
 
 .title {
@@ -465,164 +546,641 @@
   cursor: not-allowed;
 }
 
+/* ============================================================================
+   MOTYW CIEMNY = NOWY WYGLAD (docs/prototyp.html, sekcja MENTOR).
+
+   NAJWAZNIEJSZA ZMIANA: odpowiedz mentora NIE JEST dymkiem. Prototypowe
+   .msg-ai to tekst z dwupikselowa linia --signal-line z lewej, bez tla
+   i bez ramki. Dymek zostaje wylacznie po stronie uzytkownika (.msg-you).
+   Powod z prototypu: przy dlugich odpowiedziach bańka meczy, a linia od razu
+   mowi, kto mowi.
+
+   ODPOWIEDNIKI: .panel→.mentor, .header→.mentorHead, .messages→.stream,
+   .message→.msg, .user→.msg-you, .mentor→.msg-ai, .role→.who,
+   .proposalCard→.proposal, .pathChoice→.exits, .pathButton/.secondaryButton→
+   .exit, .acceptButton→.exit-primary, .inputRow→.mentorFoot.
+   ============================================================================ */
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) .panel {
-    background: #0f0f0f;
-    border-left-color: #262626;
+    background: var(--surface);
+    border-left-color: var(--line);
   }
 
   :root:not([data-theme="light"]) .header {
-    border-bottom-color: #262626;
+    border-bottom-color: var(--line);
+  }
+
+  :root:not([data-theme="light"]) .title {
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  :root:not([data-theme="light"]) .pulse {
+    background: var(--signal);
+    box-shadow: 0 0 10px var(--signal);
+  }
+
+  :root:not([data-theme="light"]) .pulse::after {
+    border-color: var(--signal-line);
   }
 
   :root:not([data-theme="light"]) .subtitle,
+  :root:not([data-theme="light"]) .draftLabel {
+    color: var(--text-2);
+  }
+
   :root:not([data-theme="light"]) .empty,
   :root:not([data-theme="light"]) .loader {
-    color: #999;
+    color: var(--text-3);
   }
 
+  :root:not([data-theme="light"]) .dots span {
+    background: var(--signal);
+  }
+
+  /* Przyciski ciche: .btn-quiet .btn-sm */
+  :root:not([data-theme="light"]) .closeButton,
+  :root:not([data-theme="light"]) .backButton {
+    padding: 6px 11px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-control);
+    background: transparent;
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  :root:not([data-theme="light"]) .closeButton:hover,
+  :root:not([data-theme="light"]) .backButton:hover {
+    border-color: var(--text-3);
+    background: var(--surface-2);
+    color: var(--text);
+  }
+
+  /* Jedyny sposob otwarcia panelu — wiec .btn-primary, nie .btn-quiet. */
+  :root:not([data-theme="light"]) .toggle {
+    padding: 10px 16px;
+    border-radius: var(--r-pill);
+    background: var(--ink);
+    color: var(--on-ink);
+    font-weight: 500;
+    box-shadow: none;
+    transition: opacity 0.16s var(--ease);
+  }
+
+  :root:not([data-theme="light"]) .toggle:hover {
+    background: var(--ink);
+    opacity: 0.86;
+  }
+
+  :root:not([data-theme="light"]) .message {
+    font-size: 13.5px;
+    max-width: 92%;
+  }
+
+  :root:not([data-theme="light"]) .user {
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    color: var(--text);
+    border-bottom-right-radius: var(--r-card);
+  }
+
+  /* ODPOWIEDZ MENTORA BEZ DYMKA — .msg-ai */
   :root:not([data-theme="light"]) .mentor {
-    background: #1a1530;
-    border-color: #3b2f6b;
-    color: #ededed;
+    position: relative;
+    padding-left: 14px;
+    border: none;
+    background: none;
+    color: var(--text);
+    border-bottom-left-radius: 0;
   }
 
-  :root:not([data-theme="light"]) .modeButton {
-    background: #1a1530;
-    border-color: #3b2f6b;
+  :root:not([data-theme="light"]) .mentor::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 3px;
+    bottom: 3px;
+    width: 2px;
+    border-radius: 2px;
+    background: var(--signal-line);
   }
 
-  :root:not([data-theme="light"]) .modeButton:hover {
-    background: #221a45;
+  :root:not([data-theme="light"]) .role {
+    font-family: var(--font-data);
+    font-size: 10.5px;
+    font-weight: 400;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    opacity: 1;
+    margin-bottom: 3px;
   }
 
-  :root:not([data-theme="light"]) .modeDesc {
-    color: #aaa;
-  }
-
+  /* Karta propozycji: pelna ramka i naglowek jako PASEK. Padding schodzi
+     z karty na dzieci, zeby pasek siegal krawedzi. */
   :root:not([data-theme="light"]) .proposalCard {
-    background: #17132e;
-    border-color: #6d28d9;
+    align-self: stretch;
+    max-width: none;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid var(--signal-line);
+    border-radius: var(--r-card);
+    background: var(--signal-soft);
+  }
+
+  :root:not([data-theme="light"]) .proposalHead {
+    margin-bottom: 0;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--signal-line);
+    font-family: var(--font-data);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--signal-text);
   }
 
   :root:not([data-theme="light"]) .proposalBody {
-    color: #d4d4d8;
+    margin-bottom: 0;
+    padding: 10px 12px;
+    font-size: 13.5px;
+    color: var(--text);
   }
 
   :root:not([data-theme="light"]) .appliedBadge {
-    color: #4ade80;
+    display: block;
+    padding: 0 12px 10px;
+    color: var(--ok);
+  }
+
+  /* Wszystkie wyjscia maja ksztalt .exit; glowne dostaje .exit-primary. */
+  :root:not([data-theme="light"]) .pathChoice {
+    align-self: stretch;
+    max-width: none;
+    gap: 6px;
+  }
+
+  :root:not([data-theme="light"]) .pathButton,
+  :root:not([data-theme="light"]) .secondaryButton,
+  :root:not([data-theme="light"]) .acceptButton {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    padding: 10px 12px;
+    text-align: left;
+    border: 1px solid var(--line);
+    border-radius: var(--r-control);
+    background: var(--surface-2);
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 500;
+    transition: border-color 0.16s var(--ease), opacity 0.16s var(--ease);
+  }
+
+  :root:not([data-theme="light"]) .pathButton:hover,
+  :root:not([data-theme="light"]) .secondaryButton:hover {
+    border-color: var(--text-3);
+    background: var(--surface-2);
+  }
+
+  :root:not([data-theme="light"]) .acceptButton {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: var(--on-ink);
+  }
+
+  :root:not([data-theme="light"]) .acceptButton:hover:not(:disabled) {
+    opacity: 0.9;
+  }
+
+  :root:not([data-theme="light"]) .acceptButton:disabled,
+  :root:not([data-theme="light"]) .secondaryButton:disabled {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: var(--on-ink);
+    opacity: 0.4;
+  }
+
+  :root:not([data-theme="light"]) .secondaryButton:disabled {
+    background: var(--surface-2);
+    border-color: var(--line);
+    color: var(--text);
+  }
+
+  :root:not([data-theme="light"]) .pathTitle {
+    font-size: 13px;
+    font-weight: 500;
+    color: inherit;
+  }
+
+  :root:not([data-theme="light"]) .pathDesc {
+    font-size: 12px;
+    color: var(--text-3);
+  }
+
+  /* WYPROWADZONE — wybor trybu nie wystepuje w prototypie, konwencja .exit. */
+  :root:not([data-theme="light"]) .modeButton {
+    border-radius: var(--r-control);
+    border-color: var(--line);
+    background: var(--surface-2);
+  }
+
+  :root:not([data-theme="light"]) .modeButton:hover {
+    border-color: var(--text-3);
+    background: var(--surface-2);
+  }
+
+  :root:not([data-theme="light"]) .modeTitle {
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  :root:not([data-theme="light"]) .modeDesc {
+    color: var(--text-3);
+    font-size: 12px;
+  }
+
+  :root:not([data-theme="light"]) .summaryCard {
+    border-radius: var(--r-card);
+    border-color: rgba(82, 240, 191, 0.4);
+    background: rgba(82, 240, 191, 0.07);
+  }
+
+  :root:not([data-theme="light"]) .summaryHead {
+    color: var(--ok);
+    font-weight: 600;
+  }
+
+  :root:not([data-theme="light"]) .summaryText {
+    color: var(--text-2);
+  }
+
+  :root:not([data-theme="light"]) .summaryWarn {
+    color: var(--warn);
+    background: rgba(216, 180, 106, 0.08);
+    border-left: 2px solid var(--warn);
   }
 
   :root:not([data-theme="light"]) .input,
   :root:not([data-theme="light"]) .draftInput {
-    background: #111;
-    color: #ededed;
-    border-color: #333;
+    padding: 10px 12px;
+    border-radius: var(--r-control);
+    border-color: var(--line);
+    background: var(--bg-2);
+    color: var(--text);
+    transition: border-color 0.16s var(--ease);
   }
 
-  :root:not([data-theme="light"]) .pathButton {
-    background: #17132e;
-    border-color: #6d28d9;
+  :root:not([data-theme="light"]) .input:hover,
+  :root:not([data-theme="light"]) .draftInput:hover {
+    border-color: var(--text-3);
   }
 
-  :root:not([data-theme="light"]) .pathButton:hover {
-    background: #221a45;
+  :root:not([data-theme="light"]) .input::placeholder,
+  :root:not([data-theme="light"]) .draftInput::placeholder {
+    color: var(--text-3);
   }
 
-  :root:not([data-theme="light"]) .pathDesc {
-    color: #aaa;
+  :root:not([data-theme="light"]) .sendButton {
+    padding: 9px 15px;
+    border-radius: var(--r-control);
+    background: var(--ink);
+    color: var(--on-ink);
+    font-weight: 500;
+    transition: opacity 0.16s var(--ease);
+  }
+
+  :root:not([data-theme="light"]) .sendButton:disabled {
+    background: var(--ink);
+    color: var(--on-ink);
+    opacity: 0.4;
   }
 
   :root:not([data-theme="light"]) .inputRow,
-  :root:not([data-theme="light"]) .draftBox,
-  :root:not([data-theme="light"]) .error {
-    border-color: #262626;
+  :root:not([data-theme="light"]) .draftBox {
+    border-top-color: var(--line);
+  }
+
+  :root:not([data-theme="light"]) .resizer:hover::before,
+  :root:not([data-theme="light"]) .resizer:focus-visible::before,
+  :root:not([data-theme="light"]) .resizerActive::before {
+    background: var(--signal);
   }
 
   :root:not([data-theme="light"]) .error {
-    background: #2a1212;
-    border-color: #5a2a2a;
-    color: #ff8f8f;
+    border-radius: var(--r-control);
+    border-color: rgba(255, 104, 173, 0.4);
+    background: rgba(255, 104, 173, 0.07);
+    color: var(--err);
   }
 }
 
 :root[data-theme="dark"] .panel {
-    background: #0f0f0f;
-    border-left-color: #262626;
+    background: var(--surface);
+    border-left-color: var(--line);
   }
 
 :root[data-theme="dark"] .header {
-    border-bottom-color: #262626;
+    border-bottom-color: var(--line);
+  }
+
+:root[data-theme="dark"] .title {
+    color: var(--text);
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+:root[data-theme="dark"] .pulse {
+    background: var(--signal);
+    box-shadow: 0 0 10px var(--signal);
+  }
+
+:root[data-theme="dark"] .pulse::after {
+    border-color: var(--signal-line);
   }
 
 :root[data-theme="dark"] .subtitle,
-  :root[data-theme="dark"] .empty,
+  :root[data-theme="dark"] .draftLabel {
+    color: var(--text-2);
+  }
+
+:root[data-theme="dark"] .empty,
   :root[data-theme="dark"] .loader {
-    color: #999;
+    color: var(--text-3);
+  }
+
+:root[data-theme="dark"] .dots span {
+    background: var(--signal);
+  }
+
+:root[data-theme="dark"] .closeButton,
+  :root[data-theme="dark"] .backButton {
+    padding: 6px 11px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-control);
+    background: transparent;
+    color: var(--text);
+    font-weight: 500;
+  }
+
+:root[data-theme="dark"] .closeButton:hover,
+  :root[data-theme="dark"] .backButton:hover {
+    border-color: var(--text-3);
+    background: var(--surface-2);
+    color: var(--text);
+  }
+
+:root[data-theme="dark"] .toggle {
+    padding: 10px 16px;
+    border-radius: var(--r-pill);
+    background: var(--ink);
+    color: var(--on-ink);
+    font-weight: 500;
+    box-shadow: none;
+    transition: opacity 0.16s var(--ease);
+  }
+
+:root[data-theme="dark"] .toggle:hover {
+    background: var(--ink);
+    opacity: 0.86;
+  }
+
+:root[data-theme="dark"] .message {
+    font-size: 13.5px;
+    max-width: 92%;
+  }
+
+:root[data-theme="dark"] .user {
+    background: var(--surface-2);
+    border: 1px solid var(--line);
+    color: var(--text);
+    border-bottom-right-radius: var(--r-card);
   }
 
 :root[data-theme="dark"] .mentor {
-    background: #1a1530;
-    border-color: #3b2f6b;
-    color: #ededed;
+    position: relative;
+    padding-left: 14px;
+    border: none;
+    background: none;
+    color: var(--text);
+    border-bottom-left-radius: 0;
   }
 
-:root[data-theme="dark"] .modeButton {
-    background: #1a1530;
-    border-color: #3b2f6b;
+:root[data-theme="dark"] .mentor::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 3px;
+    bottom: 3px;
+    width: 2px;
+    border-radius: 2px;
+    background: var(--signal-line);
   }
 
-:root[data-theme="dark"] .modeButton:hover {
-    background: #221a45;
-  }
-
-:root[data-theme="dark"] .modeDesc {
-    color: #aaa;
+:root[data-theme="dark"] .role {
+    font-family: var(--font-data);
+    font-size: 10.5px;
+    font-weight: 400;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--text-3);
+    opacity: 1;
+    margin-bottom: 3px;
   }
 
 :root[data-theme="dark"] .proposalCard {
-    background: #17132e;
-    border-color: #6d28d9;
+    align-self: stretch;
+    max-width: none;
+    padding: 0;
+    overflow: hidden;
+    border: 1px solid var(--signal-line);
+    border-radius: var(--r-card);
+    background: var(--signal-soft);
+  }
+
+:root[data-theme="dark"] .proposalHead {
+    margin-bottom: 0;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--signal-line);
+    font-family: var(--font-data);
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--signal-text);
   }
 
 :root[data-theme="dark"] .proposalBody {
-    color: #d4d4d8;
+    margin-bottom: 0;
+    padding: 10px 12px;
+    font-size: 13.5px;
+    color: var(--text);
   }
 
 :root[data-theme="dark"] .appliedBadge {
-    color: #4ade80;
+    display: block;
+    padding: 0 12px 10px;
+    color: var(--ok);
+  }
+
+:root[data-theme="dark"] .pathChoice {
+    align-self: stretch;
+    max-width: none;
+    gap: 6px;
+  }
+
+:root[data-theme="dark"] .pathButton,
+  :root[data-theme="dark"] .secondaryButton,
+  :root[data-theme="dark"] .acceptButton {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    padding: 10px 12px;
+    text-align: left;
+    border: 1px solid var(--line);
+    border-radius: var(--r-control);
+    background: var(--surface-2);
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 500;
+    transition: border-color 0.16s var(--ease), opacity 0.16s var(--ease);
+  }
+
+:root[data-theme="dark"] .pathButton:hover,
+  :root[data-theme="dark"] .secondaryButton:hover {
+    border-color: var(--text-3);
+    background: var(--surface-2);
+  }
+
+:root[data-theme="dark"] .acceptButton {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: var(--on-ink);
+  }
+
+:root[data-theme="dark"] .acceptButton:hover:not(:disabled) {
+    opacity: 0.9;
+  }
+
+:root[data-theme="dark"] .acceptButton:disabled {
+    background: var(--ink);
+    border-color: var(--ink);
+    color: var(--on-ink);
+    opacity: 0.4;
+  }
+
+:root[data-theme="dark"] .secondaryButton:disabled {
+    background: var(--surface-2);
+    border-color: var(--line);
+    color: var(--text);
+    opacity: 0.4;
+  }
+
+:root[data-theme="dark"] .pathTitle {
+    font-size: 13px;
+    font-weight: 500;
+    color: inherit;
+  }
+
+:root[data-theme="dark"] .pathDesc {
+    font-size: 12px;
+    color: var(--text-3);
+  }
+
+:root[data-theme="dark"] .modeButton {
+    border-radius: var(--r-control);
+    border-color: var(--line);
+    background: var(--surface-2);
+  }
+
+:root[data-theme="dark"] .modeButton:hover {
+    border-color: var(--text-3);
+    background: var(--surface-2);
+  }
+
+:root[data-theme="dark"] .modeTitle {
+    color: var(--text);
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+:root[data-theme="dark"] .modeDesc {
+    color: var(--text-3);
+    font-size: 12px;
+  }
+
+:root[data-theme="dark"] .summaryCard {
+    border-radius: var(--r-card);
+    border-color: rgba(82, 240, 191, 0.4);
+    background: rgba(82, 240, 191, 0.07);
+  }
+
+:root[data-theme="dark"] .summaryHead {
+    color: var(--ok);
+    font-weight: 600;
+  }
+
+:root[data-theme="dark"] .summaryText {
+    color: var(--text-2);
+  }
+
+:root[data-theme="dark"] .summaryWarn {
+    color: var(--warn);
+    background: rgba(216, 180, 106, 0.08);
+    border-left: 2px solid var(--warn);
   }
 
 :root[data-theme="dark"] .input,
   :root[data-theme="dark"] .draftInput {
-    background: #111;
-    color: #ededed;
-    border-color: #333;
+    padding: 10px 12px;
+    border-radius: var(--r-control);
+    border-color: var(--line);
+    background: var(--bg-2);
+    color: var(--text);
+    transition: border-color 0.16s var(--ease);
   }
 
-:root[data-theme="dark"] .pathButton {
-    background: #17132e;
-    border-color: #6d28d9;
+:root[data-theme="dark"] .input:hover,
+  :root[data-theme="dark"] .draftInput:hover {
+    border-color: var(--text-3);
   }
 
-:root[data-theme="dark"] .pathButton:hover {
-    background: #221a45;
+:root[data-theme="dark"] .input::placeholder,
+  :root[data-theme="dark"] .draftInput::placeholder {
+    color: var(--text-3);
   }
 
-:root[data-theme="dark"] .pathDesc {
-    color: #aaa;
+:root[data-theme="dark"] .sendButton {
+    padding: 9px 15px;
+    border-radius: var(--r-control);
+    background: var(--ink);
+    color: var(--on-ink);
+    font-weight: 500;
+    transition: opacity 0.16s var(--ease);
+  }
+
+:root[data-theme="dark"] .sendButton:disabled {
+    background: var(--ink);
+    color: var(--on-ink);
+    opacity: 0.4;
   }
 
 :root[data-theme="dark"] .inputRow,
-  :root[data-theme="dark"] .draftBox,
-  :root[data-theme="dark"] .error {
-    border-color: #262626;
+  :root[data-theme="dark"] .draftBox {
+    border-top-color: var(--line);
+  }
+
+:root[data-theme="dark"] .resizer:hover::before,
+  :root[data-theme="dark"] .resizer:focus-visible::before,
+  :root[data-theme="dark"] .resizerActive::before {
+    background: var(--signal);
   }
 
 :root[data-theme="dark"] .error {
-    background: #2a1212;
-    border-color: #5a2a2a;
-    color: #ff8f8f;
+    border-radius: var(--r-control);
+    border-color: rgba(255, 104, 173, 0.4);
+    background: rgba(255, 104, 173, 0.07);
+    color: var(--err);
   }
 
 /* themeified */

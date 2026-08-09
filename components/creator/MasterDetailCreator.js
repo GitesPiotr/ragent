@@ -262,7 +262,7 @@ export function MasterDetailCreator({
           <span className={styles.masterLabel}>Parametry agenta</span>
 
           <div className={styles.cards}>
-            {visibleIds.map((id) => {
+            {visibleIds.map((id, i) => {
               const param = getParameter(id);
               if (!param) return null;
               const isActive = activeId === id;
@@ -284,8 +284,11 @@ export function MasterDetailCreator({
                     className={styles.cardButton}
                     onClick={() => setActiveId(id)}
                   >
+                    {/* NUMER PORZADKOWY, NIE EMOJI (docs/prototyp.html: .param .num).
+                        Liczy sie pozycja na WIDOCZNEJ liscie, nie w rejestrze —
+                        po zdjeciu parametru numeracja ma zostac ciagla. */}
                     <span className={styles.cardIcon} aria-hidden="true">
-                      {param.icon}
+                      {String(i + 1).padStart(2, "0")}
                     </span>
                     <span className={styles.cardText}>
                       <span className={styles.cardLabel}>

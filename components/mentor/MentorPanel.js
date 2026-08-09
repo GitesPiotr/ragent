@@ -691,13 +691,19 @@ export function MentorPanel() {
 
   return (
     <>
-      <button
-        type="button"
-        className={styles.toggle}
-        onClick={() => setOpen((v) => !v)}
-      >
-        {open ? "✕ Zamknij mentora" : "💡 Mentor"}
-      </button>
+      {/* PLYWAJACY PRZYCISK SLUZY JUZ TYLKO DO OTWIERANIA.
+          Zamykanie przeniesione do naglowka panelu (docs/prototyp.html:
+          .mentorHead ma tytul po lewej i „Zamknij" po prawej). Gdy panel jest
+          otwarty, przycisk nie ma po co stac nad trescia. */}
+      {!open && (
+        <button
+          type="button"
+          className={styles.toggle}
+          onClick={() => setOpen(true)}
+        >
+          💡 Mentor
+        </button>
+      )}
 
       {open && (
         <aside className={styles.panel} style={{ width: mentorWidth }}>
@@ -707,20 +713,37 @@ export function MentorPanel() {
             {...separatorProps}
           />
 
+          {/* Naglowek: tytul z kropka po lewej, akcje po prawej.
+              Podtytul nie ma odpowiednika w prototypie (tam naglowek to jeden
+              wiersz z dwoma dziecmi), wiec laduje POD wierszem — usuniecie go
+              byloby zmiana tresci, nie wygladu. */}
           <div className={styles.header}>
-            <h2 className={styles.title}>Mentor AIDEAS</h2>
-            {mode === null ? (
-              <p className={styles.subtitle}>
-                Wybierz, jak mam Ci pomóc.
-              </p>
-            ) : (
-              <button
-                type="button"
-                className={styles.backButton}
-                onClick={backToModes}
-              >
-                ← zmień tryb
-              </button>
+            <div className={styles.headRow}>
+              <div className={styles.mentorTitle}>
+                <span className={styles.pulse} aria-hidden="true" />
+                <h2 className={styles.title}>Mentor AIDEAS</h2>
+              </div>
+              <div className={styles.headActions}>
+                {mode !== null && (
+                  <button
+                    type="button"
+                    className={styles.backButton}
+                    onClick={backToModes}
+                  >
+                    ← zmień tryb
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className={styles.closeButton}
+                  onClick={() => setOpen(false)}
+                >
+                  Zamknij
+                </button>
+              </div>
+            </div>
+            {mode === null && (
+              <p className={styles.subtitle}>Wybierz, jak mam Ci pomóc.</p>
             )}
           </div>
 

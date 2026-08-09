@@ -371,208 +371,533 @@
   }
 }
 
+/* ============================================================================
+   MOTYW CIEMNY = NOWY WYGLAD. Wartosci z docs/prototyp.html, sekcja KREATOR.
+
+   ODPOWIEDNIKI: .header→.topbar, .card→.param, .cardActive→.param.is-open,
+   .cardMentor→.param.is-machine, .cardIcon→.param .num, .cardLabel→.name,
+   .cardSummary→.desc, .removeCard→.paramRemove, .addButton→.addParam,
+   .detail→.detail, .pickerTitle→.detailTitle, .pickerHint→.detailLead,
+   .masterLabel→.eyebrow, .saveButton→.btn-primary.
+
+   Geometria (padding, promien, grubosc, przejscie) musi byc TUTAJ, bo w
+   regulach bazowych jest wspolna dla obu motywow, a jasny ma zostac nietkniety.
+   ============================================================================ */
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .header,
-  :root:not([data-theme="light"]) .card,
-  :root:not([data-theme="light"]) .detail,
-  :root:not([data-theme="light"]) .pickerItem {
-    background: #131318;
-    border-color: #27272a;
+  :root:not([data-theme="light"]) .header {
+    padding: 14px 18px;
+    border-radius: var(--r-shell);
+    border-color: var(--line);
+    background: var(--surface);
+    box-shadow: none;
   }
 
-  :root:not([data-theme="light"]) .agentName,
-  :root:not([data-theme="light"]) .cardLabel,
-  :root:not([data-theme="light"]) .pickerTitle {
-    color: #ededed;
+  :root:not([data-theme="light"]) .agentName {
+    color: var(--text);
+    font-weight: 600;
   }
 
-  :root:not([data-theme="light"]) .cardSummary,
-  :root:not([data-theme="light"]) .pickerHint,
-  :root:not([data-theme="light"]) .allAdded {
-    color: #a1a1aa;
+  :root:not([data-theme="light"]) .masterLabel {
+    color: var(--text-3);
+    font-family: var(--font-data);
+    font-weight: 500;
+    letter-spacing: 0.14em;
   }
 
-  :root:not([data-theme="light"]) .nameInput {
-    background: #17171c;
-    color: #ededed;
-    border-color: #7c3aed;
+  :root:not([data-theme="light"]) .master {
+    gap: 6px;
+    margin-top: 8px;
   }
 
-  :root:not([data-theme="light"]) .editNameButton:hover {
-    background: #27272e;
+  :root:not([data-theme="light"]) .cards {
+    gap: 6px;
+  }
+
+  /* overflow: visible — pasek .cardMentor::before wychodzi na left: -1px,
+     zeby przykryc ramke. Przy overflow: hidden zostalby obciety. */
+  :root:not([data-theme="light"]) .card {
+    border-radius: var(--r-card);
+    border-color: var(--line);
+    background: var(--surface);
+    overflow: visible;
+    transition: border-color 0.16s var(--ease), background 0.16s var(--ease);
+  }
+
+  :root:not([data-theme="light"]) .card:hover {
+    border-color: var(--text-3);
+    background: var(--surface);
+    box-shadow: none;
+    transform: none;
   }
 
   :root:not([data-theme="light"]) .cardActive {
-    background: #1a1530;
-    border-color: #7c3aed;
+    border-color: var(--text-3);
+    background: var(--surface-2);
+    box-shadow: none;
   }
 
-  :root:not([data-theme="light"]) .card:hover,
-  :root:not([data-theme="light"]) .pickerItem:hover {
-    border-color: #6d28d9;
+  /* „Mentor o tym mowi" — cyjan, nie bursztyn. Bursztyn nie nalezy do palety. */
+  :root:not([data-theme="light"]) .cardMentor {
+    border-color: var(--signal-line);
+    background: var(--signal-soft);
+    box-shadow: none;
   }
 
-  :root:not([data-theme="light"]) .pickerItem:hover {
-    background: #1a1530;
+  :root:not([data-theme="light"]) .cardMentor::before {
+    left: -1px;
+    top: -1px;
+    bottom: -1px;
+    width: 2px;
+    background: var(--signal);
+    border-radius: var(--r-card) 0 0 var(--r-card);
   }
 
-  :root:not([data-theme="light"]) .addButton {
-    background: #17132e;
-    border-color: #3b2f6b;
-    color: #c4b5fd;
+  :root:not([data-theme="light"]) .cardMentor .cardLabel {
+    color: var(--signal-text);
   }
 
-  :root:not([data-theme="light"]) .addButton:hover:not(:disabled),
-  :root:not([data-theme="light"]) .addButtonActive {
-    background: #221a45;
-    border-color: #7c3aed;
+  :root:not([data-theme="light"]) .cardButton {
+    padding: 11px 12px 11px 13px;
+    gap: 10px;
   }
 
+  :root:not([data-theme="light"]) .cardIcon {
+    font-family: var(--font-data);
+    font-size: 11px;
+    color: var(--text-3);
+    padding-top: 2px;
+    min-width: 18px;
+  }
+
+  :root:not([data-theme="light"]) .cardLabel {
+    color: var(--text);
+    font-size: 13.5px;
+    font-weight: 600;
+  }
+
+  :root:not([data-theme="light"]) .cardSummary {
+    color: var(--text-3);
+    line-height: 1.35;
+  }
+
+  /* .paramRemove w prototypie nie jest kolumna z kreska, tylko zwyklym x. */
   :root:not([data-theme="light"]) .removeCard {
-    border-left-color: #27272a;
+    width: auto;
+    align-self: flex-start;
+    padding: 11px 12px 0 0;
+    border-left: none;
+    background: transparent;
+    color: var(--text-3);
+    font-size: 15px;
   }
 
   :root:not([data-theme="light"]) .removeCard:hover {
-    background: #2a1212;
-    color: #ff8f8f;
+    background: transparent;
+    color: var(--err);
   }
 
+  :root:not([data-theme="light"]) .addButton {
+    padding: 11px 12px;
+    border-radius: var(--r-card);
+    border-color: var(--line);
+    background: transparent;
+    color: var(--text-2);
+    font-size: 13px;
+    font-weight: 400;
+    text-align: left;
+  }
+
+  :root:not([data-theme="light"]) .addButton:hover:not(:disabled) {
+    background: transparent;
+    border-color: var(--signal-line);
+    color: var(--signal-text);
+  }
+
+  :root:not([data-theme="light"]) .addButtonActive {
+    background: transparent;
+    border-style: solid;
+    border-color: var(--signal-line);
+    color: var(--signal-text);
+  }
+
+  :root:not([data-theme="light"]) .allAdded {
+    color: var(--text-3);
+  }
+
+  :root:not([data-theme="light"]) .detail {
+    border-radius: var(--r-shell);
+    border-color: var(--line);
+    background: var(--surface);
+  }
+
+  :root:not([data-theme="light"]) .pickerTitle {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  :root:not([data-theme="light"]) .pickerHint {
+    color: var(--text-2);
+    max-width: 62ch;
+  }
+
+  /* WYPROWADZONE — ekran wyboru parametru nie wystepuje w prototypie.
+     Konwencja .param. */
+  :root:not([data-theme="light"]) .pickerItem {
+    border-radius: var(--r-card);
+    border-color: var(--line);
+    background: var(--surface);
+    transition: border-color 0.16s var(--ease), background 0.16s var(--ease);
+  }
+
+  :root:not([data-theme="light"]) .pickerItem:hover {
+    border-color: var(--text-3);
+    background: var(--surface-2);
+    transform: none;
+  }
+
+  /* Plakietka neutralna .tag — jak w etapie 1. */
   :root:not([data-theme="light"]) .previewTag {
-    background: #422006;
-    color: #fcd34d;
+    padding: 2px 9px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-pill);
+    background: transparent;
+    color: var(--text-2);
+    font-family: var(--font-data);
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    text-transform: none;
+  }
+
+  :root:not([data-theme="light"]) .saveStatus {
+    font-family: var(--font-data);
+    font-weight: 400;
   }
 
   :root:not([data-theme="light"]) .statusSaved {
-    color: #4ade80;
+    color: var(--ok);
   }
 
   :root:not([data-theme="light"]) .statusError {
-    color: #ff8f8f;
+    color: var(--err);
   }
 
   :root:not([data-theme="light"]) .statusDirty {
-    color: #fbbf24;
+    color: var(--warn);
   }
 
+  /* WYPROWADZONE — zapisywanie to praca maszyny, stad --signal-text. */
   :root:not([data-theme="light"]) .statusSaving {
-    color: #c4b5fd;
+    color: var(--signal-text);
+  }
+
+  :root:not([data-theme="light"]) .saveButton {
+    padding: 9px 15px;
+    border: 1px solid transparent;
+    border-radius: var(--r-control);
+    background: var(--ink);
+    color: var(--on-ink);
+    font-weight: 500;
+    transition: background 0.16s var(--ease), opacity 0.16s var(--ease);
+  }
+
+  :root:not([data-theme="light"]) .saveButton:hover:not(:disabled) {
+    background: var(--ink);
+    opacity: 0.86;
   }
 
   :root:not([data-theme="light"]) .saveButton:disabled {
-    background: #3f3f46;
-    color: #a1a1aa;
+    background: var(--ink);
+    color: var(--on-ink);
+    opacity: 0.4;
   }
 
+  :root:not([data-theme="light"]) .editNameButton {
+    padding: 6px 11px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-control);
+    background: transparent;
+    color: var(--text);
+    opacity: 1;
+  }
+
+  :root:not([data-theme="light"]) .editNameButton:hover {
+    background: var(--surface-2);
+    border-color: var(--text-3);
+  }
+
+  :root:not([data-theme="light"]) .nameInput {
+    padding: 10px 12px;
+    border-radius: var(--r-control);
+    border-color: var(--line);
+    background: var(--bg-2);
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  /* WYPROWADZONE — --err, jak .error w etapie 1. */
   :root:not([data-theme="light"]) .error {
-    background: #2a1212;
-    border-color: #5a2a2a;
-    color: #ff8f8f;
+    border-radius: var(--r-card);
+    border-color: rgba(255, 104, 173, 0.4);
+    background: rgba(255, 104, 173, 0.07);
+    color: var(--err);
   }
 
   :root:not([data-theme="light"]) .chatArea {
-    border-top-color: #27272a;
+    border-top-color: var(--line);
   }
 }
 
-:root[data-theme="dark"] .header,
-  :root[data-theme="dark"] .card,
-  :root[data-theme="dark"] .detail,
-  :root[data-theme="dark"] .pickerItem {
-    background: #131318;
-    border-color: #27272a;
+:root[data-theme="dark"] .header {
+    padding: 14px 18px;
+    border-radius: var(--r-shell);
+    border-color: var(--line);
+    background: var(--surface);
+    box-shadow: none;
   }
 
-:root[data-theme="dark"] .agentName,
-  :root[data-theme="dark"] .cardLabel,
-  :root[data-theme="dark"] .pickerTitle {
-    color: #ededed;
+:root[data-theme="dark"] .agentName {
+    color: var(--text);
+    font-weight: 600;
   }
 
-:root[data-theme="dark"] .cardSummary,
-  :root[data-theme="dark"] .pickerHint,
-  :root[data-theme="dark"] .allAdded {
-    color: #a1a1aa;
+:root[data-theme="dark"] .masterLabel {
+    color: var(--text-3);
+    font-family: var(--font-data);
+    font-weight: 500;
+    letter-spacing: 0.14em;
   }
 
-:root[data-theme="dark"] .nameInput {
-    background: #17171c;
-    color: #ededed;
-    border-color: #7c3aed;
+:root[data-theme="dark"] .master {
+    gap: 6px;
+    margin-top: 8px;
   }
 
-:root[data-theme="dark"] .editNameButton:hover {
-    background: #27272e;
+:root[data-theme="dark"] .cards {
+    gap: 6px;
+  }
+
+:root[data-theme="dark"] .card {
+    border-radius: var(--r-card);
+    border-color: var(--line);
+    background: var(--surface);
+    overflow: visible;
+    transition: border-color 0.16s var(--ease), background 0.16s var(--ease);
+  }
+
+:root[data-theme="dark"] .card:hover {
+    border-color: var(--text-3);
+    background: var(--surface);
+    box-shadow: none;
+    transform: none;
   }
 
 :root[data-theme="dark"] .cardActive {
-    background: #1a1530;
-    border-color: #7c3aed;
+    border-color: var(--text-3);
+    background: var(--surface-2);
+    box-shadow: none;
   }
 
-:root[data-theme="dark"] .card:hover,
-  :root[data-theme="dark"] .pickerItem:hover {
-    border-color: #6d28d9;
+:root[data-theme="dark"] .cardMentor {
+    border-color: var(--signal-line);
+    background: var(--signal-soft);
+    box-shadow: none;
   }
 
-:root[data-theme="dark"] .pickerItem:hover {
-    background: #1a1530;
+:root[data-theme="dark"] .cardMentor::before {
+    left: -1px;
+    top: -1px;
+    bottom: -1px;
+    width: 2px;
+    background: var(--signal);
+    border-radius: var(--r-card) 0 0 var(--r-card);
   }
 
-:root[data-theme="dark"] .addButton {
-    background: #17132e;
-    border-color: #3b2f6b;
-    color: #c4b5fd;
+:root[data-theme="dark"] .cardMentor .cardLabel {
+    color: var(--signal-text);
   }
 
-:root[data-theme="dark"] .addButton:hover:not(:disabled),
-  :root[data-theme="dark"] .addButtonActive {
-    background: #221a45;
-    border-color: #7c3aed;
+:root[data-theme="dark"] .cardButton {
+    padding: 11px 12px 11px 13px;
+    gap: 10px;
+  }
+
+:root[data-theme="dark"] .cardIcon {
+    font-family: var(--font-data);
+    font-size: 11px;
+    color: var(--text-3);
+    padding-top: 2px;
+    min-width: 18px;
+  }
+
+:root[data-theme="dark"] .cardLabel {
+    color: var(--text);
+    font-size: 13.5px;
+    font-weight: 600;
+  }
+
+:root[data-theme="dark"] .cardSummary {
+    color: var(--text-3);
+    line-height: 1.35;
   }
 
 :root[data-theme="dark"] .removeCard {
-    border-left-color: #27272a;
+    width: auto;
+    align-self: flex-start;
+    padding: 11px 12px 0 0;
+    border-left: none;
+    background: transparent;
+    color: var(--text-3);
+    font-size: 15px;
   }
 
 :root[data-theme="dark"] .removeCard:hover {
-    background: #2a1212;
-    color: #ff8f8f;
+    background: transparent;
+    color: var(--err);
+  }
+
+:root[data-theme="dark"] .addButton {
+    padding: 11px 12px;
+    border-radius: var(--r-card);
+    border-color: var(--line);
+    background: transparent;
+    color: var(--text-2);
+    font-size: 13px;
+    font-weight: 400;
+    text-align: left;
+  }
+
+:root[data-theme="dark"] .addButton:hover:not(:disabled) {
+    background: transparent;
+    border-color: var(--signal-line);
+    color: var(--signal-text);
+  }
+
+:root[data-theme="dark"] .addButtonActive {
+    background: transparent;
+    border-style: solid;
+    border-color: var(--signal-line);
+    color: var(--signal-text);
+  }
+
+:root[data-theme="dark"] .allAdded {
+    color: var(--text-3);
+  }
+
+:root[data-theme="dark"] .detail {
+    border-radius: var(--r-shell);
+    border-color: var(--line);
+    background: var(--surface);
+  }
+
+:root[data-theme="dark"] .pickerTitle {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+:root[data-theme="dark"] .pickerHint {
+    color: var(--text-2);
+    max-width: 62ch;
+  }
+
+:root[data-theme="dark"] .pickerItem {
+    border-radius: var(--r-card);
+    border-color: var(--line);
+    background: var(--surface);
+    transition: border-color 0.16s var(--ease), background 0.16s var(--ease);
+  }
+
+:root[data-theme="dark"] .pickerItem:hover {
+    border-color: var(--text-3);
+    background: var(--surface-2);
+    transform: none;
   }
 
 :root[data-theme="dark"] .previewTag {
-    background: #422006;
-    color: #fcd34d;
+    padding: 2px 9px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-pill);
+    background: transparent;
+    color: var(--text-2);
+    font-family: var(--font-data);
+    font-weight: 400;
+    letter-spacing: 0.04em;
+    text-transform: none;
+  }
+
+:root[data-theme="dark"] .saveStatus {
+    font-family: var(--font-data);
+    font-weight: 400;
   }
 
 :root[data-theme="dark"] .statusSaved {
-    color: #4ade80;
+    color: var(--ok);
   }
 
 :root[data-theme="dark"] .statusError {
-    color: #ff8f8f;
+    color: var(--err);
   }
 
 :root[data-theme="dark"] .statusDirty {
-    color: #fbbf24;
+    color: var(--warn);
   }
 
 :root[data-theme="dark"] .statusSaving {
-    color: #c4b5fd;
+    color: var(--signal-text);
+  }
+
+:root[data-theme="dark"] .saveButton {
+    padding: 9px 15px;
+    border: 1px solid transparent;
+    border-radius: var(--r-control);
+    background: var(--ink);
+    color: var(--on-ink);
+    font-weight: 500;
+    transition: background 0.16s var(--ease), opacity 0.16s var(--ease);
+  }
+
+:root[data-theme="dark"] .saveButton:hover:not(:disabled) {
+    background: var(--ink);
+    opacity: 0.86;
   }
 
 :root[data-theme="dark"] .saveButton:disabled {
-    background: #3f3f46;
-    color: #a1a1aa;
+    background: var(--ink);
+    color: var(--on-ink);
+    opacity: 0.4;
+  }
+
+:root[data-theme="dark"] .editNameButton {
+    padding: 6px 11px;
+    border: 1px solid var(--line);
+    border-radius: var(--r-control);
+    background: transparent;
+    color: var(--text);
+    opacity: 1;
+  }
+
+:root[data-theme="dark"] .editNameButton:hover {
+    background: var(--surface-2);
+    border-color: var(--text-3);
+  }
+
+:root[data-theme="dark"] .nameInput {
+    padding: 10px 12px;
+    border-radius: var(--r-control);
+    border-color: var(--line);
+    background: var(--bg-2);
+    color: var(--text);
+    font-weight: 500;
   }
 
 :root[data-theme="dark"] .error {
-    background: #2a1212;
-    border-color: #5a2a2a;
-    color: #ff8f8f;
+    border-radius: var(--r-card);
+    border-color: rgba(255, 104, 173, 0.4);
+    background: rgba(255, 104, 173, 0.07);
+    color: var(--err);
   }
 
 :root[data-theme="dark"] .chatArea {
-    border-top-color: #27272a;
+    border-top-color: var(--line);
   }
 
 /* themeified */
