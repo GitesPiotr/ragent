@@ -1,0 +1,271 @@
+/* ============================================================================
+   EKRAN LOGOWANIA — przepisany z docs/prototyplogowania.html.
+
+   TRZY RZECZY, KTORYCH NIE WOLNO TU RUSZAC BEZ CZYTANIA:
+
+   1. PALETA STOI NA .ekran, NIGDY W :root. Prototyp deklaruje ja w :root
+      i trzy nazwy zderzaja sie z aplikacja: --line (#6ee7e0 kontra #213b63),
+      --bg (#0c1220 kontra #040611) i --ink (ta sama wartosc, kolizja pozorna).
+      Gdyby --line trafilo do :root, KAZDA ramka w aplikacji zrobilaby sie
+      turkusowa. Dwie kolidujace nazwy sa tu przemianowane — patrz nizej.
+
+   2. TLO MUSI BYC #0c1220 I NIEPRZEZROCZYSTE. Obraz helmu nie ma kanalu alfa
+      (367x972, trzy kanaly), a jego wlasne tlo to dokladnie #0c1220 — na tle
+      tej samej barwy nie widac szwu. Postawienie ekranu na --bg aplikacji
+      (#040611) obrysuje helm widocznym prostokatem.
+      Nieprzezroczystosc zalatwia przy okazji drugie zadanie: globals.css maluje
+      na body poswiate radial-gradient(... #0d1c38 ...) u gory ekranu, czyli
+      akurat tam, gdzie helm jest najwyzszy. .ekran ja zakrywa, wiec nie trzeba
+      niczego wylaczac w pliku wspoldzielonym.
+
+   3. EKRAN JEST ZAWSZE CIEMNY, niezaleznie od data-theme. Wychodzi to samo
+      z siebie, bo paleta to LITERALY, a nie tokeny aplikacji — motyw nie ma
+      na co wplynac. Jedyne, co sie samo nie zalatwia, to color-scheme:
+      globalne :root{color-scheme:light} w motywie jasnym dalo by biale tlo
+      autouzupelniania Chrome, jasny pasek przewijania i jasny kursor w polach.
+      Stad jawne color-scheme: dark nizej.
+   ============================================================================ */
+
+.ekran {
+  /* --- paleta prototypu, literaly --- */
+
+  /* PRZEMIANOWANE: prototyp nazywa to --line. Kolidowaloby z --line aplikacji
+     (#213b63, kolor kazdej ramki). Czyta to takze JavaScript rysujacy obrys
+     napisu — nazwa musi sie zgadzac w obu miejscach. */
+  --siatka: #6ee7e0;
+  /* PRZEMIANOWANE: prototyp nazywa to --bg. */
+  --tlo: #0c1220;
+
+  --node: #a5f6f2;
+  --mag: #b06bf2;
+  --mag-line: #8b5cf6;
+  --w-line: 1.15;
+  --r-node: 2.6;
+  --visor: #98fbf8;
+
+  --cyan: #35dcff;
+  --cyan-soft: #7fe9ff;
+  --ink: #f3fbff;
+  --ring-off: #27436b;
+  --field-bg: #101d33;
+  --field-bd: #2a4468;
+
+  /* Prototyp deklaruje jeszcze --accent i --edge (uzywane wylacznie przez panel
+     deweloperski) oraz --muted, --panel, --panel2 i --tx (nieuzywane nigdzie).
+     Nie przenosze ich. */
+
+  min-height: 100dvh;
+  background: var(--tlo);
+  color: var(--ink);
+  color-scheme: dark;
+
+  /* Ekran nie ma .shell, wiec kroj trzeba przypisac tutaj — inaczej dziedziczy
+     Arial z reguly body w globals.css. */
+  font-family: var(--font-ui);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ====== UKLAD ====== */
+
+.uklad {
+  max-width: 1240px;
+  margin: 0 auto;
+  padding: 24px 20px 40px;
+  display: grid;
+  grid-template-columns: 1.02fr 0.98fr;
+  gap: 28px;
+  align-items: center;
+  min-height: 100dvh;
+}
+
+.scena {
+  width: 100%;
+}
+
+.kolumnaPanelu {
+  position: relative;
+  display: grid;
+  place-items: center;
+  padding: 10px;
+}
+
+/* ====== GLOWA ====== */
+
+.glowa {
+  overflow: hidden;
+  display: flex;
+  justify-content: center;
+}
+
+.glowaWnetrze {
+  width: 100%;
+  max-width: 760px;
+}
+
+.glowaSvg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Poswiata pod grupami siatki. drop-shadow, a nie filter: url(#...) — prototyp
+   tlumaczy dlaczego (linie 118-121): odwolanie do fragmentu przegladarka
+   rozwiazuje wzgledem adresu strony. Tu i tak chodzimy po HTTP, ale wlasciwosc
+   CSS jest po prostu prostsza. */
+.poswiata {
+  filter: drop-shadow(0 0 2.4px rgba(110, 231, 224, 0.55));
+}
+
+/* Grupy sa w JSX PUSTE i takie zostaja — wypelni je efekt w etapie B.
+   Selektory potomne, bo elementow jeszcze nie ma. */
+.siatka line {
+  stroke: var(--siatka);
+  stroke-width: var(--w-line);
+  stroke-linecap: round;
+}
+.siatka line.magenta {
+  stroke: var(--mag-line);
+}
+.siatka circle {
+  fill: var(--node);
+  r: var(--r-node);
+}
+.siatka circle.magenta {
+  fill: var(--mag);
+  r: 3;
+}
+
+.rozproszenie circle {
+  fill: var(--siatka);
+}
+.rozproszenie circle.magenta {
+  fill: var(--mag);
+}
+.rozproszenie polygon {
+  fill: none;
+  stroke: var(--siatka);
+  stroke-width: 1.1;
+  stroke-linejoin: round;
+}
+.rozproszenie polygon.magenta {
+  stroke: var(--mag);
+}
+
+.spawy circle {
+  fill: none;
+  stroke: var(--visor);
+  stroke-width: 1.2;
+}
+
+/* ====== NAPIS RAGent ====== */
+
+.znak {
+  /* Prototyp nadpisuje tu takze --bg na #050A16, ale ta deklaracja jest MARTWA:
+     .ragent ma background: transparent i nigdzie tego nie czyta. Nie przenosze. */
+  --siatka: #35dcff; /* krawedzie obrysu — cyjan, kolor maszyny */
+  --node: #7fe9ff; /* wezly i czlon „RAG" */
+  --mag: #f3fbff; /* koncowka „ent" — biel */
+  --size: 100px; /* 349/250 szerokosci ze szkicu = 1,40 x 72px */
+
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 760px;
+
+  /* Podciagniecie pod helm. viewBox ma 67,5 jednostki pustego pasa pod helmem
+     (tresc konczy sie na y=581,5 z 649), czyli 10,82% szerokosci sceny. Docelowy
+     odstep ze szkicu to 4,04% szerokosci, stad -6,78%. Drugi czlon to odleglosc
+     od gornej krawedzi bloku do wierzcholkow liter, zmierzona: 0,334 rozmiaru. */
+  min-height: calc(var(--size) * 1.54);
+  margin-top: calc(-6.78% - var(--size) * 0.334);
+
+  background: transparent;
+}
+
+.znakSlowo {
+  font-family: var(--font-znak), system-ui, sans-serif;
+  font-weight: 700;
+  font-size: var(--size);
+  letter-spacing: normal; /* musi byc zero: plotno nie wszedzie wspiera rozstrzelenie */
+  color: var(--node);
+  white-space: nowrap;
+}
+
+.znakAkcent {
+  color: var(--mag);
+}
+
+/* ====== PIERSCIEN ====== */
+
+.pierscien {
+  position: relative;
+  width: 100%;
+  max-width: 460px;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  /* Jednostka cqi w formularzu liczy sie od SZEROKOSCI PIERSCIENIA — stad
+     kontener zapytan. Bez tego pola wyszlyby poza wolne pole w srodku. */
+  container-type: inline-size;
+}
+
+.pierscienSvg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.kreska {
+  stroke: var(--ring-off);
+  stroke-width: 7;
+  stroke-linecap: round;
+  opacity: 0.85;
+  transition: stroke 0.18s linear, opacity 0.18s linear;
+}
+
+.kreskaWlaczona {
+  stroke: var(--cyan);
+  opacity: 1;
+  filter: drop-shadow(0 0 4px var(--cyan));
+}
+
+/* ====== WASKIE EKRANY ====== */
+
+@media (max-width: 980px) {
+  .uklad {
+    grid-template-columns: 1fr;
+    gap: 4px;
+    padding-top: 12px;
+  }
+
+  .scena {
+    max-width: 520px;
+    margin: 0 auto;
+  }
+}
+
+/* Ponizej 600px glowa znika, napis zostaje.
+
+   ZEROWANIE margin-top NIE JEST OZDOBA: ujemny margines podciaga napis pod
+   helm. Bez helmu podciagalby go poza gorna krawedz ekranu. */
+@media (max-width: 600px) {
+  .glowa {
+    display: none;
+  }
+
+  .znak {
+    margin-top: 0;
+    --size: 76px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .kreska {
+    transition: none;
+  }
+}
