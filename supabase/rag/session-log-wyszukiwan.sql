@@ -1,3 +1,19 @@
+-- ############################################################################
+--  KOLEJNOŚĆ MA ZNACZENIE
+--
+--  Część sekwencji stawiania modułu RAG, nie plik archiwalny: tworzy tabelę
+--  rag_search_log wraz z indeksami. To jedyne miejsce, w którym ta tabela
+--  powstaje — supabase/016_rls_rag.sql tylko dokłada jej owner_id i politykę.
+--
+--  Uruchamiaj PRZED migracjami numerowanymi od supabase/016_rls_rag.sql w górę
+--  — one zakładają, że te obiekty już istnieją (nadają im prawa, dokładają
+--  owner_id i polityki RLS).
+--
+--  Ponowne uruchomienie jest nieszkodliwe dla RLS, ale cofa definicję do tej
+--  z tego pliku, czyli kasuje późniejsze poprawki. Wyjątkiem jest
+--  session-2-schema.sql — tam ponowne uruchomienie WYŁĄCZA RLS.
+-- ############################################################################
+
 -- Dziennik wyszukiwań (11.3).
 --
 -- POWÓD: dziś nie wiadomo, o co ludzie pytali, co dostali i ile to trwało. Po integracji

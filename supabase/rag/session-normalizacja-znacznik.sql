@@ -1,3 +1,17 @@
+-- ############################################################################
+--  KOLEJNOŚĆ MA ZNACZENIE
+--
+--  Część sekwencji stawiania modułu RAG, nie plik archiwalny: dokłada kolumny do rag_collections.
+--
+--  Uruchamiaj PRZED migracjami numerowanymi od supabase/016_rls_rag.sql w górę
+--  — one zakładają, że te obiekty już istnieją (nadają im prawa, dokładają
+--  owner_id i polityki RLS).
+--
+--  Ponowne uruchomienie jest nieszkodliwe dla RLS, ale cofa definicję do tej
+--  z tego pliku, czyli kasuje późniejsze poprawki. Wyjątkiem jest
+--  session-2-schema.sql — tam ponowne uruchomienie WYŁĄCZA RLS.
+-- ############################################################################
+
 -- Znacznik przebiegu normalizacji pojęć.
 --
 -- POWÓD (pułapka procesu, 29.07.2026). Przetwarzanie pojęć ma DWA kroki:

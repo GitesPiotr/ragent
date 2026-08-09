@@ -1,3 +1,23 @@
+-- ############################################################################
+--  KOLEJNOŚĆ MA ZNACZENIE — PRZECZYTAJ PRZED URUCHOMIENIEM
+--
+--  Ten plik TWORZY pięć tabel rag_* (rag_collections, rag_documents,
+--  rag_chunks, rag_concepts, rag_chunk_concepts) i jest WYMAGANY przy
+--  stawianiu modułu od zera. Nie jest archiwalny — w supabase/*.sql nie ma
+--  ani jednego "create table" dla tabel rag_*, tamte migracje tylko je
+--  modyfikują.
+--
+--  Ale kończy się WYŁĄCZENIEM RLS na tych tabelach (linie 135-139), z czasów,
+--  gdy projekt był jednoużytkownikowy. Naprawia to supabase/016_rls_rag.sql,
+--  który włącza RLS z powrotem i zakłada polityki "for all to authenticated".
+--
+--  URUCHAMIAJ WYŁĄCZNIE PRZED 016_rls_rag.sql.
+--
+--  Ponowne uruchomienie PO 016 zdejmie RLS z pięciu tabel — cicho, bez błędu.
+--  Aplikacja będzie działać dalej, a dane przestaną być izolowane między
+--  kontami. Nic tego nie zgłosi.
+-- ############################################################################
+
 -- =============================================================================
 --  Sesja 2 - schemat bazy RAG. Uruchamiasz TY recznie w Supabase -> SQL Editor.
 --
