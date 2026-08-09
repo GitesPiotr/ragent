@@ -2,9 +2,55 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { DEMO, PYTANIA, podzielNaWyroznienia } from "../_lib/demoFragmenty.js";
+import { FORMATY_OPIS, KONTROLNA, NIEOBSLUGIWANE, ZASADY } from "../_lib/zasady.js";
 import panel from "../../kreator-rag.module.css";
 import styles from "../samouczek.module.css";
+
+const ZNACZNIK_KLASA = {
+  pewne: "znacznikPewne",
+  zgadywane: "znacznikZgadywane",
+  brak: "znacznikBrak",
+};
+
+// Jedna zasada. Nagłówek jest przyciskiem, treść rozwija się pod nim —
+// renderowana warunkowo, a nie chowana CSS-em, żeby nie trzymać w drzewie
+// pięciu bloków tekstu, z których widać jeden.
+function Zasada({ dane, otwarta, przelacz }) {
+  return (
+    <div className={styles.zasada}>
+      <button
+        type="button"
+        className={styles.zasadaGlowa}
+        aria-expanded={otwarta}
+        onClick={przelacz}
+      >
+        <span className={styles.zasadaNazwa}>{dane.nazwa}</span>
+        {dane.skrot ? <span className={styles.zasadaSkrot}>{dane.skrot}</span> : null}
+        <span className={styles.zasadaZnak} aria-hidden="true">
+          {otwarta ? "−" : "+"}
+        </span>
+      </button>
+
+      {otwarta ? (
+        <div className={styles.zasadaTresc}>
+          <p>{dane.opis}</p>
+          <div className={styles.porownanie}>
+            <div className={`${styles.probka} ${styles.probkaZle}`}>
+              <span className={styles.probkaMetka}>Źle</span>
+              <pre>{dane.zle}</pre>
+            </div>
+            <div className={`${styles.probka} ${styles.probkaDobrze}`}>
+              <span className={styles.probkaMetka}>Dobrze</span>
+              <pre>{dane.dobrze}</pre>
+            </div>
+          </div>
+        </div>
+      ) : null}
+    </div>
+  );
+}
 
 // Jeden fragment dokumentu w demo. Wyróżnienie idzie przez podzielNaWyroznienia,
 // a nie przez wstrzykiwanie HTML-a — dane są czystym tekstem.
@@ -55,11 +101,34 @@ function Werdykt({ odpowiedz }) {
 // (page.js) i podaje dalej — dzięki temu instrukcja nie może zacząć kłamać po
 // zmianie konfiguracji.
 
-export function Samouczek({ rozmiarFragmentu, progTwardegoCiecia }) {
+export function Samouczek({ rozmiarFragmentu, progTwardegoCiecia, limitMb }) {
   // Dwa stany demo. Prototyp trzymał je w zmiennych modułu i przerysowywał
   // ręcznie; tutaj wystarczy React.
+  const router = useRouter();
   const [wersja, setWersja] = useState("zle");
   const [pytanie, setPytanie] = useState(null);
+  // Pierwsza zasada rozwinięta od startu — to ta o nagłówkach, czyli jedyna
+  // rzecz, którą aplikacja naprawdę dokleja do fragmentu przy indeksowaniu.
+  const [rozwiniete, setRozwiniete] = useState(() => new Set([ZASADY[0].id]));
+  const [zaznaczone, setZaznaczone] = useState(() => new Set());
+
+  const przelaczZasade = (id) =>
+    setRozwiniete((biezace) => {
+      const nowe = new Set(biezace);
+      if (nowe.has(id)) nowe.delete(id);
+      else nowe.add(id);
+      return nowe;
+    });
+
+  const przelaczPozycje = (i) =>
+    setZaznaczone((biezace) => {
+      const nowe = new Set(biezace);
+      if (nowe.has(i)) nowe.delete(i);
+      else nowe.add(i);
+      return nowe;
+    });
+
+  const komplet = zaznaczone.size === KONTROLNA.length;
 
   const dane = DEMO[wersja];
   const odpowiedz = pytanie ? dane.odp[pytanie] : null;
@@ -235,6 +304,149 @@ export function Samouczek({ rozmiarFragmentu, progTwardegoCiecia }) {
           {rozmiarFragmentu} znaków, a akapit nigdy nie jest przecinany w środku —
           chyba że sam przekracza {progTwardegoCiecia} znaków.
         </p>
+      </section>
+
+      <section className={styles.sekcja}>
+        <h2 className={styles.podtytulSekcji}>Pięć rzeczy, które robią różnicę</h2>
+        <p className={styles.wstep}>
+          Wszystkie sprowadzają się do jednego: fragment musi być zrozumiały sam
+          z siebie, bez reszty dokumentu.
+        </p>
+
+        <div className={styles.zasady}>
+          {ZASADY.map((z) => (
+            <Zasada
+              key={z.id}
+              dane={z}
+              otwarta={rozwiniete.has(z.id)}
+              przelacz={() => przelaczZasade(z.id)}
+            />
+          ))}
+        </div>
+      </section>
+
+      <section className={styles.sekcja}>
+        <h2 className={styles.podtytulSekcji}>Formaty, które aplikacja czyta</h2>
+        {/* Bez liczebnika w tekście: lista formatów jest pilnowana testem wobec
+            FORMATY z extract.js, więc mogłaby się kiedyś zmienić — a „pięć"
+            trzeba by wtedy odmienić ręcznie. Tabela i tak je wylicza. */}
+        <p className={styles.wstep}>
+          Formaty różnią się nie tym, <em>czy</em> zostaną przeczytane, tylko tym,
+          czy aplikacja rozpozna w nich strukturę — a od tego zależy trafność
+          wyszukiwania.
+        </p>
+
+        <table className={styles.tabelaFormatow}>
+          <thead>
+            <tr>
+              <th>Format</th>
+              <th>Jak jest czytany</th>
+              <th>Rozpoznawanie nagłówków</th>
+            </tr>
+          </thead>
+          <tbody>
+            {FORMATY_OPIS.map((f) => (
+              <tr key={f.ext}>
+                <td className={styles.fmt}>{f.ext}</td>
+                <td>{f.czytanie}</td>
+                <td>
+                  <span className={`${styles.znacznik} ${styles[ZNACZNIK_KLASA[f.pewnosc]]}`}>
+                    {f.etykieta}
+                  </span>
+                  {f.naglowki}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+
+        <div className={styles.nieczyta}>
+          <span className={styles.nieczytaTytul}>Tych aplikacja nie przyjmie</span>
+          <p>
+            Wgranie zakończy się komunikatem o nieobsługiwanym formacie. Zapisz plik
+            w jednym z powyższych — Word i większość narzędzi ma „Zapisz jako”.
+            Sama zmiana rozszerzenia w nazwie nie wystarczy.
+          </p>
+          <div className={styles.nieczytaLista}>{NIEOBSLUGIWANE.join(" · ")}</div>
+        </div>
+
+        <div className={styles.uwaga}>
+          <span className={styles.uwagaTytul}>
+            Skan wgra się bez błędu — i będzie pusty
+          </span>
+          <p>
+            PDF, który powstał ze skanera albo ze zdjęcia, jest dla aplikacji
+            obrazkiem. Nie ma w nim tekstu do przeczytania, a aplikacja nie
+            rozpoznaje pisma z obrazu.
+          </p>
+          <p>
+            Nie zobaczysz czerwonego błędu — plik zostanie przyjęty, a przy
+            dokumencie pojawi się znacznik <code className={styles.kod}>brak tekstu</code>{" "}
+            i informacja, że nie ma fragmentów.{" "}
+            <strong>Sprawdź to zawsze po wgraniu.</strong> Prosty test wcześniej:
+            otwórz plik i spróbuj zaznaczyć zdanie myszą. Jeśli się nie da — to skan.
+          </p>
+        </div>
+
+        <div className={styles.uwaga}>
+          <span className={styles.uwagaTytul}>Limit {limitMb} MB na plik</span>
+          <p>
+            Sprawdzany po tym, jak plik dotrze na serwer — przy bardzo dużym pliku
+            odczekasz całą wysyłkę, zanim zobaczysz odmowę. Liczby plików
+            w kolekcji nic nie ogranicza.
+          </p>
+        </div>
+      </section>
+
+      <section className={styles.sekcja}>
+        <h2 className={styles.podtytulSekcji}>Sprawdź, zanim wgrasz</h2>
+        <p className={styles.wstep}>
+          Jeśli na każde odpowiesz twierdząco, możesz wgrywać. Licznik pod listą
+          pokazuje, ile zostało.
+        </p>
+
+        <div className={styles.kontrolna}>
+          {KONTROLNA.map((tresc, i) => (
+            <div
+              key={i}
+              className={`${styles.pozycja} ${zaznaczone.has(i) ? styles.zaznaczona : ""}`}
+              role="checkbox"
+              tabIndex={0}
+              aria-checked={zaznaczone.has(i)}
+              onClick={() => przelaczPozycje(i)}
+              // Spacja i Enter, bo div z role="checkbox" nie dostaje tego
+              // od przeglądarki tak jak <input type="checkbox">.
+              onKeyDown={(e) => {
+                if (e.key === " " || e.key === "Enter") {
+                  e.preventDefault();
+                  przelaczPozycje(i);
+                }
+              }}
+            >
+              <span className={styles.pudelko} aria-hidden="true">
+                ✓
+              </span>
+              <span className={styles.pozycjaOpis}>{tresc}</span>
+            </div>
+          ))}
+        </div>
+
+        <div className={styles.stopka}>
+          <span className={styles.postep}>
+            {zaznaczone.size} z {KONTROLNA.length}
+          </span>
+          <Link href="/kreator-rag" className={styles.btnCichy}>
+            Wróć do tego później
+          </Link>
+          <button
+            type="button"
+            className={styles.btnGlowny}
+            disabled={!komplet}
+            onClick={() => router.push("/kreator-rag/kolekcje")}
+          >
+            Wgraj dokumenty
+          </button>
+        </div>
       </section>
     </div>
   );

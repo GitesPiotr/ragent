@@ -30,6 +30,7 @@ export default function SamouczekPage() {
     <Samouczek
       rozmiarFragmentu={config.chunk.size}
       progTwardegoCiecia={config.chunk.max}
+      limitMb={config.files.maxFileMb}
     />
   );
 }
