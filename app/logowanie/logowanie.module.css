@@ -18,12 +18,27 @@
       akurat tam, gdzie helm jest najwyzszy. .ekran ja zakrywa, wiec nie trzeba
       niczego wylaczac w pliku wspoldzielonym.
 
-   3. EKRAN JEST ZAWSZE CIEMNY, niezaleznie od data-theme. Wychodzi to samo
-      z siebie, bo paleta to LITERALY, a nie tokeny aplikacji — motyw nie ma
-      na co wplynac. Jedyne, co sie samo nie zalatwia, to color-scheme:
-      globalne :root{color-scheme:light} w motywie jasnym dalo by biale tlo
-      autouzupelniania Chrome, jasny pasek przewijania i jasny kursor w polach.
-      Stad jawne color-scheme: dark nizej.
+   3. EKRAN JEST ZAWSZE CIEMNY, niezaleznie od data-theme.
+
+      DECYZJA I JEJ UZASADNIENIE: helm to nieprzezroczysty prostokat bez
+      kanalu alfa, wiec ilustracja jest ciemna z natury i na jasnym tle
+      pokazuje szew. To jest jedyny powod, ktory sie liczy.
+
+      HISTORIA, ZEBY NIKT NIE SZUKAL NIEISTNIEJACEGO: wczesniejsza wersja
+      tego komentarza opierala decyzje na tym, ze domyslnym motywem jest
+      "auto", wiec nowy uzytkownik na jasnym systemie zobaczylby stary wyglad
+      na Arialu. Commit c2377a4 zmienil domyslke na ciemna i ta przeslanka
+      przestala obowiazywac. Decyzja stoi na przeslance wyzej, ktora sie nie
+      zmienila.
+
+      MECHANIZM: paleta nizej to LITERALY, a nie tokeny aplikacji, wiec motyw
+      nie ma na co wplynac. Samo sie nie zalatwia color-scheme: globalne
+      :root{color-scheme:light} w motywie jasnym daloby biale tlo
+      autouzupelniania Chrome i jasny kursor w polach. Stad jawne
+      color-scheme: dark nizej.
+
+      POZA TYM PLIKIEM: pasek przewijania okna i kanwa poza .ekran ida
+      z <html>/<body> i sa domykane dwiema regulami na koncu app/globals.css.
    ============================================================================ */
 
 .ekran {

@@ -247,7 +247,7 @@ function SkrotDeweloperski() {
 // zalezy od "?powrot=": formularz i skrot deweloperski.
 export default function LoginPage() {
   return (
-    <div className={styles.ekran}>
+    <div className={styles.ekran} data-ekran="logowanie">
       <div className={styles.uklad}>
         <section className={styles.scena}>
           <Glowa />
