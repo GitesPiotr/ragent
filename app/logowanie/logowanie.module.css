@@ -226,6 +226,15 @@
   background: transparent;
 }
 
+/* Plotno obrysu lezy pod napisem i wypelnia cale pole znaku. Prototyp ma tu
+   to samo (#mark canvas). Jest czysto dekoracyjne: do konca przebiegu zostaje
+   puste, a warstwa tekstowa dochodzi do pelnej widocznosci. */
+.znakPlotno {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
 .znakSlowo {
   font-family: var(--font-znak), system-ui, sans-serif;
   font-weight: 700;
