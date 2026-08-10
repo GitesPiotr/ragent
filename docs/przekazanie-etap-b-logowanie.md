@@ -1,8 +1,9 @@
 # Ekran logowania RAGent — etap B: animacja
 
 > Dokument roboczy etapu B. Etap A zamknięty i scalony do `master`.
-> Etap B rozpoczęty: B0 i B1 zamknięte, B2–B7 przed nami.
-> Wersja z 10 sierpnia 2026, po sesji 1.
+> Etap B w toku: B0, B0b, B1, B2, B3, B4 i B5 zamknięte; przed nami B6, B8 i —
+> warunkowo — B7. Scena animuje się w całości.
+> Wersja z 10 sierpnia 2026, po sesji 3.
 
 ---
 
@@ -281,13 +282,15 @@ Gałąź `feature/etap-b-animacja` odbita od `master` na `f14443b`.
 | commit | zakres | stan |
 |---|---|---|
 | **B0** | ekran ciemny także poza własnym pudełkiem, uzasadnienie motywu poprawione | zamknięty (`1ab7d79`) |
-| **B0b** | dokument przekazania do repozytorium | ten plik |
+| **B0b** | dokument przekazania do repozytorium | zamknięty (`61755d9`) |
 | **B1** | harmonogram jako czyste funkcje + test danych siatki | zamknięty (`b6fe574`) |
-| **B2** | jeden zegar sceny: `rAF` z warunkiem stopu i sprzątaniem | |
-| **B3** | głowa: animacja, budowanie idempotentne | |
-| **B4** | znak RAGent na płótnie, `getComputedStyle` poza pętlą | |
-| **B5** | pierścień, próg 600 ms, animacja raz na sesję | |
+| **B2** | jeden zegar sceny: `rAF` z warunkiem stopu i sprzątaniem | zamknięty (`a6a63f2`) |
+| **B3** | głowa: animacja, budowanie idempotentne | zamknięty (`4cb7f0f`) |
+| **B4** | znak RAGent na płótnie, `getComputedStyle` poza pętlą | zamknięty (`6c90d54`) |
+| **B5** | pierścień, próg 2000 ms, animacja raz na sesję | zamknięty (`2347b80`) |
+| — | cofnięcie progu z 600 na 2000 | zamknięty (`5e28f42`) |
 | **B6** | `prefers-reduced-motion` obejmuje trzy komponenty | |
+| **B8** | miganie pierścienia i oko na czerwono przy nieudanym logowaniu | **po B6** |
 | **B7** | siatka na canvas — **traktowany jako prawdopodobny** | |
 
 B1 skurczył się wobec pierwotnego planu, bo dane siatki (138 węzłów, 290 krawędzi,
@@ -328,12 +331,26 @@ Znacznik w `sessionStorage` — przeżywa odświeżenie, ginie z kartą.
 **Nieudane logowanie nie wznawia animacji.** Pierścień się zeruje, oko gaśnie,
 głowa i napis stoją. To najczęstszy przypadek powrotu na ten ekran.
 
-**`minMs` z 2000 na 600.** Prototyp trzyma pierścień w ruchu minimum 2 sekundy,
-nawet gdy Supabase odpowie w 200 ms. To 1,8 s sztucznej zwłoki przy każdym
-logowaniu — podatek płacony codziennie.
+**`minMs` zostaje na 2000 — po nieudanej próbie skrócenia do 600.** Historia
+jest tu ważniejsza od wyniku, bo pokusa wróci. Prototyp trzyma pierścień
+w ruchu minimum 2 sekundy nawet wtedy, gdy Supabase odpowie w 200 ms, więc
+skrócenie progu oszczędzało około 1,2 s przy **każdym** logowaniu — podatek
+płacony codziennie. Odstępstwo weszło w B5 świadomie i z dobrym uzasadnieniem.
+
+Zmierzone 629 ms okazało się jednak **za krótkie, żeby przebieg pierścienia
+był w ogóle widoczny**: 48 kresek zapala się i gaśnie, zanim oko zarejestruje
+to jako ruch. Animacja, której nie widać, nie płaci za swoją cenę — zostaje
+sam koszt kodu i sama zwłoka, bez tego, po co ta zwłoka była. Próg wrócił do
+wartości źródłowej (prototyp, linia 726: `minMs: 2000`) w commicie `5e28f42`.
+
+**Próg jest DOLNĄ GRANICĄ, nie dodatkiem** — to się nie zmieniło. Pierścień
+i uwierzytelnienie idą równolegle przez `Promise.all`, więc przy odpowiedzi
+wolniejszej niż próg nie dokłada nic. Zmierzony narzut ponad próg: **29 ms**
+(przy progu 600 odpowiedź natychmiastowa dała 629 ms, a odpowiedź po 1500 ms
+dała 1527 ms, nie 2100).
 
 **`prefers-reduced-motion` obejmuje wszystkie trzy komponenty** (prototyp
-przeskakuje na koniec tylko głowę, linia 441), i wtedy próg 600 ms znika.
+przeskakuje na koniec tylko głowę, linia 441), i wtedy próg 2000 ms znika.
 
 **Panel deweloperski nie jest przenoszony** — patrz sekcja o rusztowaniu.
 
@@ -399,6 +416,20 @@ Planuj czas tak, jakby B7 był w zakresie.
     poświata `radial-gradient` na `body` **nietknięta**. Na `/ustawienia` nic
     się nie zmienia.
 
+**Nieudane logowanie (B8):**
+
+16. Pierścień zapala **wszystkie 48 kresek na czerwono** i mruga trzy razy,
+    potem gaśnie
+17. Oko zapala się na **czerwono**, nie na niebiesko
+18. **Komunikat tekstowy pojawia się OD RAZU, nie po mrugnięciach.** Inaczej
+    dokładamy półtorej sekundy do informacji, że hasło jest złe — a to jest
+    informacja, na którą użytkownik czeka, nie efekt do obejrzenia
+19. Pod `prefers-reduced-motion` **miganie znika**, zostaje sam czerwony kolor
+    bez pulsowania
+20. Trzy mrugnięcia rozłożone na **co najmniej 1,5 s**, czyli dwa na sekundę.
+    Wytyczne dostępności mówią o maksimum trzech błyskach na sekundę i to jest
+    granica, której nie wolno dotknąć nawet na chwilę
+
 **Podgląd dla zalogowanego:** `?podglad=1` działa tylko poza produkcją.
 Bez parametru `proxy.js` wyrzuca z `/logowanie` na `/projekty`.
 
@@ -406,28 +437,32 @@ Bez parametru `proxy.js` wyrzuca z `/logowanie` na `/projekty`.
 
 ## 6. Rozkład na sesje
 
-Pierwotny szacunek mówił 4–8 godzin. Po dołożeniu B0 i B0b oraz po policzeniu
-punktów sprawdzenia jako osobnej pracy wychodzi **7–11 godzin**. Podaję liczbę,
-która się obroni, nie tę, która ładniej wygląda.
+Pierwotny szacunek mówił 4–8 godzin, po dołożeniu B0 i B0b urealniony na 7–11.
+Plan urósł od tego czasu o jeden commit (B8) i przegląd rozdzielił się na własną
+sesję, więc wychodzi **8,5–12,5 godziny**, z czego **6 godzin już za nami**.
+Podaję liczbę, która się obroni, nie tę, która ładniej wygląda.
 
-| sesja | zakres | promptów | czas | kończy się na |
-|---|---|---|---|---|
-| **1** | B0, B0b, B1 | 8–11 | 60–90 min | trzy commity, `npm test` 759 → 788, zero animacji |
-| **2** | B2, B3 | 10–14 | 100–140 min | pierwsza animacja na ekranie; punkty 1–4 |
-| **3** | B4, B5 | 10–14 | 100–140 min | pełny przebieg 4220 ms, `minMs` 600; punkty 5–8 |
-| **4** | B6, przegląd 15 punktów, pomiar pod B7 | 6–9 | 60–90 min | decyzja o B7 na liczbach |
-| **5** | B7 — **warunkowa** | 12–18 | 120–180 min | powtórzony pomiar, porównanie przed/po |
+| sesja | zakres | czas | stan |
+|---|---|---|---|
+| **1** | B0, B0b, B1 | ~90 min | **wykonana** — trzy commity, `npm test` 759 → 788, zero animacji |
+| **2** | B2, B3 | ~140 min | **wykonana** — pierwsza animacja na ekranie, testy → 841 |
+| **3** | B4, B5 | ~150 min | **wykonana** — napis na płótnie, pierścień, oko, animacja raz na sesję, testy → 888 |
+| **4** | próg 2000, B6 ruch ograniczony, B8 miganie | 2–2,5 h | w toku |
+| **5** | przegląd 20 punktów z sekcji 5, pomiar pod kryterium B7 | 1–1,5 h | |
+| **6** | B7 siatka na canvas — **warunkowa** | 2–3 h | |
 
-**Sesje 1 i 4 są bezpieczne o dowolnej porze** — kod testowalny automatycznie
+**Sesje 1 i 5 są bezpieczne o dowolnej porze** — kod testowalny automatycznie
 i czytanie liczb z DevTools.
 
-**Sesje 2, 3 i 5 wymagają patrzenia i nie nadają się na późny wieczór.**
+**Sesje 2, 3, 4 i 6 wymagają patrzenia i nie nadają się na późny wieczór.**
 Błędy cyklu życia Reacta nie rzucają wyjątków — objawiają się grzejącym laptopem
 po piątym wejściu na stronę. Zmęczona głowa ich nie zauważy, a piąte wejście to
-dokładnie ten test, który się wtedy pomija.
+dokładnie ten test, który się wtedy pomija. Sesja 4 dochodzi do tej listy przez
+B8: miganie ocenia się okiem, a granica trzech błysków na sekundę to nie jest
+rzecz, którą wolno oszacować na oko o północy.
 
-**Sesja 4 jest bramką.** Jeśli kryterium B7 nie zadziała, sesja 5 znika i całość
-zamyka się w 5–8 godzinach.
+**Sesja 5 jest bramką.** Jeśli kryterium B7 nie zadziała, sesja 6 znika i całość
+zamyka się w 6,5–9,5 godzinach.
 
 **Co może wydłużyć konkretnie:** B3 jest największym pojedynczym kawałkiem etapu:
 animuje 443 elementy SVG (428 w grupie siatki — 290 kresek i 138 kółek — plus 15
@@ -458,8 +493,9 @@ Jeśli coś się rozjedzie, to tam. B5 ma pułapkę z `sessionStorage` opisaną 
   obronił się wyłącznie jasny pasek przewijania.
 - **Prototyp jest źródłem prawdy dla wartości.** Claude Code ma go czytać,
   nie odtwarzać z opisu. Dotyczy wartości, nie architektury: prawdziwy `<form>`,
-  `minMs` 600 zamiast 2000, brak panelu deweloperskiego i przemianowane
-  `--siatka`/`--tlo` to celowe odstępstwa, które mają zostać.
+  brak panelu deweloperskiego i przemianowane `--siatka`/`--tlo` to celowe
+  odstępstwa, które mają zostać. Skrócony próg logowania był tu wymieniony jako
+  czwarte i **został cofnięty** — patrz sekcja 4.
 - **Odstępstwa od planu mają być zgłaszane, nie wykonywane po cichu.**
   W etapie A dwa razy odstępstwo było lepsze od instrukcji. W B1 pięć razy.
 
@@ -468,7 +504,7 @@ Jeśli coś się rozjedzie, to tam. B5 ma pułapkę z `sessionStorage` opisaną 
 ## 8. Instrukcja startu następnej sesji
 
 1. Wklej ten dokument jako pierwszą wiadomość w nowym czacie.
-2. Dopisz jedno zdanie: od czego chcesz zacząć. Następny w kolejce: **B2**.
+2. Dopisz jedno zdanie: od czego chcesz zacząć. Następny w kolejce: **B6**.
 3. Miej otwarte: aplikację na `localhost:3000` (wylogowaną albo z `?podglad=1`),
    terminal z Claude Code w katalogu projektu.
 4. Jeśli coś w tym dokumencie rozminie się z rzeczywistością — najpierw
