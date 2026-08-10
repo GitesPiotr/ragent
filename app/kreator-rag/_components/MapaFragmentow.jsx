@@ -125,6 +125,24 @@ const CZUJNIK_ZYWEJ_MAPY = 45000;
 const KUBELKI_GLEBI = 10;
 const OBROT_NA_KLATKE = 0.0016;
 
+// =============================================================================
+//  WARTOŚCI POCZĄTKOWE WIDOKU — W JEDNYM MIEJSCU, BO CZYTA JE TAKŻE ODCZYT
+//
+//  Nie są to zwykłe argumenty useState: od `TRYB_POCZATKOWY` zależy, czy
+//  PIERWSZY odczyt ma ciągnąć sąsiedztwo. Rozsypane po komponencie rozjechałyby
+//  się przy pierwszej zmianie zdania — tryb Połączenia bez sąsiadów rysuje mapę
+//  bez ani jednej krawędzi i wygląda to na usterkę danych, nie na brak odczytu.
+//
+//  UWAGA: SPRZECZNE ZE SPECYFIKACJĄ, ŚWIADOMIE. docs/rag-SPEC.md:1650-1652 mówi
+//  „Domyślny widok to 2D (…) Traktuj 3D jako widok pokazowy, nie roboczy",
+//  z uzasadnieniem, że w 3D punkty się zasłaniają, głębia myli się z odległością
+//  i trudniej trafić w konkretny punkt. Decyzja właściciela produktu odwraca to
+//  na potrzeby pokazu. Zapis w specyfikacji NIE został zmieniony — kto będzie
+//  je uzgadniał, ma tu znaleźć powód rozbieżności, a nie samą rozbieżność.
+// =============================================================================
+const TRYB_POCZATKOWY = 'polaczenia'; // 'punkty' | 'polaczenia'
+const WIDOK_POCZATKOWY = '3d'; // '2d' | '3d'
+
 // STATUSY_W_TOKU mieszkają w _lib/podgladNaZywo.js razem z regułami, które ich
 // używają. Tu był drugi egzemplarz tej listy — dwie kopie rozjechałyby się przy
 // pierwszym nowym statusie, a to właśnie one decydują, czy podgląd w ogóle ruszy.
@@ -217,8 +235,8 @@ export default function MapaFragmentow({
   const [oknoZablokowane, setOknoZablokowane] = useState(false);
 
   // --- Sesja 6b ---
-  const [tryb, setTryb] = useState('punkty'); // 'punkty' | 'polaczenia'
-  const [widok, setWidok] = useState('2d'); // '2d' | '3d' — domyślnie 2D (12.8)
+  const [tryb, setTryb] = useState(TRYB_POCZATKOWY);
+  const [widok, setWidok] = useState(WIDOK_POCZATKOWY);
   const [autoObrot, setAutoObrot] = useState(true);
   const [licz3d, setLicz3d] = useState(false);
 
@@ -398,9 +416,17 @@ export default function MapaFragmentow({
 
   useEffect(() => {
     if (!widoczna) return;
-    // Osadzona mapa startuje w trybie Punkty, a sąsiedztwo to ~0,6 MB z 1,6 MB odczytu.
-    // Dociągamy je dopiero, gdy naprawdę będzie potrzebne (efekt niżej).
-    pobierz(false, { sasiedzi: !osadzona });
+    // SĄSIEDZTWO ZALEŻY OD TRYBU POCZĄTKOWEGO, NIE OD `osadzona`.
+    //
+    // Tu stało `sasiedzi: !osadzona`, z uzasadnieniem „osadzona mapa startuje
+    // w trybie Punkty, a sąsiedztwo to ~0,6 MB z 1,6 MB odczytu". Odkąd startuje
+    // w Połączeniach, to uzasadnienie przestało obowiązywać: efekt dociągający
+    // niżej odpalałby się NATYCHMIAST po pierwszym odczycie i każde wejście na
+    // stronę kolekcji kosztowałoby dwa pełne odczyty zamiast jednego.
+    //
+    // Warunek zostaje wyrażony przez stałą, a nie zwinięty do `true`, żeby
+    // powrót do startu w trybie Punkty przywrócił oszczędność sam z siebie.
+    pobierz(false, { sasiedzi: !osadzona || TRYB_POCZATKOWY === 'polaczenia' });
   }, [widoczna, pobierz, osadzona]);
 
   // Sąsiedztwo NA ŻĄDANIE. Tryb Połączenia i podświetlanie po najechaniu (12.6 każe temu
