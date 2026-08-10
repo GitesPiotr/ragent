@@ -134,6 +134,51 @@ Trzy drogi, gdyby data kiedyś była potrzebna:
   wykonania dane są prawdziwe (starych nie odtworzy);
 - zostawić bez daty, jak teraz.
 
+### Ostrzeżenie „brak tabeli `rag_search_log`" myli przyczynę
+
+Przy każdym wyszukiwaniu ze skryptu konsolowego leci:
+
+> `[rag] Dziennik wyszukiwań nie działa: brak tabeli rag_search_log.`
+> `Uruchom sql/session-log-wyszukiwan.sql albo ustaw RAG_SEARCH_LOG=off.`
+
+**Tabela istnieje.** Sprawdzone na żywo 2026-08-10: 140 wierszy, kolumna
+`owner_id` na miejscu. Inaczej być nie mogło — `supabase/016_rls_rag.sql:127-131`
+przerywa **całą** migrację RLS, gdy brakuje którejkolwiek z sześciu tabel `rag_*`,
+a ta migracja przeszła.
+
+Prawdziwy błąd zapisu to:
+
+```
+23502: null value in column "owner_id" of relation "rag_search_log"
+       violates not-null constraint
+```
+
+`016` nadało `owner_id` wartość domyślną `auth.uid()` i więz `not null`
+(`016_rls_rag.sql:254`, `:261`). Zapis **bez sesji użytkownika** — czyli
+z klienta na kluczu `service_role`, jak w skryptach konsolowych — daje
+`auth.uid() = NULL` i wiersz odpada.
+
+**Dlaczego komunikat mówi co innego.** `lib/rag/search-log.js:72` rozpoznaje
+„brak tabeli" po tym, że treść błędu zawiera napis `rag_search_log`. Zawiera go
+**każdy** błąd zapisu do tej tabeli, łącznie z powyższym. Warunek nie odróżnia
+więc „nie ma tabeli" od „tabela jest, ale odrzuciła wiersz", a osłona niżej
+zamienia jedno i drugie na to samo ostrzeżenie.
+
+**Czego to NIE dotyczy: produkcji.** Tam zapis idzie klientem z sesją
+(`app/api/rag/collections/[id]/search/route.js:29`), `auth.uid()` ma wartość
+i dziennik działa — 140 zapisanych wierszy jest na to dowodem. To usterka
+diagnostyki, nie dziennika.
+
+**Druga usterka w tym samym zdaniu:** ścieżka `sql/session-log-wyszukiwan.sql`
+**nie istnieje**. Plik leży w `supabase/rag/session-log-wyszukiwan.sql`. Kto
+uwierzy komunikatowi, szuka pliku pod adresem, którego nie ma. Ten sam zły adres
+powtarza `docs/rag-SPEC.md:1099`.
+
+Do naprawy przy okazji: rozpoznawać przypadki po `error.code` (`42P01` to brak
+relacji, `23502` to złamany więz) zamiast po napisie w treści, i poprawić obie
+ścieżki. Dopóki tego nie ma, **ostrzeżenia w skryptach konsolowych należy
+ignorować** — nie znaczy tego, co pisze.
+
 ---
 
 ## Nazwa
