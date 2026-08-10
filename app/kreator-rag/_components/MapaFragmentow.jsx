@@ -143,7 +143,24 @@ const OBROT_NA_KLATKE = 0.0016;
 // `onApi` dostaje `{ naPartie, odswiez }`. `naPartie` to DOKŁADNIE ten sam handler,
 // którego mapa używa dla własnej pętli — obsługa `newChunks` i `recalculated` istnieje
 // w jednym egzemplarzu, niezależnie od tego, kto uruchomił indeksowanie.
-export default function MapaFragmentow({ collectionId, osadzona = false, trybOkna = false, onApi }) {
+//
+// `dokumentyZRodzica` DOMYKA TĘ SAMĄ ZASADĘ dla listy dokumentów. Widok osadzony ma
+// wyłączony puls, który tę listę odświeża (patrz warunek `osadzona` przy nim), więc
+// jego własne `dokumenty` zamarzały na stanie z chwili wczytania. To nie jest szczegół
+// kosmetyczny: z tej listy liczy się `indeksujeSie`, a od niego zależy, czy widok
+// w ogóle zbuduje rzutowanie. Mapa widoczna, ZANIM dokument został pocięty, widziała
+// więc pustą listę już na zawsze i nie budowała nigdy.
+//
+// Rodzic tę listę ma i odświeża ją po wgraniu, usunięciu i po każdym skończonym
+// dokumencie — podanie jej tutaj jest tańsze niż drugi puls i zgodne z zasadą, dla
+// której pętle są w tym trybie wyłączone: osadzoną mapę karmi rodzic.
+export default function MapaFragmentow({
+  collectionId,
+  osadzona = false,
+  trybOkna = false,
+  onApi,
+  dokumentyZRodzica = null,
+}) {
   const id = collectionId;
 
   // TRYB OKNA — TRZECI ROZMIAR PŁÓTNA, obok osadzonego i pełnej strony.
@@ -277,7 +294,13 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
   const sciezki2dRef = useRef(null); // Map(kolor → Path2D) w przestrzeni świata
   const dane3dRef = useRef(null); // { sasiedzi, krawedzie } — TYLKO w pamięci
 
-  const indeksujeSie = czyIndeksowanieTrwa(dokumenty);
+  // WYPROWADZENIE, NIE SYNCHRONIZACJA. Lista od rodzica nie jest przepisywana do
+  // `dokumenty` przez efekt — po pierwsze byłby to `setState` w ciele efektu (reguła
+  // react-hooks/set-state-in-effect), po drugie mielibyśmy dwa egzemplarze tej samej
+  // listy, czyli dokładnie ten rozjazd, przed którym bronią wyłączone pętle.
+  // Rodzic ma pierwszeństwo tylko wtedy, gdy w ogóle coś podał.
+  const dokumentyDoStanu = dokumentyZRodzica || dokumenty;
+  const indeksujeSie = czyIndeksowanieTrwa(dokumentyDoStanu);
 
   // --- pobranie danych ------------------------------------------------------------
   //
@@ -503,7 +526,16 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
         if (!daneRef.current || !daneRef.current.projectionBuilt) await dociagnijStan();
         return;
       }
-      setDane((d) => (d && !d.projectionBuilt ? { ...d, chunkCount: j.chunkCount } : d));
+      // `canBuild` IDZIE RAZEM Z LICZNIKIEM — bez tego łatka odświeżała JEDNO pole
+      // obiektu pochodzącego z serwera i cała reszta zostawała z chwili wczytania.
+      // Zmierzone: licznik dochodził do 160, a `canBuild` trzymało `false` z odczytu
+      // przy pustej kolekcji, więc warunek budowy rzutowania nie przepuszczał ani
+      // razu i etap 3a był bezczynny. Okno tego nie miało, bo jego odpytywanie
+      // podmienia CAŁY obiekt `dane`, a nie jedno pole.
+      // `minChunks` nie dopisujemy: to stała z konfiguracji, nie stan.
+      setDane((d) =>
+        d && !d.projectionBuilt ? { ...d, chunkCount: j.chunkCount, canBuild: j.canBuild } : d
+      );
     } catch {
       // Licznik jest odczytem pomocniczym. Gdy padnie, indeksowanie idzie dalej,
       // a następna partia spróbuje ponownie.
@@ -2001,7 +2033,22 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
                 </p>
               </>
             )}
-            {dane.canBuild ? (
+            {/* RĘCZNA BUDOWA TYLKO POZA PODGLĄDEM — ROZDZIELENIE WYMUSZONE ODMROŻENIEM
+                `canBuild`. Dopóki flaga była w widoku osadzonym zamrożona na `false`,
+                ten przycisk nie miał prawa się tam pokazać i nikt tego nie zauważył.
+                Odkąd łatka licznika ją odświeża, pojawiłby się w prawej kolumnie już
+                przy trzecim fragmencie z wektorem — a podgląd ma budować mapę sam.
+
+                `canBuild` ZOSTAJE JEDNĄ FLAGĄ: znaczy „da się policzyć PCA" i tyle
+                znaczy też w warunku budowy wyżej. Rozdzielone jest MIEJSCE UŻYCIA,
+                nie pojęcie — drugi stan o tej samej treści rozjechałby się przy
+                pierwszej zmianie progu.
+
+                Czego to kosztuje: w podglądzie nie ma ręcznego wyjścia awaryjnego.
+                Gdy `canBuild` jest prawdą, a nic się nie indeksuje (fragmenty są,
+                rzutowania nie ma, pętla stoi), podgląd pokaże sam komunikat. Budowa
+                jest wtedy pod ręką w pełnym widoku i w oknie. */}
+            {!osadzona && dane.canBuild ? (
               <button onClick={zbuduj} disabled={budowanie} style={{ marginBottom: 0 }}>
                 {budowanie ? 'Buduję…' : 'Zbuduj mapę'}
               </button>
