@@ -157,6 +157,25 @@ pogorszyłoby wszystkie wąskie okna dla jednego przypadku. To jest zarazem
 jedyny przypadek, w którym ekran logowania ma co przewijać, czyli jedyny,
 w którym widać pasek przewijania — stąd reguły z B0.
 
+### Przebłysk gotowej sceny przed startem — ta sama kategoria
+
+Znane, potwierdzone okiem, **zostawione z powodem**.
+
+Przy każdym wejściu z przeładowaniem — a więc przy każdym `F5` — przez ułamek
+sekundy widać gotową scenę, zanim animacja ruszy od zera. `/logowanie` jest
+prerenderowane jako `○ (Static)`, a etap A3 renderuje w JSX **klatkę końcową**,
+świadomie, żeby ekran bez JavaScriptu wyglądał docelowo. `useEffect` biegnie po
+pierwszym malowaniu, więc przeglądarka zdąży pokazać to, co przyszło z serwera.
+
+**Nie naprawiamy tego**, bo jedyne prawdziwe lekarstwo to renderować w JSX
+klatkę **początkową**, czyli pustą scenę — a wtedy każdy bez JavaScriptu i każdy,
+u kogo skrypt nie dojdzie, zobaczyłby pusty ekran zamiast docelowego. Wada
+trwała zamiast chwilowej. Druga droga, `useLayoutEffect`, odpada osobno: React
+ostrzega przy budowaniu, że nie działa na serwerze, a trasa jest prerenderowana.
+
+Szczegóły i historia tej decyzji stoją w komentarzu nad efektem indeksującym
+w `app/logowanie/_components/Glowa.jsx`.
+
 ---
 
 ## 3. Co pokazał zwiad — i dlaczego etap B to nie jest przenoszenie

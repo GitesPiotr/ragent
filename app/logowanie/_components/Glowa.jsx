@@ -253,22 +253,37 @@ export function Glowa() {
   // (silnik robi tak, gdy petla nie ma ruszyc — na przyklad przy ruchu
   // ograniczonym). Odwrotna kolejnosc znaczylaby klatke przed indeksowaniem.
   //
-  // PRZEBLYSK KLATKI KONCOWEJ PRZY WEJSCIU — WIDOCZNY, SWIADOMY, DO B5.
-  // useEffect biegnie PO pierwszym malowaniu, wiec kolejnosc jest taka:
-  // przegladarka maluje prerenderowany HTML, czyli gotowa scene koncowa,
-  // dopiero potem ten efekt ustawia klatke zerowa. Przez okolo jedna klatke
-  // widac wiec cala glowe, zanim animacja ruszy od poczatku.
+  // =========================================================================
+  //  PRZEBLYSK GOTOWEJ SCENY PRZED STARTEM — ZNANY, POTWIERDZONY OKIEM
+  //  I ZOSTAJE. To jest decyzja, nie niedorobka; nie „naprawiaj" tego.
   //
-  // NIE JEST TO PRZEOCZENIE i nie zalatwiamy tego przez useLayoutEffect: ten
-  // biegnie przed malowaniem, ale trasa jest prerenderowana, wiec React
-  // wypisywalby ostrzezenie przy kazdym budowaniu.
+  //  CO WIDAC: przez ulamek sekundy gotowa scena — cala glowa, zrosnieta
+  //  siatka — a zaraz potem animacja rusza od zera. Przy kazdym wejsciu
+  //  z przeladowaniem, czyli takze przy kazdym F5.
   //
-  // ROZSTRZYGNIETE W B5 I ZOSTAJE TAK, JAK JEST. Animacja gra raz na sesje,
-  // wiec przy DRUGIM i kazdym kolejnym wejsciu scena startuje od stanu
-  // koncowego: to, co przy pierwszym wejsciu przeblyskuje, jest wtedy stanem
-  // docelowym i nie ma po czym przeskakiwac. Przeblysk zostaje wylacznie przy
-  // PIERWSZYM wejsciu w danej karcie — jedna klatka gotowej sceny, zanim
-  // ruszy od zera. To jest stan docelowy, nie niedorobka.
+  //  SKAD SIE BIERZE: /logowanie jest prerenderowane jako STATIC, a etap A3
+  //  renderuje w JSX klatke KONCOWA — swiadomie, zeby ekran bez JavaScriptu
+  //  wygladal docelowo. useEffect biegnie PO pierwszym malowaniu, wiec
+  //  przegladarka zdazy pokazac to, co przyszlo z serwera, zanim ten efekt
+  //  ustawi klatke zerowa.
+  //
+  //  DLACZEGO NIE NAPRAWIAMY: lekarstwem byloby renderowanie w JSX klatki
+  //  POCZATKOWEJ, czyli pustej sceny. Wtedy uzytkownik bez JavaScriptu —
+  //  i kazdy, u kogo skrypt nie dojdzie — zobaczylby PUSTY EKRAN zamiast
+  //  docelowego. To gorsza wada niz ulamek sekundy przeblysku, i to wada
+  //  trwala zamiast chwilowej.
+  //
+  //  DRUGA DROGA TEZ ODPADA: useLayoutEffect biegnie przed malowaniem, ale
+  //  React wypisuje przy budowaniu ostrzezenie, ze nie dziala na serwerze,
+  //  a ta trasa jest prerenderowana.
+  //
+  //  UWAGA HISTORYCZNA, zeby nikt nie szukal nieistniejacego: ten akapit
+  //  mowil dwa razy cos innego. W B3 obiecywal, ze rozstrzygnie to B5;
+  //  B5 tego nie rozstrzygnal. Potem twierdzil, ze przeblysk zniknie sam,
+  //  bo animacja gra raz na sesje — a przeniesienie znacznika na czas zycia
+  //  dokumentu sprawilo, ze przeblysk WRACA przy kazdym przeladowaniu.
+  //  Powyzszy opis jest stanem faktycznym, potwierdzonym okiem.
+  // =========================================================================
   useEffect(() => {
     const grupaSiatki = refSiatka.current;
     const grupaRozproszenia = refRozproszenie.current;
