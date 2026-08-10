@@ -8,6 +8,7 @@ import { usePojecia } from '@/app/kreator-rag/_hooks/usePojecia.js';
 import MapaFragmentow from '@/app/kreator-rag/_components/MapaFragmentow.jsx';
 import { komunikatBledu } from '@/app/kreator-rag/_lib/bledy.js';
 import { stanEtapow } from '@/app/kreator-rag/_lib/etapy.js';
+import { POKAZ_DOSTAWCE_LOKALNA } from '@/lib/config/models';
 import styles from '../../kreator-rag.module.css';
 import PrzyciskDiagnostyki from '@/app/kreator-rag/_components/PrzyciskDiagnostyki.jsx';
 
@@ -64,6 +65,24 @@ function scoreKlasa(score) {
 // Ile trafień ściągać w trybie diagnostycznym — na tyle dużo, żeby było widać ogon
 // poniżej progu, na tyle mało, żeby lista dała się przejrzeć wzrokiem.
 const DIAGNOSTYKA_TOPK = 20;
+
+// =============================================================================
+//  PIĄTY EKRAN WYBORU DOSTAWCY — LISTA „Model do wyciągania pojęć" (etap 2)
+//
+//  Nie objęły go poprzednie zmiany trybu pokazu i to nie było przeoczenie
+//  jednego miejsca, tylko inny rodzaj listy. Tamte cztery czytają PROVIDERS
+//  albo ofertę wpisaną w kod; ta czyta `allowed_models` KONTA, przyniesione
+//  przez /api/settings/models. Filtr musi więc iść po polu `provider`
+//  WIERSZA BAZY — żadna z tamtych tablic tu nie sięga.
+//
+//  PO IDENTYFIKATORZE DOSTAWCY, NIE PO TREŚCI `model_id`. Ta sama zasada co
+//  przy OpenAI: `openai/gpt-5.6-terra` ma tu `provider = 'openrouter'`
+//  i zostaje widoczny.
+// =============================================================================
+function widoczneModeleKonta(dopuszczone) {
+  const lista = Array.isArray(dopuszczone) ? dopuszczone : [];
+  return POKAZ_DOSTAWCE_LOKALNA ? lista : lista.filter((m) => m.provider !== 'ollama');
+}
 
 export default function KolekcjaPage() {
   const params = useParams();
@@ -203,7 +222,29 @@ export default function KolekcjaPage() {
         // nie decydowało po cichu o tym, czy domyślna wartość się pokaże.
         const przypisany = j.przypisania && j.przypisania.rag_pojecia;
         const modelId = przypisany && (przypisany.model_id ?? przypisany.model);
-        if (przypisany && przypisany.provider && modelId) {
+        // ZABEZPIECZENIE 2 — PRZYPISANIE MOŻE WSKAZYWAĆ MODEL, KTÓREGO TRYB
+        // POKAZU NIE POKAZUJE.
+        //
+        // Bez tego warunku `value` selekta wskazywałby na pozycję odsianą
+        // z listy, a przeglądarka nie ma czego zaznaczyć — pole wychodzi
+        // PUSTE. To ta sama pułapka, dla której „Domyślne agenta" zostały
+        // świadomie nietknięte.
+        //
+        // Zostawiamy `null`, czyli pozycję „— model z przypisań konta —".
+        // Ta pozycja jest prawdziwa: przebieg pójdzie wtedy na przypisaniu
+        // konta, dokładnie tak, jak mówi jej nazwa. UWAGA DLA CZYTAJĄCEGO:
+        // to znaczy, że ukrycie pozycji NIE zmienia modelu, którym liczy
+        // rdzeń — jeśli przypisanie wskazuje Ollamę, przebieg pójdzie na
+        // Ollamę mimo pustego wyboru. Tryb pokazu chowa kontrolkę, nie
+        // przestawia konfiguracji konta.
+        const widoczny =
+          przypisany &&
+          przypisany.provider &&
+          modelId &&
+          widoczneModeleKonta(j.dopuszczone).some(
+            (m) => m.provider === przypisany.provider && m.model_id === modelId,
+          );
+        if (widoczny) {
           setModelPojec({ provider: przypisany.provider, model: modelId });
         }
       } catch {
@@ -822,7 +863,13 @@ export default function KolekcjaPage() {
                 bo sugerowałby, że nie ma czym liczyć. Trasa i tak sięgnie
                 po przypisanie.
                 ============================================================= */}
-            {modeleKonta && modeleKonta.dopuszczone && modeleKonta.dopuszczone.length ? (
+            {/* ZABEZPIECZENIE 1 — STRAŻNIK LICZONY PO FILTRZE, NIE PRZED.
+                `modeleKonta.dopuszczone.length` sprawdzałoby listę SUROWĄ, więc
+                konto mające wyłącznie modele lokalne przeszłoby ten warunek
+                i wyrenderowało <select> z samą pozycją zapasową. Zdanie z akapitu
+                wyżej — „nie pokazujemy pustego selecta" — obowiązuje tak samo,
+                gdy listę opróżnia filtr, a nie brak konfiguracji. */}
+            {modeleKonta && widoczneModeleKonta(modeleKonta.dopuszczone).length ? (
               <div style={{ marginBottom: 14 }}>
                 <label htmlFor="model-pojec">Model do wyciągania pojęć</label>
                 <select
@@ -837,7 +884,7 @@ export default function KolekcjaPage() {
                   }}
                 >
                   <option value="">— model z przypisań konta —</option>
-                  {modeleKonta.dopuszczone.map((m) => (
+                  {widoczneModeleKonta(modeleKonta.dopuszczone).map((m) => (
                     <option key={`${m.provider} ${m.model_id}`} value={`${m.provider} ${m.model_id}`}>
                       {m.label || m.model_id} · {m.provider}
                     </option>
