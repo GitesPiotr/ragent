@@ -25,6 +25,27 @@ const SECTIONS = [
 
 const THEME_LABELS = { light: "Jasny", dark: "Ciemny", auto: "Auto (system)" };
 
+// =============================================================================
+//  TRYB POKAZU — GAŁĄŹ feature/tryb-demo, NIGDY DO master
+//
+//  Ten przełącznik istnieje wyłącznie po to, żeby na pokazie nie dało się
+//  przypadkiem przełączyć aplikacji w motyw jasny, który nie jest skończony
+//  (patrz docs/dlugi.md, sekcja Wygląd: pasek zapisu agenta i przycisk powrotu
+//  bez reguł ciemnych, ekran rejestracji wciąż jasny).
+//
+//  CO TO ROBI, A CZEGO NIE:
+//   • NIE zmienia wartości domyślnej — „dark" siedzi w lib/settings/defaults.js
+//     i jest na master, ta gałąź go nie dotyka,
+//   • NIE usuwa reguł jasnego motywu z arkuszy — mają zostać na powrót,
+//   • NIE kasuje zapisanego wyboru: kto ma w localStorage „light" albo „auto",
+//     dostanie go dalej, bo sanitizeSettings działa bez zmian. Ukrycie
+//     kontrolki nie jest wymuszeniem motywu — to trzeba wiedzieć przed
+//     pokazem na cudzej maszynie.
+//
+//  Przywrócenie: ustawić na false. JSX zostaje na miejscu nietknięty.
+// =============================================================================
+const TRYB_POKAZU = true;
+
 // --- Male, wspoldzielone kontrolki --------------------------------------------
 
 function Row({ label, desc, htmlFor, children }) {
@@ -176,26 +197,30 @@ function AppearanceSection({ settings, updateSettings }) {
         <h2 className={styles.cardTitle}>Wygląd</h2>
       </div>
 
-      <Row
-        label="Motyw"
-        desc="Auto podąża za ustawieniem systemu. Jasny/Ciemny wymuszają wybrany wariant."
-      >
-        <div className={styles.segmented} role="group" aria-label="Motyw">
-          {THEMES.map((t) => (
-            <button
-              key={t}
-              type="button"
-              className={`${styles.segment} ${
-                settings.theme === t ? styles.segmentActive : ""
-              }`}
-              aria-pressed={settings.theme === t}
-              onClick={() => updateSettings({ theme: t })}
-            >
-              {THEME_LABELS[t]}
-            </button>
-          ))}
-        </div>
-      </Row>
+      {/* Przełącznik motywu ukryty na czas pokazu — patrz TRYB_POKAZU wyżej.
+          Kod zostaje w całości: przywrócenie to zmiana jednej stałej. */}
+      {TRYB_POKAZU ? null : (
+        <Row
+          label="Motyw"
+          desc="Auto podąża za ustawieniem systemu. Jasny/Ciemny wymuszają wybrany wariant."
+        >
+          <div className={styles.segmented} role="group" aria-label="Motyw">
+            {THEMES.map((t) => (
+              <button
+                key={t}
+                type="button"
+                className={`${styles.segment} ${
+                  settings.theme === t ? styles.segmentActive : ""
+                }`}
+                aria-pressed={settings.theme === t}
+                onClick={() => updateSettings({ theme: t })}
+              >
+                {THEME_LABELS[t]}
+              </button>
+            ))}
+          </div>
+        </Row>
+      )}
 
       <Row
         label="Panel diagnostyczny"
