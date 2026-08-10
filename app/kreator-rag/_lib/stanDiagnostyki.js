@@ -75,8 +75,28 @@ export function stanSrodowiska(dane, blad = null) {
     };
   }
 
+  // Czy Ollama jest w ogóle na drodze do wektorów. Przy dostawcy chmurowym jej
+  // stan NIE MÓWI NIC o możliwości indeksowania.
+  const ollamaWGrze = (dane.config && dane.config.embedProvider) === 'ollama';
+
   // --- BURSZTYNOWA: widać dane, nie da się indeksować ------------------------
-  if (!ollama.ok) {
+  //
+  // WARUNEK `ollamaWGrze` DOPISANY — I TO NIE JEST USTĘPSTWO NA RZECZ POKAZU.
+  //
+  // Ten warunek stał tu goły, mimo że sąsiedni `maModelEmbeddingow` od zawsze
+  // pytał najpierw, czy dostawcą jest Ollama (patrz jego pierwsza linia). Dwie
+  // reguły o tej samej rzeczy rozstrzygały ją inaczej.
+  //
+  // Skutek na wdrożeniu z RAG_EMBED_PROVIDER=openrouter, gdzie Ollamy NIE MA
+  // I NIE MA JEJ BYĆ: werdykt bursztynowy z komunikatem „nie da się zaindeksować
+  // ani przeszukać", czyli zdaniem nieprawdziwym — wektory liczy wtedy chmura.
+  // Bursztyn niesie się na diodę w rogu KAŻDEJ strony panelu, więc cała
+  // aplikacja zgłaszała usterkę, której nie było.
+  //
+  // Znalezione przy przygotowaniu trybu pokazowego, ale to nie jest zmiana
+  // pokazowa — na wdrożeniu chmurowym ta diagnoza była fałszywa niezależnie
+  // od tego, co akurat widać na ekranie.
+  if (ollamaWGrze && !ollama.ok) {
     return { poziom: 'ostrzezenie', ...POZIOMY.ostrzezenie, powod: 'Ollama nie odpowiada — dokumenty są widoczne, ale nie da się ich zaindeksować ani przeszukać.' };
   }
   if (!maModelEmbeddingow(dane)) {
@@ -99,5 +119,17 @@ export function stanSrodowiska(dane, blad = null) {
     };
   }
 
-  return { poziom: 'ok', ...POZIOMY.ok, powod: 'Baza, pgvector i Ollama odpowiadają poprawnie.' };
+  // POWÓD WYMIENIA TYLKO TO, CO NAPRAWDĘ SPRAWDZONO. Zdanie „Baza, pgvector
+  // i Ollama odpowiadają poprawnie" stało tu bezwarunkowo i przy dostawcy
+  // chmurowym chwaliło się sprawdzeniem składnika, którego w tym układzie
+  // nie ma. Ten sam werdykt czyta dioda w rogu każdej strony, więc obietnica
+  // „po kliknięciu zobaczysz to samo" wymaga, żeby powód dotyczył rzeczy,
+  // które na ekranie diagnostyki naprawdę widać.
+  return {
+    poziom: 'ok',
+    ...POZIOMY.ok,
+    powod: ollamaWGrze
+      ? 'Baza, pgvector i Ollama odpowiadają poprawnie.'
+      : 'Baza i pgvector odpowiadają poprawnie.',
+  };
 }

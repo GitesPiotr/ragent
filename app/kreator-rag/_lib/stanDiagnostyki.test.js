@@ -105,6 +105,48 @@ test('padnięta baza I padnięta Ollama → czerwona, nie bursztynowa', () => {
 
 // --- powód zawsze obecny --------------------------------------------------------
 
+// --- dostawca chmurowy: Ollamy nie ma i nie ma jej być --------------------------
+//
+// Przypadek wdrożenia z RAG_EMBED_PROVIDER=openrouter. Przed poprawką werdykt
+// wychodził bursztynowy z komunikatem „nie da się zaindeksować ani przeszukać",
+// mimo że wektory liczy wtedy chmura — a bursztyn niesie się na diodę w rogu
+// każdej strony panelu.
+
+test('dostawca chmurowy + brak Ollamy → zielona, nie bursztynowa', () => {
+  const s = stanSrodowiska(
+    zdrowa({
+      ollama: { ok: false, code: 'ollama_unavailable', message: '', url: '' },
+      models: [],
+      config: { embedProvider: 'openrouter', embedModel: 'baai/bge-m3', embedDim: 1024 },
+    })
+  );
+  assert.equal(s.poziom, 'ok');
+});
+
+test('powód przy dostawcy chmurowym NIE wymienia Ollamy', () => {
+  const s = stanSrodowiska(
+    zdrowa({ config: { embedProvider: 'openrouter', embedModel: 'baai/bge-m3', embedDim: 1024 } })
+  );
+  assert.equal(s.poziom, 'ok');
+  assert.doesNotMatch(s.powod, /Ollam/i);
+});
+
+test('przy dostawcy lokalnym powód nadal wymienia Ollamę', () => {
+  const s = stanSrodowiska(zdrowa());
+  assert.equal(s.poziom, 'ok');
+  assert.match(s.powod, /Ollama/);
+});
+
+test('padnięta baza bije wszystko także przy dostawcy chmurowym', () => {
+  const s = stanSrodowiska(
+    zdrowa({
+      supabase: { ok: false, message: '' },
+      config: { embedProvider: 'openrouter', embedModel: 'baai/bge-m3', embedDim: 1024 },
+    })
+  );
+  assert.equal(s.poziom, 'awaria');
+});
+
 test('każdy poziom niesie powód dla title/aria-label', () => {
   const przypadki = [
     stanSrodowiska(null),
