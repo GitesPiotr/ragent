@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { supabase, isSupabaseConfigured, SUPABASE_CONFIG_ERROR } from "@/lib/supabase/client";
 import { Glowa } from "./_components/Glowa.jsx";
 import { Pierscien } from "./_components/Pierscien.jsx";
+import { ZegarScenyProvider } from "./_components/ZegarSceny.jsx";
 import { ZnakRAGent } from "./_components/ZnakRAGent.jsx";
 import styles from "./logowanie.module.css";
 
@@ -248,24 +249,26 @@ function SkrotDeweloperski() {
 export default function LoginPage() {
   return (
     <div className={styles.ekran} data-ekran="logowanie">
-      <div className={styles.uklad}>
-        <section className={styles.scena}>
-          <Glowa />
-          <ZnakRAGent />
-        </section>
+      <ZegarScenyProvider>
+        <div className={styles.uklad}>
+          <section className={styles.scena}>
+            <Glowa />
+            <ZnakRAGent />
+          </section>
 
-        <section className={styles.kolumnaPanelu}>
-          <Pierscien>
-            <Suspense fallback={<FormularzZastepczy />}>
-              <FormularzLogowania />
+          <section className={styles.kolumnaPanelu}>
+            <Pierscien>
+              <Suspense fallback={<FormularzZastepczy />}>
+                <FormularzLogowania />
+              </Suspense>
+            </Pierscien>
+
+            <Suspense fallback={null}>
+              <SkrotDeweloperski />
             </Suspense>
-          </Pierscien>
-
-          <Suspense fallback={null}>
-            <SkrotDeweloperski />
-          </Suspense>
-        </section>
-      </div>
+          </section>
+        </div>
+      </ZegarScenyProvider>
     </div>
   );
 }
