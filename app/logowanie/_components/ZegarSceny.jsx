@@ -33,31 +33,35 @@ import { utworzSilnik } from "../_lib/silnikZegara.js";
 
 const KontekstZegara = createContext(null);
 
-// ZNACZNIK SESJI. Przezywa odswiezenie strony, ginie razem z karta — dokladnie
-// tyle, ile trzeba, zeby animacja zagrala raz na wizyte, a nie przy kazdym
-// wejsciu na ekran logowania.
-const KLUCZ_SESJI = "ragent:animacja-logowania";
-
-// KAZDY DOSTEP W try/catch. sessionStorage potrafi rzucic w trybie prywatnym
-// i przy zablokowanych ciasteczkach. Wlasciwym zachowaniem jest wtedy ZAGRAC
-// animacje, a nie wywalic ekran logowania: przy odczycie zwracamy falsz,
-// przy zapisie milczymy.
-function czyZagraneWTejSesji() {
-  try {
-    return window.sessionStorage.getItem(KLUCZ_SESJI) === "1";
-  } catch {
-    return false;
-  }
-}
-
-function zapiszZagrane() {
-  try {
-    window.sessionStorage.setItem(KLUCZ_SESJI, "1");
-  } catch {
-    // Nie ma sie nad czym zatrzymywac: najgorsze, co z tego wyniknie, to
-    // animacja zagrana drugi raz.
-  }
-}
+// =============================================================================
+//  ZNACZNIK „JUZ GRANO" — JEDYNY STAN NA POZIOMIE MODULU W CALYM ETAPIE B.
+//
+//  Caly etap konsekwentnie trzyma stan w ref, i to nie jest kaprys: tablice
+//  modulowe prototypu (linie 324, 331-332, 352) narastaja przy podwojnym
+//  montowaniu i to jest Problem 3 z dokumentu przekazania. Tutaj robimy
+//  wyjatek, bo potrzebujemy stanu o dokladnie okreslonym czasie zycia:
+//  DLUZSZYM NIZ MONTOWANIE KOMPONENTU, KROTSZYM NIZ KARTA.
+//
+//  Modul laduje sie raz na dokument i ginie razem z nim — czyli zmienna
+//  modulowa TO WLASNIE JEST ten czas zycia, wyrazony wprost, bez zadnego
+//  magazynu i bez sprzatania.
+//
+//  Co z tego wynika dla uzytkownika:
+//    F5, wpisanie adresu, nowa karta   -> nowy dokument -> PELNY PRZEBIEG
+//    nawigacja klientowa tam i z powrotem -> ten sam dokument -> klatka koncowa
+//
+//  Bylo tu wczesniej sessionStorage i okazalo sie ZA TRWALE: przezywalo
+//  odswiezenie, wiec po pierwszym wejsciu w danej karcie animacji nie dalo sie
+//  juz zobaczyc inaczej niz w nowej karcie. Zmienna modulowa nie rzuca
+//  w trybie prywatnym, nie wymaga try/catch i nie zostawia sladu, ktory trzeba
+//  by czyscic.
+//
+//  PULAPKA STRICT MODE OBOWIAZUJE TAK SAMO. Znacznik stawiamy PO ZAKONCZENIU
+//  PRZEBIEGU, przez poZakonczeniu, nigdy przy montowaniu. Postawiony przy
+//  montowaniu zostalby zapisany przy PIERWSZYM montowaniu i odczytany przy
+//  DRUGIM, wiec animacja nie zagralaby ani razu w trybie deweloperskim.
+// =============================================================================
+let zagraneWTymDokumencie = false;
 
 export function ZegarScenyProvider({ czasTrwania = CALOSC_MS, children }) {
   // Silnik powstaje raz, przy pierwszym renderze — nie w efekcie, bo efekty
@@ -74,13 +78,13 @@ export function ZegarScenyProvider({ czasTrwania = CALOSC_MS, children }) {
       // DWA POWODY POMINIECIA PRZEBIEGU I NIE WOLNO ICH ZLEWAC W JEDEN.
       //
       //   RUCH OGRANICZONY — uzytkownik prosil system o mniej animacji.
-      //   ZNACZNIK SESJI  — animacja juz w tej karcie zagrala.
+      //   JUZ GRANO        — animacja odegrala sie w tym dokumencie.
       //
-      // Dzis oba prowadza do tego samego: scena startuje od klatki koncowej.
-      // Ale w B6 ruch ograniczony zdejmie TAKZE prog logowania,
-      // a znacznik sesji nie ma z progiem nic wspolnego. Zlane w jedno pojecie
-      // rozjada sie dokladnie wtedy.
-      pominPrzebieg: () => czyRuchOgraniczony() || czyZagraneWTejSesji(),
+      // Oba prowadza do tego samego: scena startuje od klatki koncowej.
+      // Ale ruch ograniczony zdejmuje TAKZE prog logowania (B6), a znacznik
+      // nie ma z progiem nic wspolnego. Zlane w jedno pojecie rozjechalyby sie
+      // dokladnie tam.
+      pominPrzebieg: () => czyRuchOgraniczony() || zagraneWTymDokumencie,
 
       // ZNACZNIK STAWIAMY PO ZAKONCZENIU PRZEBIEGU, NIGDY PRZY MONTOWANIU.
       // Postawiony przy montowaniu zostalby zapisany przy PIERWSZYM montowaniu
@@ -88,7 +92,9 @@ export function ZegarScenyProvider({ czasTrwania = CALOSC_MS, children }) {
       // razu w trybie deweloperskim. To nie jest teoretyczne: pomiary z B4
       // pokazaly, ze przy nawigacji klientowej licznik montowan rosnie o dwa
       // na kazde wejscie.
-      poZakonczeniu: zapiszZagrane,
+      poZakonczeniu: () => {
+        zagraneWTymDokumencie = true;
+      },
     });
   }
 

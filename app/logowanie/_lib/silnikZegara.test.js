@@ -337,6 +337,60 @@ test('poZakonczeniu NIE WOŁA SIĘ, gdy silnik zatrzymano w POŁOWIE', () => {
   assert.equal(p.klatka(), false);
 });
 
+test('DWA MONTOWANIA W TYM SAMYM DOKUMENCIE dają JEDEN przebieg', () => {
+  // Odwzorowanie tego, co składa provider: predykat czyta znacznik żyjący
+  // tyle, co dokument, a poZakonczeniu go stawia. Znacznik jest stawiany PO
+  // przebiegu, nie przy montowaniu — inaczej pierwsze montowanie Strict Mode
+  // zapisałoby go, drugie odczytało i animacja nie zagrałaby ani razu.
+  let zagrane = false;
+  const { p, silnik } = silnikZAtrapa({
+    pominPrzebieg: () => zagrane,
+    poZakonczeniu: () => {
+      zagrane = true;
+    },
+  });
+  const z = zbieracz();
+  silnik.subskrybuj(z);
+
+  // Pierwsze montowanie: pełny przebieg.
+  silnik.start();
+  assert.ok(p.ileZaplanowanych() > 0, "pierwsze wejście gra");
+  const klatek = p.doKonca();
+  assert.ok(klatek > 1);
+  assert.equal(zagrane, true);
+
+  // Drugie montowanie w tym samym dokumencie: od razu klatka końcowa.
+  const przed = z.klatki.length;
+  silnik.start();
+  assert.equal(p.ileZaplanowanych(), 0, "drugie wejście nie planuje ani klatki");
+  assert.equal(z.klatki.length - przed, 1, "dostaje jedną klatkę, końcową");
+  assert.equal(z.klatki.at(-1).t, TRWANIE);
+});
+
+test('STRICT MODE: dwa start() PRZED zakończeniem nie gaszą animacji', () => {
+  // Podwójne montowanie dzieje się ZANIM przebieg się skończy, więc znacznik
+  // jeszcze nie stoi i drugi start gra normalnie. Gdyby znacznik stawiał się
+  // przy montowaniu, drugi start zastałby go już postawionego.
+  let zagrane = false;
+  const { p, silnik } = silnikZAtrapa({
+    pominPrzebieg: () => zagrane,
+    poZakonczeniu: () => {
+      zagrane = true;
+    },
+  });
+  silnik.subskrybuj(zbieracz());
+
+  silnik.start();
+  p.klatka();
+  silnik.stop();      // cleanup pierwszego montowania
+  silnik.start();     // drugie montowanie
+
+  assert.equal(zagrane, false, "znacznik jeszcze nie stoi");
+  assert.ok(p.ileZaplanowanych() > 0, "animacja gra mimo podwójnego montowania");
+  p.doKonca();
+  assert.equal(zagrane, true);
+});
+
 test('DWA PRZEBIEGI to DWA zgłoszenia, po jednym na każdy', () => {
   const { p, silnik, zakonczenia } = silnikZLicznikiem();
   silnik.subskrybuj(zbieracz());
@@ -361,7 +415,7 @@ test('błąd w poZakonczeniu nie wywraca pętli ani nie wychodzi na zewnątrz', 
       anulujKlatke: p.anulujKlatke,
       teraz: p.teraz,
       poZakonczeniu: () => {
-        throw new Error("sessionStorage padl");
+        throw new Error("konsument poZakonczeniu padl");
       },
     });
     const z = zbieracz();

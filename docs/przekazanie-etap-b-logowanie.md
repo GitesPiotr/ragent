@@ -288,7 +288,7 @@ Gałąź `feature/etap-b-animacja` odbita od `master` na `f14443b`.
 | **B2** | jeden zegar sceny: `rAF` z warunkiem stopu i sprzątaniem | zamknięty (`a6a63f2`) |
 | **B3** | głowa: animacja, budowanie idempotentne | zamknięty (`4cb7f0f`) |
 | **B4** | znak RAGent na płótnie, `getComputedStyle` poza pętlą | zamknięty (`6c90d54`) |
-| **B5** | pierścień, próg 2000 ms, animacja raz na sesję | zamknięty (`2347b80`) |
+| **B5** | pierścień, próg 2000 ms, animacja raz na dokument | zamknięty (`2347b80`) |
 | — | cofnięcie progu z 600 na 2000 | zamknięty (`5e28f42`) |
 | **B6** | `prefers-reduced-motion` obejmuje całą scenę i zdejmuje próg logowania | zamknięty (`e2d5715`) |
 | **B7** | siatka na canvas — **traktowany jako prawdopodobny** | |
@@ -327,9 +327,24 @@ wyglądającą prawie dobrze. Czyli błąd, który sam się nie zgłasza.
 
 ### Decyzje podjęte, obowiązujące
 
-**Animacja raz na sesję.** Pierwsze wejście gra pełne 4220 ms
+**Animacja raz na dokument.** Pierwsze wejście gra pełne 4220 ms
 (700 + 2400 + 420 + 300 + 400), kolejne wchodzą na klatce końcowej.
-Znacznik w `sessionStorage` — przeżywa odświeżenie, ginie z kartą.
+
+Znacznik to **zwykła zmienna na poziomie modułu** w `ZegarSceny.jsx` — jedyny
+stan modułowy w całym etapie B i jedyny dozwolony. Powód: potrzebujemy czasu
+życia **dłuższego niż montowanie komponentu, krótszego niż karta**, a moduł
+ładuje się raz na dokument i ginie razem z nim. To jest dokładnie ten czas,
+wyrażony wprost, bez magazynu i bez sprzątania.
+
+| co robi użytkownik | co widzi |
+|---|---|
+| F5, wpisanie adresu, nowa karta | nowy dokument → **pełny przebieg** |
+| nawigacja klientowa tam i z powrotem | ten sam dokument → klatka końcowa |
+
+Był tu wcześniej `sessionStorage` i okazał się **za trwały**: przeżywał
+odświeżenie, więc po pierwszym wejściu w danej karcie animacji nie dało się już
+zobaczyć inaczej niż w nowej karcie. Przy okazji odpadł `try/catch` — zmienna
+nie rzuca w trybie prywatnym.
 
 > **Pułapka:** znacznik trzeba stawiać **po zakończeniu przebiegu**,
 > nie przy montowaniu. Przy montowaniu podwójne montowanie Strict Mode zapisze
@@ -397,8 +412,10 @@ Planuj czas tak, jakby B7 był w zakresie.
 **Zachowanie animacji:**
 
 5. Pierwsze wejście w nowej karcie: pełny przebieg 4220 ms
-6. Odświeżenie `F5`: klatka końcowa od razu, bez odgrywania
-7. Nowa karta: znowu pełny przebieg (`sessionStorage` ginie z kartą)
+6. Odświeżenie `F5`: **znowu pełny przebieg** — znacznik ginie razem
+   z dokumentem. Powtórzyć trzy razy pod rząd
+7. Nowa karta: pełny przebieg. Nawigacja klientowa tam i z powrotem, **bez
+   przeładowania**: klatka końcowa, bez odgrywania
 8. Błędne hasło: pierścień się zeruje, oko gaśnie, głowa i napis stoją
 
 **Ruch ograniczony:**
@@ -440,7 +457,7 @@ obroni, nie tę, która ładniej wygląda.
 |---|---|---|---|
 | **1** | B0, B0b, B1 | ~90 min | **wykonana** — trzy commity, `npm test` 759 → 788, zero animacji |
 | **2** | B2, B3 | ~140 min | **wykonana** — pierwsza animacja na ekranie, testy → 841 |
-| **3** | B4, B5 | ~150 min | **wykonana** — napis na płótnie, pierścień, oko, animacja raz na sesję, testy → 888 |
+| **3** | B4, B5 | ~150 min | **wykonana** — napis na płótnie, pierścień, oko, animacja raz na dokument, testy → 888 |
 | **4** | próg 2000 (`5e28f42`), dokument (`3ec82a1`), B6 (`e2d5715`) | ~120 min | **wykonana** — testy → 895, B8 odwołany |
 | **5** | przegląd 15 punktów z sekcji 5, pomiar pod kryterium B7 | 1–1,5 h | |
 | **6** | B7 siatka na canvas — **warunkowa** | 2–3 h | |
@@ -459,7 +476,7 @@ zamyka się w **5,5–7 godzinach**, czyli praktycznie na tym, co już jest.
 **Co może wydłużyć konkretnie:** B3 jest największym pojedynczym kawałkiem etapu:
 animuje 443 elementy SVG (428 w grupie siatki — 290 kresek i 138 kółek — plus 15
 w rozproszeniu), do tego budowanie idempotentne i okręgi spawów przez referencję.
-Jeśli coś się rozjedzie, to tam. B5 ma pułapkę z `sessionStorage` opisaną wyżej.
+Jeśli coś się rozjedzie, to tam. B5 ma pułapkę ze znacznikiem „już grano" opisaną wyżej.
 
 ---
 
