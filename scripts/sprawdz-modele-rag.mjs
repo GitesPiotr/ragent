@@ -35,13 +35,22 @@
 //  wywołał narzędzie" bez znaczenia, ale to nie jest ta sama ścieżka
 //  bazodanowa co na produkcji.
 //
-//  Uruchomienie:  node scripts/test-modeli-rag.mjs
+//  Uruchomienie:  npm run sprawdz:modele
 //  Wyniki:        poza repozytorium, ścieżka wypisana na końcu.
 //
+//  NAZWA PLIKU NIE ZACZYNA SIĘ OD „test-" I TO NIE JEST DROBIAZG. Wzorce, po
+//  których `node --test` sam znajduje pliki, obejmują `test-*.mjs` — dopóki ten
+//  skrypt nazywał się `test-modeli-rag.mjs`, KAŻDE `npm test` odpalało 36
+//  płatnych rozmów przez OpenRouter: ~5,5 minuty i ~$0,05 za przebieg, przy
+//  okazji zużywając limity. Zmierzone, nie przewidziane — złapane przy zwykłym
+//  uruchomieniu zestawu testów. Przy zmianie nazwy trzymać się z dala także od
+//  `*-test`, `*_test` i `*.test`.
+//
 //  Zawężenie przebiegu — do sprawdzenia szkieletu przed pełnym przejazdem,
-//  żeby nie płacić 36 razy za błąd w konfiguracji kontekstu:
-//    node scripts/test-modeli-rag.mjs --model=deepseek/deepseek-v4-flash \
-//                                     --pytanie=potoczne --przebiegi=1
+//  żeby nie płacić 36 razy za błąd w konfiguracji kontekstu (podwójny myślnik
+//  oddziela argumenty skryptu od argumentów npm):
+//    npm run sprawdz:modele -- --model=deepseek/deepseek-v4-flash \
+//                              --pytanie=potoczne --przebiegi=1
 // =============================================================================
 
 import { mkdirSync, writeFileSync } from "node:fs";
