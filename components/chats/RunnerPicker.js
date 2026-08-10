@@ -6,6 +6,7 @@ import { listActiveAgents } from "@/lib/data/agents";
 import { useSettings } from "@/lib/settings/SettingsContext";
 import { useDopuszczone } from "@/lib/settings/DopuszczoneContext";
 import { listaModeli, modeleOllamy } from "@/lib/settings/dopuszczoneModele";
+import { POKAZ_DOSTAWCE_LOKALNA } from "@/lib/config/models";
 import { Avatar } from "./Avatar";
 import styles from "./chats.module.css";
 
@@ -52,7 +53,13 @@ export function RunnerLabel({
 //
 // Anthropic BEZ prefiksu — tez jak wczesniej. To dostawca domyslny aplikacji
 // i doklejenie mu nazwy zmienialo by wyglad kazdej istniejacej pozycji listy.
-const PICKER_PROVIDERS = ["anthropic", "openai", "openrouter", "ollama"];
+// TRYB POKAZU: własna lista, więc własny filtr. Zdjęcie „ollama" z PROVIDERS
+// w lib/config/models.js NIE dosięgłoby tego miejsca — ta tablica jest wpisana
+// tu od nowa i o tamtej nie wie. Przełącznik jest wspólny, żeby jedno miejsce
+// dalej decydowało o wszystkich czterech ekranach.
+const PICKER_PROVIDERS = ["anthropic", "openai", "openrouter", "ollama"].filter(
+  (id) => POKAZ_DOSTAWCE_LOKALNA || id !== "ollama",
+);
 const PREFIKS = {
   anthropic: "",
   openai: "OpenAI",

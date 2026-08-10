@@ -9,6 +9,7 @@ import {
 } from "@/lib/state/actions";
 import {
   PROVIDERS,
+  PROVIDERS_WIDOCZNI,
   getModelsForProvider,
   modelSupportsTemperature,
 } from "@/lib/config/models";
@@ -201,7 +202,11 @@ export function ModelSection() {
           value={agent.provider}
           onChange={(e) => changeProvider(e.target.value)}
         >
-          {PROVIDERS.map((p) => (
+          {/* PROVIDERS_WIDOCZNI, nie PROVIDERS — tryb pokazu chowa Ollamę.
+              Podpis wybranego dostawcy niżej czyta dalej pełne PROVIDERS,
+              żeby agent zapisany wcześniej na modelu lokalnym pokazywał
+              nazwę, a nie surowe „ollama". */}
+          {PROVIDERS_WIDOCZNI.map((p) => (
             <option key={p.id} value={p.id}>
               {p.label}
             </option>

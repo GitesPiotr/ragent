@@ -7,8 +7,38 @@ import {
   MODELE_EMBEDDINGOW,
   DOMYSLNY_MODEL_EMBEDDINGOW,
 } from '@/lib/config/modeleEmbeddingow.js';
+import { POKAZ_DOSTAWCE_LOKALNA } from '@/lib/config/models';
 import styles from '../kreator-rag.module.css';
 import PrzyciskDiagnostyki from '@/app/kreator-rag/_components/PrzyciskDiagnostyki.jsx';
+
+// =============================================================================
+//  TRYB POKAZU — NAJGROŹNIEJSZE Z CZTERECH MIEJSC
+//
+//  Wariant lokalny jest tu oznaczony `domyslny: true`, więc bez tej zmiany
+//  formularz podpowiadałby zakładanie kolekcji na Ollamie — a wybór modelu
+//  embeddingów jest NIEODWRACALNY: para trafia do kolekcji na stałe i pilnuje
+//  jej strażnik zgodności. Kolekcja założona przez pomyłkę na modelu lokalnym
+//  jest na pokazie bez Ollamy nie do zaindeksowania i nie do przeszukania.
+//
+//  LISTY `MODELE_EMBEDDINGOW` NIE RUSZAM, i to jest istotne: czyta ją także
+//  walidacja po stronie serwera (app/api/rag/collections/route.js) oraz test
+//  lib/config/modeleEmbeddingow.test.js, który wprost sprawdza, że pozycje są
+//  dwie i że domyślna jest lokalna. Zawężenie tam wywróciłoby zestaw testów
+//  i odrzucałoby pary, które w bazie już istnieją. Filtrujemy WIDOK.
+//
+//  Istniejących kolekcji lokalnych to nie dotyka — one biorą swoją parę
+//  z bazy, nie z tej listy.
+// =============================================================================
+const MODELE_EMBEDDINGOW_WIDOCZNE = POKAZ_DOSTAWCE_LOKALNA
+  ? MODELE_EMBEDDINGOW
+  : MODELE_EMBEDDINGOW.filter((m) => m.provider !== 'ollama');
+
+// Domyślny musi pochodzić Z WIDOCZNYCH, inaczej formularz startowałby
+// z zaznaczeniem, którego nie ma na liście — czyli z pustym radiogroup.
+const DOMYSLNY_WIDOCZNY =
+  MODELE_EMBEDDINGOW_WIDOCZNE.find((m) => m.domyslny) ||
+  MODELE_EMBEDDINGOW_WIDOCZNE[0] ||
+  DOMYSLNY_MODEL_EMBEDDINGOW;
 
 // UI nigdy nie sięga do bazy ani do rdzenia — wyłącznie przez /api/rag/collections*.
 
@@ -41,11 +71,11 @@ export default function KolekcjePage() {
   // (np. openrouter + bge-m3), której serwer i tak nie przyjmie — lepiej,
   // żeby taki stan był w interfejsie niewyrażalny.
   const [wybranyModel, setWybranyModel] = useState(
-    `${DOMYSLNY_MODEL_EMBEDDINGOW.provider}/${DOMYSLNY_MODEL_EMBEDDINGOW.model}`,
+    `${DOMYSLNY_WIDOCZNY.provider}/${DOMYSLNY_WIDOCZNY.model}`,
   );
   const wybrany =
     MODELE_EMBEDDINGOW.find((m) => `${m.provider}/${m.model}` === wybranyModel) ||
-    DOMYSLNY_MODEL_EMBEDDINGOW;
+    DOMYSLNY_WIDOCZNY;
   const [bladFormularza, setBladFormularza] = useState(null);
   const [tworzenie, setTworzenie] = useState(false);
 
@@ -185,7 +215,7 @@ export default function KolekcjePage() {
                 pokazuje jedną linijkę i chowa resztę za kliknięciem, więc
                 decyzję podejmowałoby się bez połowy przesłanek. */}
             <div className={styles["karty-modeli"]} role="radiogroup" aria-label="Model embeddingów">
-              {MODELE_EMBEDDINGOW.map((m) => {
+              {MODELE_EMBEDDINGOW_WIDOCZNE.map((m) => {
                 const klucz = `${m.provider}/${m.model}`;
                 const zaznaczony = klucz === wybranyModel;
                 return (
