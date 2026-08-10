@@ -10,22 +10,25 @@
 export const KRESEK = 48;
 
 // =============================================================================
-//  PROG LOGOWANIA — 600 ms zamiast 2000 z prototypu.
+//  PROG LOGOWANIA — 2000 ms, wartosc z prototypu (cfg.minMs, linia 726).
 //
-//  Prototyp trzyma pierscien w ruchu minimum dwie sekundy (cfg.minMs, uzyte
-//  w linii 786), nawet gdy Supabase odpowie w 200 ms. To 1,8 sekundy sztucznej
-//  zwloki przy KAZDYM logowaniu — podatek placony codziennie, zeby animacja
-//  zdazyla sie pokazac.
+//  BYLO TU 600 I ZOSTALO COFNIETE. Odstepstwo bylo swiadome: prototyp trzyma
+//  pierscien w ruchu minimum dwie sekundy nawet wtedy, gdy Supabase odpowie
+//  w 200 ms, wiec skrocenie progu oszczedzalo okolo 1,2 sekundy przy KAZDYM
+//  logowaniu. Zmierzone 629 ms okazalo sie jednak za krotkie, zeby przebieg
+//  pierscienia byl w ogole widoczny — a animacja, ktorej nie widac, nie placi
+//  za swoja cene. Zostaje wartosc zrodlowa.
 //
-//  PROG JEST DOLNA GRANICA, NIE DODATKIEM. Prototyp puszcza pierscien
-//  i uwierzytelnienie ROWNOLEGLE przez Promise.all (linie 786-790), wiec
-//  logowanie trwa tyle, ile dluzsze z dwojga. Przy odpowiedzi w 200 ms czekamy
-//  600 ms, przy odpowiedzi w 900 ms — 900 ms, a nie 1500.
+//  PROG JEST DOLNA GRANICA, NIE DODATKIEM. Pierscien i uwierzytelnienie ida
+//  ROWNOLEGLE przez Promise.all (prototyp, linie 786-790), wiec logowanie trwa
+//  tyle, ile dluzsze z dwojga: przy odpowiedzi w 200 ms czekamy 2000 ms, przy
+//  odpowiedzi w 2500 ms — 2500 ms, a nie 4500. Zmierzone przy progu 600:
+//  narzut ponad prog wynosil 29 ms.
 //
-//  Dlaczego prog w ogole zostaje: bez niego pierscien mrugnalby i zniknal,
+//  Dlaczego prog w ogole istnieje: bez niego pierscien mrugnalby i zniknal,
 //  a przy bledzie uzytkownik nie zdazylby zobaczyc, ze cokolwiek sie stalo.
 // =============================================================================
-export const PROG_LOGOWANIA_MS = 600;
+export const PROG_LOGOWANIA_MS = 2000;
 
 // =============================================================================
 //  ileSwiecacych(postep, kresek)

@@ -79,8 +79,8 @@ export function Pierscien({ children }) {
 
     const ustaw = (postep) => {
       const ile = ileSwiecacych(postep);
-      // Zapis tylko wtedy, gdy cos sie zmienilo: przy 48 kreskach i 600 ms
-      // przebiegu wiekszosc klatek nie zmienia ani jednej klasy.
+      // Zapis tylko wtedy, gdy cos sie zmienilo: przy 48 kreskach rozlozonych
+      // na caly prog wiekszosc klatek nie zmienia ani jednej klasy.
       if (ile === stan.swiecacych) return;
       const od = Math.min(ile, stan.swiecacych);
       const doo = Math.max(ile, stan.swiecacych);

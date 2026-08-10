@@ -6,8 +6,11 @@ test('pierścień ma 48 kresek, jak w prototypie', () => {
   assert.equal(KRESEK, 48);
 });
 
-test('PRÓG LOGOWANIA to 600 ms, nie 2000 z prototypu', () => {
-  assert.equal(PROG_LOGOWANIA_MS, 600);
+test('PRÓG LOGOWANIA jest wartością z prototypu (cfg.minMs, linia 726)', () => {
+  // Nie pilnujemy tu „ładnej liczby", tylko zgodności ze źródłem. Skrócenie
+  // progu do 600 ms było odstępstwem i zostało cofnięte, bo przebiegu
+  // pierścienia nie było przy nim widać — patrz komentarz przy stałej.
+  assert.equal(PROG_LOGOWANIA_MS, 2000);
 });
 
 test('GRANICE: 0 nie zapala nic, 1 zapala wszystkie 48', () => {

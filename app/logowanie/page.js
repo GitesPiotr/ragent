@@ -109,8 +109,8 @@ function FormularzLogowania() {
 
       // Prototyp, linie 786-790: pierscien i uwierzytelnienie ida ROWNOLEGLE.
       // Prog jest przez to DOLNA GRANICA, a nie dodatkiem do czasu odpowiedzi:
-      // przy odpowiedzi w 200 ms czekamy 600 ms, przy odpowiedzi w 900 ms —
-      // 900 ms, a nie 1500.
+      // przy odpowiedzi w 200 ms czekamy tyle, co prog, a przy odpowiedzi
+      // wolniejszej niz prog — tyle, co odpowiedz, i ani milisekundy wiecej.
       // ZADNA GALAZ Promise.all NIE MA PRAWA ODRZUCIC — Promise.all odrzuca,
       // gdy odrzuci KTORAKOLWIEK z nich, a wtedy leci stad wyjatek i nie
       // wykonuje sie nic ponizej.

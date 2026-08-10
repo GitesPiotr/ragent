@@ -91,7 +91,7 @@ export function ZegarScenyProvider({ czasTrwania = CALOSC_MS, children }) {
       //   ZNACZNIK SESJI  — animacja juz w tej karcie zagrala.
       //
       // Dzis oba prowadza do tego samego: scena startuje od klatki koncowej.
-      // Ale w B6 ruch ograniczony zdejmie TAKZE prog 600 ms przy logowaniu,
+      // Ale w B6 ruch ograniczony zdejmie TAKZE prog logowania,
       // a znacznik sesji nie ma z progiem nic wspolnego. Zlane w jedno pojecie
       // rozjada sie dokladnie wtedy.
       pominPrzebieg: () => czyRuchOgraniczony() || czyZagraneWTejSesji(),
