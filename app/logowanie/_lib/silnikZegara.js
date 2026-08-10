@@ -49,9 +49,13 @@ export function utworzSilnik({
   // BLAD W JEDNYM SUBSKRYBENCIE NIE MOZE ZATRZYMAC PETLI ANI POZOSTALYCH.
   // W prototypie apply() i RAGentMark.at() sa opakowane w try/catch (409-410),
   // ale btn z linii 413 juz nie — i to on zatrzymalby rAF na amen.
+  // Trzeci argument, czasTrwania, idzie do subskrybenta razem z czasem sceny.
+  // Silnik i tak go zna, wiec podanie go nic nie kosztuje — a subskrybent,
+  // ktory wzialby dlugosc sceny z importu, rozjechalby sie po cichu w chwili,
+  // gdy provider dostanie inna. Patrz komentarz przy useKlatka.
   const wolaj = (naKlatke, t, now) => {
     try {
-      naKlatke(t, now);
+      naKlatke(t, now, czasTrwania);
     } catch (e) {
       console.error("[zegar sceny]", e);
     }

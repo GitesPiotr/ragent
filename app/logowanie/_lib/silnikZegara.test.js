@@ -62,10 +62,10 @@ function silnikZAtrapa(dodatki = {}) {
   return { p, silnik };
 }
 
-// Zbiera (t, now) z kazdego wywolania.
+// Zbiera (t, now, czasTrwania) z kazdego wywolania.
 function zbieracz() {
   const klatki = [];
-  const fn = (t, now) => klatki.push({ t, now });
+  const fn = (t, now, czasTrwania) => klatki.push({ t, now, czasTrwania });
   fn.klatki = klatki;
   return fn;
 }
@@ -147,6 +147,52 @@ test('PRZY RUCHU OGRANICZONYM subskrybent dostaje jedną klatkę końcową, prze
 
   assert.deepEqual(pozny.klatki.map((k) => k.t), [TRWANIE]);
   assert.equal(p.ileZaplanowanych(), 0);
+});
+
+// =============================================================================
+//  TRZECI ARGUMENT KLATKI: czasTrwania
+// =============================================================================
+
+test('SUBSKRYBENT DOSTAJE czasTrwania JAKO TRZECI ARGUMENT klatki z pętli', () => {
+  // Bez tego subskrybent musiałby wziąć długość sceny z importu i rozjechałby
+  // się po cichu, gdy provider dostanie inną. Głowa domyka nią spawy na końcu
+  // przebiegu, więc rozjazd to okręgi zostające na ekranie bez błędu.
+  const { p, silnik } = silnikZAtrapa();
+  const z = zbieracz();
+
+  silnik.subskrybuj(z);
+  silnik.start();
+  p.klatka();
+  p.klatka();
+
+  assert.equal(z.klatki.length, 2);
+  assert.deepEqual(z.klatki.map((k) => k.czasTrwania), [TRWANIE, TRWANIE]);
+});
+
+test('KLATKA JEDNORAZOWA dla spóźnionego subskrybenta też niesie czasTrwania', () => {
+  const { p, silnik } = silnikZAtrapa();
+  const pierwszy = zbieracz();
+
+  silnik.subskrybuj(pierwszy);
+  silnik.start();
+  p.doKonca();
+
+  const spozniony = zbieracz();
+  silnik.subskrybuj(spozniony);
+
+  assert.equal(spozniony.klatki.length, 1);
+  assert.equal(spozniony.klatki[0].czasTrwania, TRWANIE);
+  assert.equal(spozniony.klatki[0].t, TRWANIE);
+});
+
+test('klatka jednorazowa przy ruchu ograniczonym również niesie czasTrwania', () => {
+  const { silnik } = silnikZAtrapa({ ruchOgraniczony: () => true });
+  const z = zbieracz();
+
+  silnik.subskrybuj(z);
+  silnik.start();
+
+  assert.equal(z.klatki[0].czasTrwania, TRWANIE);
 });
 
 // =============================================================================

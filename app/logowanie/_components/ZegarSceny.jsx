@@ -78,9 +78,20 @@ export function ZegarScenyProvider({ czasTrwania = CALOSC_MS, children }) {
 // =============================================================================
 //  useKlatka(naKlatke)
 //
-//  naKlatke dostaje (t, now). t to czas sceny z zegara, now to surowy znacznik
-//  z rAF — prototyp potrzebuje obu: postep sceny liczy sie z t, a oscylacje
-//  rozproszenia z now (linie 374-377).
+//  naKlatke dostaje (t, now, czasTrwania):
+//
+//    t            — czas sceny z zegara; z niego liczy sie postep
+//    now          — surowy znacznik z rAF; z niego licza sie oscylacje
+//                   rozproszenia (prototyp, linie 374-377). Prototyp potrzebuje
+//                   obu, bo jedno stoi razem ze scena, a drugie tyka zawsze.
+//    czasTrwania  — dlugosc calej sceny
+//
+//  TRZECI ARGUMENT WYGLADA NA NADMIAROWY I NIE JEST. Subskrybent, ktory wezmie
+//  dlugosc sceny z importu zamiast od zegara, rozjedzie sie po cichu w chwili,
+//  gdy provider dostanie inna dlugosc niz domyslna. Glowa uzywa jej do
+//  domykania spawow na koncu przebiegu (czyUsunacSpaw), wiec rozjazd oznacza
+//  okregi zostajace na ekranie — bez jednego bledu w konsoli. Zegar zna te
+//  liczbe, wiec ma ja podac; nikt nie ma jej zgadywac.
 // =============================================================================
 export function useKlatka(naKlatke) {
   const silnik = useContext(KontekstZegara);
@@ -100,7 +111,9 @@ export function useKlatka(naKlatke) {
   }
 
   useEffect(() => {
-    return silnik.subskrybuj((t, now) => uchwyt.current(t, now));
+    return silnik.subskrybuj((t, now, czasTrwania) =>
+      uchwyt.current(t, now, czasTrwania),
+    );
     // [silnik] TO NIE JEST ZASPOKOJENIE LINTERA. Silnik powstaje raz na
     // provider i mieszka w ref, wiec ta tablica z zalozenia nigdy nie odpina
     // subskrypcji — jest rownowazna pustej. Gdyby kiedys zaczela odpinac,
