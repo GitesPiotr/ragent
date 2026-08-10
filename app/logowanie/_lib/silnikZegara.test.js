@@ -133,7 +133,7 @@ test('SUBSKRYBENT PODPIĘTY DO SCENY ZAKOŃCZONEJ dostaje jedną klatkę końcow
 });
 
 test('PRZY RUCHU OGRANICZONYM subskrybent dostaje jedną klatkę końcową, przed startem i po nim', () => {
-  const { p, silnik } = silnikZAtrapa({ ruchOgraniczony: () => true });
+  const { p, silnik } = silnikZAtrapa({ pominPrzebieg: () => true });
 
   const wczesny = zbieracz();
   silnik.subskrybuj(wczesny);
@@ -186,7 +186,7 @@ test('KLATKA JEDNORAZOWA dla spóźnionego subskrybenta też niesie czasTrwania'
 });
 
 test('klatka jednorazowa przy ruchu ograniczonym również niesie czasTrwania', () => {
-  const { silnik } = silnikZAtrapa({ ruchOgraniczony: () => true });
+  const { silnik } = silnikZAtrapa({ pominPrzebieg: () => true });
   const z = zbieracz();
 
   silnik.subskrybuj(z);
@@ -245,6 +245,259 @@ test('odpięcie JEDNEGO z dwóch subskrybentów nie rusza pętli', () => {
   p.klatka();
   assert.equal(a.klatki.length, 1);
   assert.equal(b.klatki.length, 2);
+});
+
+// =============================================================================
+//  poZakonczeniu — DOKLADNIE RAZ NA PRZEBIEG
+// =============================================================================
+
+function silnikZLicznikiem(dodatki = {}) {
+  const zakonczenia = [];
+  const { p, silnik } = silnikZAtrapa({
+    poZakonczeniu: () => zakonczenia.push(true),
+    ...dodatki,
+  });
+  return { p, silnik, zakonczenia };
+}
+
+test('poZakonczeniu WOŁA SIĘ RAZ, gdy t dojdzie do czasTrwania', () => {
+  const { p, silnik, zakonczenia } = silnikZLicznikiem();
+  silnik.subskrybuj(zbieracz());
+  silnik.start();
+
+  assert.equal(zakonczenia.length, 0, "nie na starcie");
+  p.klatka();
+  assert.equal(zakonczenia.length, 0, "nie w trakcie");
+
+  p.doKonca();
+  assert.equal(zakonczenia.length, 1);
+});
+
+test('poZakonczeniu idzie PO ostatniej klatce, nie przed nią', () => {
+  // Konsument stawia tam znacznik sesji, więc scena musi być już domalowana
+  // do końca, kiedy to się dzieje.
+  const kolejnosc = [];
+  const p = atrapaPlanisty();
+  const silnik = utworzSilnik({
+    czasTrwania: TRWANIE,
+    zaplanujKlatke: p.zaplanujKlatke,
+    anulujKlatke: p.anulujKlatke,
+    teraz: p.teraz,
+    poZakonczeniu: () => kolejnosc.push("koniec"),
+  });
+
+  silnik.subskrybuj((t) => kolejnosc.push(`klatka ${t}`));
+  silnik.start();
+  p.doKonca();
+
+  assert.equal(kolejnosc.at(-1), "koniec");
+  assert.equal(kolejnosc.at(-2), `klatka ${TRWANIE}`);
+});
+
+test('poZakonczeniu NIE WOŁA SIĘ PONOWNIE przy klatkach podtrzymania', () => {
+  const { p, silnik, zakonczenia } = silnikZLicznikiem();
+  silnik.subskrybuj(zbieracz());
+  silnik.start();
+  p.doKonca();
+  assert.equal(zakonczenia.length, 1);
+
+  silnik.podtrzymaj();
+  p.klatka();
+  p.klatka();
+  p.klatka();
+
+  assert.equal(zakonczenia.length, 1, "podtrzymanie to nie kolejny przebieg");
+});
+
+test('poZakonczeniu NIE WOŁA SIĘ przy przebiegu POMINIĘTYM', () => {
+  // Pominięty to nie zakończony. Inaczej znacznik sesji stawiałby się w kółko
+  // przy każdym wejściu, które i tak nic nie zagrało.
+  const { p, silnik, zakonczenia } = silnikZLicznikiem({ pominPrzebieg: () => true });
+  silnik.subskrybuj(zbieracz());
+  silnik.start();
+
+  assert.equal(zakonczenia.length, 0);
+  assert.equal(p.ileZaplanowanych(), 0);
+
+  silnik.podtrzymaj();
+  p.klatka();
+  p.klatka();
+  assert.equal(zakonczenia.length, 0, "także przy podtrzymaniu");
+});
+
+test('poZakonczeniu NIE WOŁA SIĘ, gdy silnik zatrzymano w POŁOWIE', () => {
+  const { p, silnik, zakonczenia } = silnikZLicznikiem();
+  silnik.subskrybuj(zbieracz());
+  silnik.start();
+  p.klatka();
+  p.klatka();
+  silnik.stop();
+
+  assert.equal(zakonczenia.length, 0);
+  assert.equal(p.klatka(), false);
+});
+
+test('DWA PRZEBIEGI to DWA zgłoszenia, po jednym na każdy', () => {
+  const { p, silnik, zakonczenia } = silnikZLicznikiem();
+  silnik.subskrybuj(zbieracz());
+
+  silnik.start();
+  p.doKonca();
+  assert.equal(zakonczenia.length, 1);
+
+  silnik.start();
+  p.doKonca();
+  assert.equal(zakonczenia.length, 2);
+});
+
+test('błąd w poZakonczeniu nie wywraca pętli ani nie wychodzi na zewnątrz', () => {
+  const oryginalny = console.error;
+  console.error = () => {};
+  try {
+    const p = atrapaPlanisty();
+    const silnik = utworzSilnik({
+      czasTrwania: TRWANIE,
+      zaplanujKlatke: p.zaplanujKlatke,
+      anulujKlatke: p.anulujKlatke,
+      teraz: p.teraz,
+      poZakonczeniu: () => {
+        throw new Error("sessionStorage padl");
+      },
+    });
+    const z = zbieracz();
+    silnik.subskrybuj(z);
+    silnik.start();
+
+    assert.doesNotThrow(() => p.doKonca());
+    assert.equal(z.klatki.at(-1).t, TRWANIE);
+  } finally {
+    console.error = oryginalny;
+  }
+});
+
+// =============================================================================
+//  PODTRZYMANIE PETLI PO ZAKONCZENIU SCENY
+// =============================================================================
+
+test('PODTRZYMANIE TRZYMA PĘTLĘ PRZY ŻYCIU po zakończeniu sceny', () => {
+  // Oko zapala się w chwili kliknięcia, czyli zwykle długo po animacji.
+  const { p, silnik } = silnikZAtrapa();
+  const z = zbieracz();
+
+  silnik.subskrybuj(z);
+  silnik.start();
+  p.doKonca();
+  assert.equal(p.ileZaplanowanych(), 0, "bez podtrzymania pętla stoi");
+
+  silnik.podtrzymaj();
+  assert.equal(p.ileZaplanowanych(), 1);
+
+  p.klatka();
+  p.klatka();
+  assert.equal(p.ileZaplanowanych(), 1, "i planuje się dalej");
+});
+
+test('klatki podtrzymania NIE RUSZAJĄ SCENY: t stoi na końcu, now idzie dalej', () => {
+  const { p, silnik } = silnikZAtrapa();
+  const z = zbieracz();
+
+  silnik.subskrybuj(z);
+  silnik.start();
+  p.doKonca();
+  const ileDoKonca = z.klatki.length;
+
+  silnik.podtrzymaj();
+  p.klatka();
+  p.klatka();
+  p.klatka();
+
+  const podtrzymane = z.klatki.slice(ileDoKonca);
+  assert.equal(podtrzymane.length, 3);
+  assert.deepEqual(podtrzymane.map((k) => k.t), [TRWANIE, TRWANIE, TRWANIE]);
+
+  const czasy = podtrzymane.map((k) => k.now);
+  assert.ok(czasy[1] > czasy[0] && czasy[2] > czasy[1], "now idzie do przodu");
+});
+
+test('ZWOLNIENIE UCHWYTU zatrzymuje pętlę po jednej klatce', () => {
+  const { p, silnik } = silnikZAtrapa();
+  const z = zbieracz();
+
+  silnik.subskrybuj(z);
+  silnik.start();
+  p.doKonca();
+
+  const zwolnij = silnik.podtrzymaj();
+  p.klatka();
+  zwolnij();
+
+  // Zaplanowana klatka jeszcze wypada — na niej rysuje się stan po wygaszeniu.
+  assert.equal(p.ileZaplanowanych(), 1);
+  p.klatka();
+  assert.equal(p.ileZaplanowanych(), 0, "i dopiero ona nie planuje następnej");
+});
+
+test('DWA UCHWYTY nie gaszą się nawzajem', () => {
+  const { p, silnik } = silnikZAtrapa();
+  silnik.subskrybuj(zbieracz());
+  silnik.start();
+  p.doKonca();
+
+  const a = silnik.podtrzymaj();
+  const b = silnik.podtrzymaj();
+  a();
+  p.klatka();
+  assert.equal(p.ileZaplanowanych(), 1, "drugi uchwyt nadal trzyma");
+
+  b();
+  p.klatka();
+  assert.equal(p.ileZaplanowanych(), 0);
+});
+
+test('zwolnienie tego samego uchwytu DWA RAZY nic nie psuje', () => {
+  const { p, silnik } = silnikZAtrapa();
+  silnik.subskrybuj(zbieracz());
+  silnik.start();
+  p.doKonca();
+
+  const zwolnij = silnik.podtrzymaj();
+  silnik.podtrzymaj();
+  zwolnij();
+  zwolnij();
+  zwolnij();
+
+  p.klatka();
+  assert.equal(p.ileZaplanowanych(), 1, "drugi uchwyt przeżył potrójne zwolnienie pierwszego");
+});
+
+test('podtrzymanie BEZ SUBSKRYBENTÓW nie budzi pętli', () => {
+  const { p, silnik } = silnikZAtrapa();
+  silnik.start();
+  silnik.podtrzymaj();
+  assert.equal(p.ileZaplanowanych(), 0);
+});
+
+test('podtrzymanie w TRAKCIE sceny nie dokłada drugiej pętli', () => {
+  const { p, silnik } = silnikZAtrapa();
+  silnik.subskrybuj(zbieracz());
+  silnik.start();
+  p.klatka();
+  assert.equal(p.ileZaplanowanych(), 1);
+
+  silnik.podtrzymaj();
+  assert.equal(p.ileZaplanowanych(), 1, "nadal jedna zaplanowana klatka");
+});
+
+test('stop() gasi pętlę także wtedy, gdy trzyma ją podtrzymanie', () => {
+  const { p, silnik } = silnikZAtrapa();
+  silnik.subskrybuj(zbieracz());
+  silnik.start();
+  p.doKonca();
+  silnik.podtrzymaj();
+  assert.equal(p.ileZaplanowanych(), 1);
+
+  silnik.stop();
+  assert.equal(p.ileZaplanowanych(), 0, "odmontowanie wygrywa z podtrzymaniem");
 });
 
 // =============================================================================

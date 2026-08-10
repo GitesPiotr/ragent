@@ -17,6 +17,7 @@ import {
   zlagodzenie,
 } from "../_lib/klatkaGlowy.js";
 import { useKlatka } from "./ZegarSceny.jsx";
+import { useSterowanieScena } from "./SterowanieScena.jsx";
 import styles from "../logowanie.module.css";
 
 // GLOWA AGENTA — prawa polowa to render helmu, lewa to siatka punktow.
@@ -57,9 +58,13 @@ import styles from "../logowanie.module.css";
 //  co widac po otwarciu prototypu, to wiec kierunek "ltr" i tryb helmu "end".
 //  showScat i showWeld zostaja prawdziwe, wiec ich warunki sa tu pominiete.
 //
-//  OKO JEST WYLACZONE. eyeOn = false przez caly przebieg (applyPreset wola
-//  setEye(false)), wiec grupa rozblysku stoi na opacity 0, a wizjer wygaszony
-//  trzyma sie 1. Rozblysk i puls wchodza w B5.
+//  OKO NIE NALEZY DO PRZEBIEGU. W prototypie steruje nim przelacznik panelu
+//  deweloperskiego (setEye, linia 420), u nas formularz logowania: zapala sie
+//  w chwili klikniecia „Zaloguj", gasnie przy niepowodzeniu. Klikniecie wypada
+//  zwykle DLUGO po zakonczeniu sceny, kiedy petla juz stoi — dlatego stan oka
+//  siedzi w sterowaniu scena, a klatki na czas swiecenia zamawia sie tam przez
+//  podtrzymanie. Wzory rozblysku sa z linii 399-403, wygaszanie wizjera
+//  z linii 369.
 // =============================================================================
 
 const NS = "http://www.w3.org/2000/svg";
@@ -91,8 +96,36 @@ function rysujKlatke(s, t, now, czasTrwania) {
 
   // --- wizjer wygaszony, linie 368-370 ---
   // "wygaszony wizjer przygasa razem z helmem, inaczej swiecilby jasniej niz kask"
-  s.eyeK += ((s.okoWlaczone ? 0 : 1) - s.eyeK) * 0.18;
+  const okoWlaczone = s.oko.wlaczone();
+  s.eyeK += ((okoWlaczone ? 0 : 1) - s.eyeK) * 0.18;
   s.wizjer.setAttribute("opacity", s.eyeK.toFixed(3));
+
+  // --- rozblysk wizjera, linie 399-403 ---
+  // Dwa niezalezne powody zapalenia, brany jest mocniejszy: przelot po
+  // domknieciu ostatniego spawu i puls od chwili zapalenia oka.
+  let fl = 0;
+  if (okoWlaczone) {
+    if (s.harmonogram.ostatniSzew !== null) {
+      // Dlug z B1 po raz drugi: bez tego warunku null zszedlby do zera
+      // i przelot liczylby sie od poczatku sceny, ktorej szwow nie ma.
+      const fk = (t - s.harmonogram.ostatniSzew) / 700;
+      if (fk > 0 && fk < 1) fl = Math.sin(fk * Math.PI) * 0.9;
+    }
+    const pk = (now - s.oko.pulsOd()) / 520;
+    if (pk > 0 && pk < 1) fl = Math.max(fl, Math.sin(pk * Math.PI) * 0.7);
+  }
+  s.rozblysk.setAttribute("opacity", fl.toFixed(3));
+
+  // ODDANIE UCHWYTU DOPIERO PO WYGASZENIU. Wygaszanie wizjera jest
+  // wykladnicze, wiec eyeK dochodzi do jedynki przez kilkanascie klatek.
+  // Zwolnienie uchwytu w chwili zgaszenia oka zatrzymaloby petle w polowie
+  // tego dochodzenia i wizjer zostalby zapalony — ta sama klasa resztki,
+  // co spawy zostajace po przebiegu w B3.
+  if (!okoWlaczone && fl === 0 && Math.abs(1 - s.eyeK) < 0.002) {
+    s.eyeK = 1;
+    s.wizjer.setAttribute("opacity", "1.000");
+    s.oko.oddajKlatki();
+  }
 
   // --- rozproszenie, linie 372-378 ---
   // Elementy wchodza kaskada co 40 ms, w kolejnosci indeksow.
@@ -180,9 +213,11 @@ function rysujKlatke(s, t, now, czasTrwania) {
 export function Glowa() {
   const refHelm = useRef(null);
   const refWizjer = useRef(null);
+  const refRozblysk = useRef(null);
   const refRozproszenie = useRef(null);
   const refSiatka = useRef(null);
   const refSpawy = useRef(null);
+  const sterowanie = useSterowanieScena();
 
   // CALY STAN ANIMACJI SIEDZI W ref, NIGDY NA POZIOMIE MODULU. W prototypie
   // scat, nodes, edges i welds sa tablicami modulowymi (linie 324, 331-332,
@@ -203,10 +238,14 @@ export function Glowa() {
   //
   // NIE JEST TO PRZEOCZENIE i nie zalatwiamy tego przez useLayoutEffect: ten
   // biegnie przed malowaniem, ale trasa jest prerenderowana, wiec React
-  // wypisywalby ostrzezenie przy kazdym budowaniu. Rozstrzygniecie nalezy do
-  // B5, gdzie animacja ma grac RAZ NA SESJE: przy kolejnych wejsciach scena
-  // ma zostac na klatce koncowej, czyli to, co dzis przeblyskuje, bedzie
-  // wtedy stanem docelowym, a nie bledem do ukrycia.
+  // wypisywalby ostrzezenie przy kazdym budowaniu.
+  //
+  // ROZSTRZYGNIETE W B5 I ZOSTAJE TAK, JAK JEST. Animacja gra raz na sesje,
+  // wiec przy DRUGIM i kazdym kolejnym wejsciu scena startuje od stanu
+  // koncowego: to, co przy pierwszym wejsciu przeblyskuje, jest wtedy stanem
+  // docelowym i nie ma po czym przeskakiwac. Przeblysk zostaje wylacznie przy
+  // PIERWSZYM wejsciu w danej karcie — jedna klatka gotowej sceny, zanim
+  // ruszy od zera. To jest stan docelowy, nie niedorobka.
   useEffect(() => {
     const grupaSiatki = refSiatka.current;
     const grupaRozproszenia = refRozproszenie.current;
@@ -279,11 +318,11 @@ export function Glowa() {
       dlugosci,
       odpalone: new Array(WEZLY.length).fill(false),
       spawy: [],
+      rozblysk: refRozblysk.current,
+      oko: sterowanie.oko,
       // Prototyp, linia 369: eyeK dochodzi wykladniczo do (eyeOn ? 0 : 1).
-      // applyPreset ustawia eyeK = 1 i oko wylaczone, wiec wartosc stoi na 1.
-      // Pole zostaje, bo B5 bedzie nim ruszal.
+      // Scena startuje z okiem wylaczonym, wiec wartosc spoczynkowa to 1.
       eyeK: 1,
-      okoWlaczone: false,
     };
     scenaRef.current = scena;
 
@@ -307,7 +346,9 @@ export function Glowa() {
       }
       scenaRef.current = null;
     };
-  }, []);
+    // sterowanie powstaje raz na provider i nie zmienia tozsamosci — patrz
+    // ta sama uwaga przy subskrypcji w ZegarSceny.jsx.
+  }, [sterowanie]);
 
   useKlatka((t, now, czasTrwania) => {
     const scena = scenaRef.current;
@@ -349,10 +390,10 @@ export function Glowa() {
             />
           </g>
 
-          {/* Rozblysk wizjera. W spoczynku wygaszony — zapala sie dopiero przy
-              logowaniu (B5). Dziewiec elips o malejacych promieniach daje
-              miekkie halo bez filtra rozmycia. */}
-          <g opacity="0" style={{ mixBlendMode: "screen" }}>
+          {/* Rozblysk wizjera. W spoczynku wygaszony — zapala sie przy
+              logowaniu, razem z okiem. Dziewiec elips o malejacych promieniach
+              daje miekkie halo bez filtra rozmycia. */}
+          <g ref={refRozblysk} opacity="0" style={{ mixBlendMode: "screen" }}>
             {[86.0, 76.4, 66.9, 57.3, 47.8, 38.2, 28.7, 19.1, 9.6].map((rx, i) => (
               <ellipse
                 key={rx}

@@ -47,6 +47,32 @@ function czyRuchOgraniczony() {
   }
 }
 
+// ZNACZNIK SESJI. Przezywa odswiezenie strony, ginie razem z karta — dokladnie
+// tyle, ile trzeba, zeby animacja zagrala raz na wizyte, a nie przy kazdym
+// wejsciu na ekran logowania.
+const KLUCZ_SESJI = "ragent:animacja-logowania";
+
+// KAZDY DOSTEP W try/catch. sessionStorage potrafi rzucic w trybie prywatnym
+// i przy zablokowanych ciasteczkach. Wlasciwym zachowaniem jest wtedy ZAGRAC
+// animacje, a nie wywalic ekran logowania: przy odczycie zwracamy falsz,
+// przy zapisie milczymy.
+function czyZagraneWTejSesji() {
+  try {
+    return window.sessionStorage.getItem(KLUCZ_SESJI) === "1";
+  } catch {
+    return false;
+  }
+}
+
+function zapiszZagrane() {
+  try {
+    window.sessionStorage.setItem(KLUCZ_SESJI, "1");
+  } catch {
+    // Nie ma sie nad czym zatrzymywac: najgorsze, co z tego wyniknie, to
+    // animacja zagrana drugi raz.
+  }
+}
+
 export function ZegarScenyProvider({ czasTrwania = CALOSC_MS, children }) {
   // Silnik powstaje raz, przy pierwszym renderze — nie w efekcie, bo efekty
   // dzieci biegna PRZED efektem rodzica i subskrybenci musza miec sie do czego
@@ -58,7 +84,25 @@ export function ZegarScenyProvider({ czasTrwania = CALOSC_MS, children }) {
       zaplanujKlatke: (naKlatke) => requestAnimationFrame(naKlatke),
       anulujKlatke: (id) => cancelAnimationFrame(id),
       teraz: () => performance.now(),
-      ruchOgraniczony: czyRuchOgraniczony,
+
+      // DWA POWODY POMINIECIA PRZEBIEGU I NIE WOLNO ICH ZLEWAC W JEDEN.
+      //
+      //   RUCH OGRANICZONY — uzytkownik prosil system o mniej animacji.
+      //   ZNACZNIK SESJI  — animacja juz w tej karcie zagrala.
+      //
+      // Dzis oba prowadza do tego samego: scena startuje od klatki koncowej.
+      // Ale w B6 ruch ograniczony zdejmie TAKZE prog 600 ms przy logowaniu,
+      // a znacznik sesji nie ma z progiem nic wspolnego. Zlane w jedno pojecie
+      // rozjada sie dokladnie wtedy.
+      pominPrzebieg: () => czyRuchOgraniczony() || czyZagraneWTejSesji(),
+
+      // ZNACZNIK STAWIAMY PO ZAKONCZENIU PRZEBIEGU, NIGDY PRZY MONTOWANIU.
+      // Postawiony przy montowaniu zostalby zapisany przy PIERWSZYM montowaniu
+      // Strict Mode i odczytany przy DRUGIM, wiec animacja nie zagralaby ani
+      // razu w trybie deweloperskim. To nie jest teoretyczne: pomiary z B4
+      // pokazaly, ze przy nawigacji klientowej licznik montowan rosnie o dwa
+      // na kazde wejscie.
+      poZakonczeniu: zapiszZagrane,
     });
   }
 
@@ -93,6 +137,25 @@ export function ZegarScenyProvider({ czasTrwania = CALOSC_MS, children }) {
 //  okregi zostajace na ekranie — bez jednego bledu w konsoli. Zegar zna te
 //  liczbe, wiec ma ja podac; nikt nie ma jej zgadywac.
 // =============================================================================
+// =============================================================================
+//  usePodtrzymanieSceny()
+//
+//  Zwraca podtrzymaj() z silnika: uchwyt, ktory trzyma petle przy zyciu, gdy
+//  scena juz sie skonczyla. Potrzebuja tego rzeczy, ktore dzieja sie PO
+//  animacji i nie sa jej czescia — oko agenta i pierscien logowania.
+//  Szczegoly i uzasadnienie, dlaczego nie ma tu drugiej petli rAF, przy samym
+//  podtrzymaj() w _lib/silnikZegara.js.
+// =============================================================================
+export function usePodtrzymanieSceny() {
+  const silnik = useContext(KontekstZegara);
+  if (silnik === null) {
+    throw new Error(
+      "usePodtrzymanieSceny wymaga <ZegarScenyProvider> wyzej w drzewie.",
+    );
+  }
+  return silnik.podtrzymaj;
+}
+
 export function useKlatka(naKlatke) {
   const silnik = useContext(KontekstZegara);
 
