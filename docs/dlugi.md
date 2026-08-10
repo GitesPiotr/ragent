@@ -179,6 +179,52 @@ relacji, `23502` to złamany więz) zamiast po napisie w treści, i poprawić ob
 ścieżki. Dopóki tego nie ma, **ostrzeżenia w skryptach konsolowych należy
 ignorować** — nie znaczy tego, co pisze.
 
+### Komunikat o progu 50 na mapie opisuje regułę, która już nie obowiązuje
+
+`app/kreator-rag/_components/MapaFragmentow.jsx:2013-2035` rozgałęzia się na
+`dane.chunkCount < dane.minChunks` i pisze jedno z dwojga:
+
+> Mapa pojawi się po przekroczeniu progu **50** fragmentów z wektorem —
+> i od razu **w całości, nie punkt po punkcie**.
+
+> **Próg przekroczony.** Rzutowanie policzy się **po zakończeniu indeksowania**
+> dokumentu — osie powstają raz, z całego zbioru, więc mapa czeka na komplet.
+
+**Oba zdania są dziś nieprawdziwe dla ścieżki klienckiej**, i to w trzech
+punktach naraz:
+
+| co mówi napis | jak jest naprawdę |
+|---|---|
+| mapa czeka na **50** | widok buduje rzutowanie sam, gdy tylko `canBuild`, czyli od **3** fragmentów (`map.js:481`, `pca.js:29`); `buildCollectionProjection` też wymaga tylko 3 (`map.js:224-229`) |
+| pojawi się **w całości** | pojawia się, a potem **przyrasta punkt po punkcie** — kolejne partie dokłada `dolaczFragmenty` |
+| policzy się **po zakończeniu** | liczy się **w trakcie**, z warunku w `MapaFragmentow.jsx:818` |
+
+**Próg 50 nie jest fikcją — tylko dotyczy czego innego.** Rządzi ścieżką
+serwerową: `refreshProjectionAfterIndexing` buduje bazę przy `finished`, jeśli
+liczba fragmentów sięga `config.projection.minChunks` (`map.js:410-412`). To ta
+gałąź działa, gdy nikt nie patrzy na mapę. Napis opisuje ją, stojąc w widoku,
+który jej nie używa.
+
+**Skąd się to wzięło:** zdanie było prawdziwe, dopóki rzutowanie budował
+wyłącznie serwer. Budowę z widoku dostało najpierw okno („wariant A"), a przy
+naprawie podglądu osadzonego — także prawa kolumna strony kolekcji
+(`9ebb546`). Tekst został z poprzedniego układu. Potwierdzone w przeglądarce
+2026-08-10: przy pustej liście dokumentów i **bez** otwartego `?okno=1` punkty
+narysowały się przy 70 fragmentach z wektorem, a licznik ruszył z zera.
+
+**Dlaczego to nie jest kosmetyka:** to jest dokładnie ta klasa napisu, przed
+którą ostrzega reguła 12.9 — interfejs twierdzi coś o mechanizmie, a mechanizm
+robi co innego. Kto czyta „mapa pojawi się po 50", widzi ją przy 70 i nie wie,
+czy to działa dobrze, czy źle. Poprzednia runda diagnozy potknęła się o ten
+napis: został wzięty za opis zamiaru, a był opisem objawu.
+
+Naprawa to sam tekst — **żadnej zmiany zachowania**. Trudność jest redakcyjna,
+nie techniczna: komunikat musi mówić prawdę dla obu ścieżek naraz, nie
+obiecywać kolejności, której nikt nie gwarantuje, i nie sugerować progu jako
+warunku, skoro warunkiem jest `canBuild`. Warto przy okazji rozstrzygnąć, czy
+ułamek `N / 50` ma nadal sens, skoro mianownik nie jest już tym, na co się
+czeka.
+
 ---
 
 ## Nazwa
