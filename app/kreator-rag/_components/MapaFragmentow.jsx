@@ -458,17 +458,57 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
   //  i `projectionBuilt`. Nie dopisuje ani jednego punktu i nie dotyka
   //  współrzędnych — poniżej progu żadnych współrzędnych po prostu nie ma.
   // =============================================================================
+  // DOCIĄGNIĘCIE STANU — JEDNORAZOWE, NIE PRZY KAŻDEJ PARTII.
+  //
+  // Obie ścieżki naprawy (licznik i partia z współrzędnymi) kończą się tym samym:
+  // „nasz stan jest przestarzały, przeczytaj wszystko". Bez zamka wołałyby `pobierz`
+  // przy KAŻDEJ kolejnej partii, dopóki odpowiedź nie wróci — a przy partii co
+  // kilka sekund i pełnym odczycie z sąsiedztwem (~1,6 MB) to jest lawina żądań
+  // o to samo. Zamek jest refem, nie stanem: ma działać natychmiast, a nie po
+  // przerysowaniu.
+  //
+  // Z SĄSIEDZTWEM, tak jak domknięcie: to jest odczyt „raz, ale kompletny".
+  // Bez `neighbors=1` nowe punkty przyszłyby z pustą listą sąsiadów i tryb
+  // Połączenia zostałby pusty aż do następnego pełnego odczytu.
+  const dociaganieRef = useRef(false);
+  const dociagnijStan = useCallback(async () => {
+    if (dociaganieRef.current) return;
+    dociaganieRef.current = true;
+    try {
+      await pobierz(true, { sasiedzi: true });
+    } finally {
+      dociaganieRef.current = false;
+    }
+  }, [pobierz]);
+
   const odswiezLicznik = useCallback(async () => {
     try {
       const r = await fetch(`/api/rag/collections/${id}/map`, { cache: 'no-store' });
       const j = await r.json();
-      if (j.error || j.projectionBuilt) return; // próg przekroczony — zajmie się tym `recalculated`
+      if (j.error) return;
+      // RZUTOWANIE POWSTAŁO OBOK NAS — i to jest etap 1 naprawy podglądu osadzonego.
+      //
+      // Tu stało `if (j.projectionBuilt) return;` z odesłaniem „zajmie się tym
+      // `recalculated`". To odesłanie było fałszywe: `recalculated` wraca WYŁĄCZNIE
+      // przy `finished` (documents.js woła refreshProjectionAfterIndexing tylko dla
+      // ostatniej partii), więc między zbudowaniem bazy a końcem dokumentu nie
+      // przychodziło nic. Widok osadzony, który nie ma ani odpytywania, ani pulsu,
+      // zostawał wtedy z `projectionBuilt: false` na stałe — a ta flaga zamyka
+      // `dolaczFragmenty` (patrz warunek `!d.projectionBuilt` tam). Zmierzone:
+      // licznik „0 / 50" przy 256 fragmentach z wektorem w bazie.
+      //
+      // Rozbieżność między serwerem a naszą flagą jest jedynym sygnałem, jaki tu
+      // mamy, więc na niej stoi decyzja o dociągnięciu całości.
+      if (j.projectionBuilt) {
+        if (!daneRef.current || !daneRef.current.projectionBuilt) await dociagnijStan();
+        return;
+      }
       setDane((d) => (d && !d.projectionBuilt ? { ...d, chunkCount: j.chunkCount } : d));
     } catch {
       // Licznik jest odczytem pomocniczym. Gdy padnie, indeksowanie idzie dalej,
       // a następna partia spróbuje ponownie.
     }
-  }, [id]);
+  }, [id, dociagnijStan]);
 
   // Znacznik „na żywo" gaśnie sam, gdyby ostatnia partia nigdy nie przyszła.
   // Dzieje się tak po „Przerwij": pętla staje bez odpowiedzi z `finished: true`,
@@ -501,6 +541,23 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
         return;
       }
       if (json.newChunks && json.newChunks.length) {
+        // ETAP 2: PARTIA ZE WSPÓŁRZĘDNYMI PRZY NASZEJ FLADZE `false` TO NIE JEST
+        // „nic do roboty" — TO JEST DOWÓD, ŻE NASZ STAN JEST PRZESTARZAŁY.
+        //
+        // Serwer nie odesłałby zrzutowanych fragmentów, gdyby bazy rzutowania nie
+        // było (projectPendingChunks bez `coll.projection` zwraca pustą listę).
+        // Skoro więc przyszły, a my wciąż mamy `projectionBuilt: false`, to znaczy,
+        // że baza powstała bez naszego udziału — i wtedy `dolaczFragmenty` wyrzuca
+        // CAŁĄ partię na swoim warunku wejścia, po cichu. Tak ginęły wszystkie
+        // punkty w podglądzie osadzonym: kanał działał, ładunek był odrzucany.
+        //
+        // Dociągamy komplet zamiast doklejać: przy nieaktualnej fladze nie wiemy
+        // też, ile fragmentów minęło nas wcześniej, więc doklejenie samej tej partii
+        // dałoby mapę z dziurą.
+        if (!daneRef.current || !daneRef.current.projectionBuilt) {
+          dociagnijStan();
+          return;
+        }
         dolaczFragmenty(json.newChunks, json.documents);
         return;
       }
@@ -508,7 +565,7 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
       // aktualny jest sam licznik.
       odswiezLicznik();
     },
-    [dolaczFragmenty, pobierz, odswiezLicznik]
+    [dolaczFragmenty, pobierz, odswiezLicznik, dociagnijStan]
   );
 
   // Kanał dla rodzica: gdy indeksowanie rusza z listy dokumentów, odpowiedzi /embed
@@ -702,7 +759,7 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
   }, [indeksujeSie, osadzona, pobierz]);
 
   // =============================================================================
-  //  OKNO TEŻ BUDUJE RZUTOWANIE (wariant A)
+  //  KAŻDY WIDOK BUDUJE RZUTOWANIE (wariant A, rozszerzony o osadzony — etap 3a)
   //
   //  Zdanie „osie powstają raz, z całego zbioru" jest słuszne co do intencji, ale
   //  widok osadzony i tak buduje przy końcu dokumentu — więc dotąd mieliśmy wariant
@@ -710,14 +767,23 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
   //  pokazuje „Rzutowanie policzy się po zakończeniu indeksowania". Zgodność obu
   //  widoków jest ważniejsza niż oszczędność jednego przeliczenia.
   //
-  //  RÓWNOLEGŁEJ BUDOWY PILNUJE BAZA, nie ten warunek. `budowanieRef` odsiewa tylko
-  //  drugie wywołanie z TEJ SAMEJ karty; dwa różne okna zatrzymuje dopiero zapis
-  //  warunkowy w buildCollectionProjection (patrz komentarz „STRAŻNIK" w map.js).
+  //  `osadzona` ZDJĘTE Z WARUNKU. Dopóki tu stało, podgląd w prawej kolumnie nie
+  //  budował bazy nigdy i cała jego żywotność zależała od tego, czy ktoś ma
+  //  otwarte drugie okno na tę samą kolekcję. Otwarte — okno budowało, podgląd
+  //  dostawał partie, których nie umiał przyjąć (etap 2). Zamknięte — baza
+  //  powstawała dopiero przy `finished` i mapa pojawiała się jednym skokiem na
+  //  końcu. Widok osadzony ma zachowywać się jak okno, więc buduje tak samo.
+  //
+  //  RÓWNOLEGŁEJ BUDOWY PILNUJE BAZA, nie ten warunek — i to jest powód, dla
+  //  którego zdjęcie `osadzona` jest bezpieczne mimo dwóch widoków na jednym
+  //  ekranie. `budowanieRef` odsiewa tylko drugie wywołanie z TEJ SAMEJ karty;
+  //  dwa widoki obok siebie zatrzymuje dopiero zapis warunkowy
+  //  w buildCollectionProjection (patrz komentarz „STRAŻNIK" w map.js).
   //  Odpowiedź `ubiegnietoNas` znaczy „mapa jest, ale zbudował ją ktoś inny" —
   //  wtedy wystarczy odczyt.
   const budowanieRef = useRef(false);
   useEffect(() => {
-    if (osadzona || !dane || dane.projectionBuilt || !dane.canBuild || !indeksujeSie) return;
+    if (!dane || dane.projectionBuilt || !dane.canBuild || !indeksujeSie) return;
     if (budowanieRef.current) return;
     budowanieRef.current = true;
     (async () => {
@@ -725,12 +791,12 @@ export default function MapaFragmentow({ collectionId, osadzona = false, trybOkn
         await fetch(`/api/rag/collections/${id}/map/build`, { method: 'POST' });
         await pobierz(true, { sasiedzi: true });
       } catch {
-        // Budowa z okna jest ścieżką pomocniczą — przy porażce zostaje przycisk.
+        // Budowa z widoku jest ścieżką pomocniczą — przy porażce zostaje przycisk.
       } finally {
         budowanieRef.current = false;
       }
     })();
-  }, [osadzona, dane, indeksujeSie, id, pobierz]);
+  }, [dane, indeksujeSie, id, pobierz]);
 
   // --- krawędzie 2D: liczone RAZ na zmianę danych, nie na klatkę (12.6) ------------
 
