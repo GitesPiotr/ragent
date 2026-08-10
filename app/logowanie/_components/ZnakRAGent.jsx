@@ -8,6 +8,7 @@ import {
   zanik,
 } from "../_lib/harmonogramZnaku.js";
 import { sledzKontur, uproscLamana } from "../_lib/obrysNapisu.js";
+import { czyRuchOgraniczony } from "../_lib/ruchOgraniczony.js";
 import { zlagodzenie } from "../_lib/klatkaGlowy.js";
 import { useKlatka } from "./ZegarSceny.jsx";
 import styles from "../logowanie.module.css";
@@ -213,6 +214,20 @@ export function ZnakRAGent() {
       odcinki: [],
       kolory: null,
       gotowy: false,
+
+      // RUCH OGRANICZONY: NIE ODKLADAMY POMIARU, TYLKO GO NIE ROBIMY.
+      //
+      // Obrys sluzy wylacznie animacji — przy ruchu ograniczonym nie zostanie
+      // narysowana ani jedna jego klatka, wiec caly pomiar bylby praca za nic:
+      // fillText, getImageData na 92 690 pikselach, skan Moore'a
+      // i Douglas-Peucker, zmierzone 4-19 ms. Odlozenie ich przez
+      // requestIdleCallback nadal by je wykonalo, tylko pozniej.
+      //
+      // Sciezki wyswietlania nie trzeba pisac drugi raz: `gotowy` zostaje
+      // falszywe, a zabezpieczenie z B4 — pomyslane na obrys, ktory jeszcze
+      // sie nie policzyl — pokazuje wtedy sam napis w pelni widoczny. Tu jest
+      // to nie awaryjne wyjscie, tylko stan docelowy.
+      pomijamy: czyRuchOgraniczony(),
     };
     stanRef.current = stan;
 
@@ -261,7 +276,7 @@ export function ZnakRAGent() {
     // czyli o 93 procent. Te 125 punktow i 125 odcinkow to caly koszt klatki
     // napisu — liczba potrzebna przy ocenie kryterium B7.
     const odlozPomiar = () => {
-      if (!zywy || stan.gotowy) return;
+      if (!zywy || stan.gotowy || stan.pomijamy) return;
       if (typeof window.requestIdleCallback === "function") {
         idPrzestoju = window.requestIdleCallback(zmierz, { timeout: 1000 });
       } else {
@@ -284,7 +299,7 @@ export function ZnakRAGent() {
     const naZmianeRozmiaru = () => {
       clearTimeout(idRozmiaru);
       idRozmiaru = setTimeout(() => {
-        if (!zywy) return;
+        if (!zywy || stan.pomijamy) return;
         const szerokosc = Math.round(korzen.getBoundingClientRect().width);
         if (szerokosc === stan.W) return; // prototyp: W !== now
         stan.gotowy = false;

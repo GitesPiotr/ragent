@@ -2,6 +2,7 @@
 
 import { createContext, useContext, useEffect, useRef } from "react";
 import { CALOSC_MS } from "../_lib/harmonogram.js";
+import { czyRuchOgraniczony } from "../_lib/ruchOgraniczony.js";
 import { utworzSilnik } from "../_lib/silnikZegara.js";
 
 // =============================================================================
@@ -31,21 +32,6 @@ import { utworzSilnik } from "../_lib/silnikZegara.js";
 // =============================================================================
 
 const KontekstZegara = createContext(null);
-
-// Prototyp, linie 441-442: to samo pytanie zadane w try/catch, z komentarzem
-// "nie wolno przerwać startu pętli". Powod jest ten sam: matchMedia potrafi nie
-// istniec w nietypowym srodowisku, a brak preferencji nie jest bledem.
-function czyRuchOgraniczony() {
-  try {
-    return (
-      typeof window !== "undefined" &&
-      typeof window.matchMedia === "function" &&
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    );
-  } catch {
-    return false;
-  }
-}
 
 // ZNACZNIK SESJI. Przezywa odswiezenie strony, ginie razem z karta — dokladnie
 // tyle, ile trzeba, zeby animacja zagrala raz na wizyte, a nie przy kazdym

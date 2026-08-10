@@ -10,6 +10,7 @@ import {
   zbudujHarmonogram,
 } from "../_lib/harmonogram.js";
 import { zbudujRozproszenie } from "../_lib/rozproszenie.js";
+import { czyRuchOgraniczony } from "../_lib/ruchOgraniczony.js";
 import {
   czyUsunacSpaw,
   nieprzezroczystoscHelmu,
@@ -97,14 +98,30 @@ function rysujKlatke(s, t, now, czasTrwania) {
   // --- wizjer wygaszony, linie 368-370 ---
   // "wygaszony wizjer przygasa razem z helmem, inaczej swiecilby jasniej niz kask"
   const okoWlaczone = s.oko.wlaczone();
-  s.eyeK += ((okoWlaczone ? 0 : 1) - s.eyeK) * 0.18;
+
+  // RUCH OGRANICZONY: OKO PRZELACZA SIE SKOKOWO. Wygladzanie wykladnicze
+  // z linii 369 prototypu to tez ruch — kilkanascie klatek dochodzenia do
+  // wartosci docelowej. Przy ograniczonym ruchu wizjer po prostu jest zapalony
+  // albo zgaszony.
+  if (s.ruchOgraniczony) {
+    s.eyeK = okoWlaczone ? 0 : 1;
+  } else {
+    s.eyeK += ((okoWlaczone ? 0 : 1) - s.eyeK) * 0.18;
+  }
   s.wizjer.setAttribute("opacity", s.eyeK.toFixed(3));
 
   // --- rozblysk wizjera, linie 399-403 ---
   // Dwa niezalezne powody zapalenia, brany jest mocniejszy: przelot po
   // domknieciu ostatniego spawu i puls od chwili zapalenia oka.
+  //
+  // ROZBLYSK GASNIE CALKIEM PRZY RUCHU OGRANICZONYM, nie zostaje statyczny.
+  // Rozblysk JEST pulsowaniem — oba jego skladniki to sinusy po czasie. Halo
+  // zamrozone na dowolnej fazie byloby nowym stanem wizualnym, ktorego nikt
+  // nie zaprojektowal, i tym jasniejszym, im szczesliwiej trafilo w faze.
+  // Sygnal „oko sie zapalilo" niesie sam wizjer, ktory przelacza sie skokowo
+  // z 1 na 0 — to widac i bez halo.
   let fl = 0;
-  if (okoWlaczone) {
+  if (okoWlaczone && !s.ruchOgraniczony) {
     if (s.harmonogram.ostatniSzew !== null) {
       // Dlug z B1 po raz drugi: bez tego warunku null zszedlby do zera
       // i przelot liczylby sie od poczatku sceny, ktorej szwow nie ma.
@@ -121,7 +138,13 @@ function rysujKlatke(s, t, now, czasTrwania) {
   // Zwolnienie uchwytu w chwili zgaszenia oka zatrzymaloby petle w polowie
   // tego dochodzenia i wizjer zostalby zapalony — ta sama klasa resztki,
   // co spawy zostajace po przebiegu w B3.
-  if (!okoWlaczone && fl === 0 && Math.abs(1 - s.eyeK) < 0.002) {
+  if (s.ruchOgraniczony) {
+    // Nic sie nie wygasza ani nie pulsuje, wiec JEDNA KLATKA NA ZMIANE STANU
+    // wystarczy — uchwyt wraca od razu i petla nie chodzi przez cale logowanie
+    // po to, zeby przemalowywac ten sam obraz. Kolejna zmiana stanu oka
+    // zamowi wlasna klatke: podtrzymanie bierze zarowno zapal(), jak i zgas().
+    s.oko.oddajKlatki();
+  } else if (!okoWlaczone && fl === 0 && Math.abs(1 - s.eyeK) < 0.002) {
     s.eyeK = 1;
     s.wizjer.setAttribute("opacity", "1.000");
     s.oko.oddajKlatki();
@@ -320,6 +343,10 @@ export function Glowa() {
       spawy: [],
       rozblysk: refRozblysk.current,
       oko: sterowanie.oko,
+      // Czytane RAZ na zamontowanie, nie co klatke: matchMedia buduje przy
+      // kazdym wywolaniu nowy obiekt zapytania, a klatek jest szescdziesiat
+      // na sekunde.
+      ruchOgraniczony: czyRuchOgraniczony(),
       // Prototyp, linia 369: eyeK dochodzi wykladniczo do (eyeOn ? 0 : 1).
       // Scena startuje z okiem wylaczonym, wiec wartosc spoczynkowa to 1.
       eyeK: 1,

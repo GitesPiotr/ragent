@@ -55,8 +55,22 @@ function utworzSterowanie(podtrzymaj) {
       // petli w tej chwili zostawiloby wizjer zapalony na zawsze — ta sama
       // klasa resztki, co spawy zostajace po przebiegu w B3. Uchwyt oddaje
       // dopiero Glowa, kiedy zobaczy, ze nie ma juz czego wygaszac.
+      //
+      // ZGASZENIE TEZ ZAMAWIA KLATKE. Przy zwyklym ruchu uchwyt jest juz
+      // wziety z zapal() i to nic nie zmienia. Przy ruchu ograniczonym Glowa
+      // oddaje go po JEDNEJ klatce, bo nie ma czego wygaszac — wiec w chwili
+      // zgaszenia nikt by nie trzymal petli i wizjer zostalby zapalony
+      // na zawsze. Ta sama klasa resztki, co spawy w B3.
+      //
+      // TO JUZ TRZECI RAZ TEN SAM WZORZEC W ETAPIE B: spawy zostajace po
+      // przebiegu (B3), wizjer zatrzymany w polowie wygaszania (B5) i to.
+      // Regula, ktora z tego wychodzi: KTO BIERZE UCHWYT, ODDAJE GO DOPIERO
+      // PO SKONCZENIU SPRZATANIA, NIE PO OSTATNIEJ ZMIANIE WARTOSCI. Zmiana
+      // wartosci jest poczatkiem dochodzenia do stanu spoczynkowego, nie
+      // jego koncem.
       zgas() {
         okoWlaczone = false;
+        if (zwolnijKlatki === null) zwolnijKlatki = podtrzymaj();
       },
 
       // Wola Glowa: „wizjer wrocil do spoczynku, nie potrzebuje wiecej klatek".

@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { KRESEK, ileSwiecacych } from "../_lib/pierscien.js";
+import { czyRuchOgraniczony } from "../_lib/ruchOgraniczony.js";
 import { useKlatka, usePodtrzymanieSceny } from "./ZegarSceny.jsx";
 import { useSterowanieScena } from "./SterowanieScena.jsx";
 import styles from "../logowanie.module.css";
@@ -110,6 +111,31 @@ export function Pierscien({ children }) {
       // z `now`, ktory kazda klatka i tak przynosi. Uzasadnienie przy
       // podtrzymaj() w _lib/silnikZegara.js.
       uruchom(ms) {
+        // =====================================================================
+        //  RUCH OGRANICZONY ZDEJMUJE PROG. To jest ta roznica, dla ktorej w B5
+        //  nie zlalismy w jedno dwoch powodow pominiecia przebiegu: znacznik
+        //  sesji progu NIE zdejmuje (animacja juz byla, ale czekanie zostaje),
+        //  ruch ograniczony zdejmuje.
+        //
+        //  Logowanie rozstrzyga sie wtedy natychmiast po odpowiedzi serwera —
+        //  bez dwoch sekund czekania na przebieg, ktorego i tak nie bedzie.
+        //
+        //  KRESKI SKOKOWO, WSZYSTKIE NARAZ, a nie „wcale". Przy zerowym progu
+        //  nie ma czego animowac: przebieg trwalby tyle, co odpowiedz serwera,
+        //  wiec kreski mrugnelyby i zgasly. Zamiast tego pierscien zapala sie
+        //  caly w jednej klatce i tak zostaje do konca logowania — statyczny
+        //  wskaznik pracy zamiast ruchu. Uzytkownik nadal widzi, ze cos sie
+        //  dzieje; nie widzi tylko, jak to sie dzieje.
+        //
+        //  Preferencja jest czytana TU, przy kazdym logowaniu, a nie raz przy
+        //  montowaniu — patrz komentarz w _lib/ruchOgraniczony.js.
+        // =====================================================================
+        if (czyRuchOgraniczony()) {
+          if (stan.biegnie) zakoncz();
+          ustaw(1);
+          return Promise.resolve();
+        }
+
         return new Promise((gotowe) => {
           // Ponowne uruchomienie w trakcie biegu domyka poprzednia obietnice,
           // zeby nikt nie zostal z wiszacym `await`.
