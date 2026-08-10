@@ -16,7 +16,7 @@ import {
   kluczModelu,
   FILTRY_DOMYSLNE,
 } from "@/lib/settings/katalogModeli";
-import { POKAZ_DOSTAWCE_LOKALNA } from "@/lib/config/models";
+import { POKAZ_DOSTAWCE_LOKALNA, POKAZ_DOSTAWCE_OPENAI } from "@/lib/config/models";
 import wspolne from "../ustawienia.module.css";
 import styles from "./modele.module.css";
 
@@ -93,9 +93,14 @@ function KartaDostawcow({ status, ollama, odswiezKatalog, odswiezanie }) {
       detal: status?.anthropic?.configured ? "Klucz ustawiony." : "Brak klucza ANTHROPIC_API_KEY." },
     { id: "openai", nazwa: "OpenAI", stan: status?.openai?.configured ? "ok" : "warn",
       detal: status?.openai?.configured ? "Klucz ustawiony." : "Brak klucza OPENAI_API_KEY." },
-    // TRYB POKAZU: wiersz Ollamy odsiany na końcu, a nie usunięty z tablicy —
-    // dzięki temu widać, że to ukrycie, nie brak obsługi dostawcy.
-  ].filter((w) => POKAZ_DOSTAWCE_LOKALNA || w.id !== "ollama");
+    // TRYB POKAZU: wiersze Ollamy i OpenAI odsiane na końcu, a nie usunięte
+    // z tablicy — dzięki temu widać, że to ukrycie, nie brak obsługi dostawcy.
+    // Wiersz „OpenRouter" zostaje: to inny identyfikator i inny dostawca.
+  ].filter(
+    (w) =>
+      (POKAZ_DOSTAWCE_LOKALNA || w.id !== "ollama") &&
+      (POKAZ_DOSTAWCE_OPENAI || w.id !== "openai"),
+  );
 
   const klasaDiody = { ok: wspolne.dotOk, warn: wspolne.dotWarn, error: wspolne.dotError };
 

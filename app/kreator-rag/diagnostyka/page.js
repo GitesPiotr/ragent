@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { komunikatBledu } from '@/app/kreator-rag/_lib/bledy.js';
 import { stanSrodowiska } from '@/app/kreator-rag/_lib/stanDiagnostyki.js';
+import { POKAZ_DOSTAWCE_LOKALNA } from '@/lib/config/models';
 import styles from '../kreator-rag.module.css';
 
 // UI nigdy nie sięga do bazy ani do rdzenia — dane wyłącznie z /api/rag/status.
@@ -81,8 +82,12 @@ export default function DiagnostykaPage() {
       {/* Nagłówek i podtytuł pochodziły z czasów, gdy moduł był osobną aplikacją:
           „RAG — Diagnostyka" powtarzało nazwę zakładki z sidebara, a „Sesja 0"
           to numer etapu budowy, który użytkownikowi nie mówi nic. */}
+      {/* Podtytuł WYLICZA to, co niżej widać. W trybie pokazu karta Ollamy
+          znika, więc wymienianie jej tutaj obiecywałoby sekcję, której nie ma. */}
       <p className={styles.podtytul}>
-        Stan środowiska: Supabase, pgvector, Ollama.
+        {POKAZ_DOSTAWCE_LOKALNA
+          ? 'Stan środowiska: Supabase, pgvector, Ollama.'
+          : 'Stan środowiska: Supabase, pgvector.'}
       </p>
 
       {/* Ten sam werdykt, który świeci na diodzie w rogu pozostałych stron — liczony
@@ -127,26 +132,37 @@ export default function DiagnostykaPage() {
             komunikat={dane.dimCheck.message}
           />
 
-          <Karta
-            tytul="Ollama"
-            ok={dane.ollama.ok}
-            kod={dane.ollama.code}
-            komunikat={`${dane.ollama.message} (${dane.ollama.url})`}
-          >
-            {dane.models && dane.models.length ? (
-              <ul className={styles.modele}>
-                {dane.models.map((m) => (
-                  <li key={m.name}>{m.name}</li>
-                ))}
-              </ul>
-            ) : null}
-          </Karta>
+          {/* TRYB POKAZU: karta Ollamy razem z listą pobranych modeli znika.
+              Sam odczyt zostaje — /api/rag/status i tak ją sprawdza, a werdykt
+              wyżej wie, kiedy jej stan ma znaczenie (stanDiagnostyki.js pyta
+              najpierw o embedProvider). Ukrywamy widok, nie pomiar. */}
+          {POKAZ_DOSTAWCE_LOKALNA ? (
+            <Karta
+              tytul="Ollama"
+              ok={dane.ollama.ok}
+              kod={dane.ollama.code}
+              komunikat={`${dane.ollama.message} (${dane.ollama.url})`}
+            >
+              {dane.models && dane.models.length ? (
+                <ul className={styles.modele}>
+                  {dane.models.map((m) => (
+                    <li key={m.name}>{m.name}</li>
+                  ))}
+                </ul>
+              ) : null}
+            </Karta>
+          ) : null}
 
           <div className={styles.meta}>
-            <div>
-              Dostawca embeddingów: <code>{dane.config.embedProvider}</code>, model:{' '}
-              <code>{dane.config.embedModel}</code>, wymiar: <code>{dane.config.embedDim}</code>
-            </div>
+            {/* Wiersz o dostawcy embeddingów potrafi wypisać wprost „ollama",
+                więc w trybie pokazu znika razem z kartą. Prefiks tabel
+                i brakujące zmienne zostają — nie niosą nazwy dostawcy. */}
+            {POKAZ_DOSTAWCE_LOKALNA ? (
+              <div>
+                Dostawca embeddingów: <code>{dane.config.embedProvider}</code>, model:{' '}
+                <code>{dane.config.embedModel}</code>, wymiar: <code>{dane.config.embedDim}</code>
+              </div>
+            ) : null}
             <div>
               Prefiks tabel: <code>{dane.config.tablePrefix}</code>
             </div>

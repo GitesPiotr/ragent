@@ -6,7 +6,7 @@ import { listActiveAgents } from "@/lib/data/agents";
 import { useSettings } from "@/lib/settings/SettingsContext";
 import { useDopuszczone } from "@/lib/settings/DopuszczoneContext";
 import { listaModeli, modeleOllamy } from "@/lib/settings/dopuszczoneModele";
-import { POKAZ_DOSTAWCE_LOKALNA } from "@/lib/config/models";
+import { POKAZ_DOSTAWCE_LOKALNA, POKAZ_DOSTAWCE_OPENAI } from "@/lib/config/models";
 import { Avatar } from "./Avatar";
 import styles from "./chats.module.css";
 
@@ -57,8 +57,14 @@ export function RunnerLabel({
 // w lib/config/models.js NIE dosięgłoby tego miejsca — ta tablica jest wpisana
 // tu od nowa i o tamtej nie wie. Przełącznik jest wspólny, żeby jedno miejsce
 // dalej decydowało o wszystkich czterech ekranach.
+// TE WARTOŚCI TO IDENTYFIKATORY DOSTAWCÓW, NIE MODELI. Odsianie „openai"
+// zabiera dostawcę OpenAI; modele OpenRoutera o identyfikatorach zaczynających
+// się od „openai/" (jak openai/gpt-5.6-terra) idą w grupie „openrouter"
+// i zostają — patrz pętla po PICKER_PROVIDERS niżej, która pyta o dostawcę.
 const PICKER_PROVIDERS = ["anthropic", "openai", "openrouter", "ollama"].filter(
-  (id) => POKAZ_DOSTAWCE_LOKALNA || id !== "ollama",
+  (id) =>
+    (POKAZ_DOSTAWCE_LOKALNA || id !== "ollama") &&
+    (POKAZ_DOSTAWCE_OPENAI || id !== "openai"),
 );
 const PREFIKS = {
   anthropic: "",

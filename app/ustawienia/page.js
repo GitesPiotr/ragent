@@ -2,7 +2,11 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useSettings } from "@/lib/settings/SettingsContext";
-import { PROVIDERS } from "@/lib/config/models";
+import {
+  PROVIDERS,
+  POKAZ_DOSTAWCE_LOKALNA,
+  POKAZ_DOSTAWCE_OPENAI,
+} from "@/lib/config/models";
 import { useDopuszczone } from "@/lib/settings/DopuszczoneContext";
 import { listaModeli, modeleMentora, ZRODLO } from "@/lib/settings/dopuszczoneModele";
 import {
@@ -166,26 +170,39 @@ function ConnectionsSection({ settings, updateSettings }) {
             włączeniem izolacji danych (RLS) — patrz komentarz w trasie. */}
         <StatusRow name="Konto (sesja na serwerze)" status={diag?.account} />
         <StatusRow name="Anthropic (klucz API)" status={diag?.anthropic} />
-        <StatusRow name="OpenAI (klucz API)" status={diag?.openai} />
-        <StatusRow name="Ollama (lokalne modele)" status={diag?.ollama} />
+        {POKAZ_DOSTAWCE_OPENAI && (
+          <StatusRow name="OpenAI (klucz API)" status={diag?.openai} />
+        )}
+        {POKAZ_DOSTAWCE_LOKALNA && (
+          <StatusRow name="Ollama (lokalne modele)" status={diag?.ollama} />
+        )}
       </div>
 
-      <div className={styles.rowsDivider} />
+      {/* Adres serwera Ollamy znika razem z jej wierszem stanu — pole bez
+          pozycji, do której się odnosi, byłoby zagadką. Wartość `ollamaUrl`
+          zostaje w ustawieniach nietknięta i wraca z przełącznikiem.
+          Kreska rozdzielająca też znika: bez pola niżej rozdzielałaby listę
+          stanu od pustki. */}
+      {POKAZ_DOSTAWCE_LOKALNA && (
+        <>
+          <div className={styles.rowsDivider} />
 
-      <Row
-        label="Adres serwera Ollama"
-        desc={`Używany do wykrywania lokalnych modeli. Domyślnie ${DEFAULT_OLLAMA_URL}.`}
-        htmlFor="ollamaUrl"
-      >
-        <input
-          id="ollamaUrl"
-          type="text"
-          className={styles.textInput}
-          value={settings.ollamaUrl}
-          onChange={(e) => updateSettings({ ollamaUrl: e.target.value })}
-          placeholder={DEFAULT_OLLAMA_URL}
-        />
-      </Row>
+          <Row
+            label="Adres serwera Ollama"
+            desc={`Używany do wykrywania lokalnych modeli. Domyślnie ${DEFAULT_OLLAMA_URL}.`}
+            htmlFor="ollamaUrl"
+          >
+            <input
+              id="ollamaUrl"
+              type="text"
+              className={styles.textInput}
+              value={settings.ollamaUrl}
+              onChange={(e) => updateSettings({ ollamaUrl: e.target.value })}
+              placeholder={DEFAULT_OLLAMA_URL}
+            />
+          </Row>
+        </>
+      )}
     </div>
   );
 }
