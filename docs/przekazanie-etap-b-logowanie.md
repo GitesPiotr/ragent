@@ -1,10 +1,10 @@
 # Ekran logowania RAGent — etap B: animacja
 
 > Dokument roboczy etapu B. Etap A zamknięty i scalony do `master`.
-> Etap B w toku: B0 do B6 zamknięte. Zostaje przegląd punktów z sekcji 5,
-> pomiar pod kryterium B7 i — warunkowo — sam B7. Scena animuje się w całości,
-> razem z ruchem ograniczonym. B8 (miganie na czerwono) odwołany, patrz sekcja 4.
-> Wersja z 10 sierpnia 2026, po sesji 4.
+> **Etap B zamknięty.** B0 do B6 wykonane, B7 **odpadł po pomiarze** (sekcja 4),
+> B8 odwołany zakresowo. Scena animuje się w całości, razem z ruchem
+> ograniczonym.
+> Wersja z 11 sierpnia 2026, po sesji 5.
 
 ---
 
@@ -280,16 +280,43 @@ i ma zostać — działa z menedżerami haseł i obsługuje Enter.
 
 ### Wydajność — ryzyko jest gdzie indziej, niż się wydaje
 
-| źródło kosztu | skala |
-|---|---|
-| 443 elementy SVG, każdy z `setAttribute` co klatkę | ~890 zapisów atrybutów na klatkę ≈ **53 000/s** przy 60 fps |
-| `getComputedStyle` w pętli rysującej płótna (592, 606–607) | setki wymuszonych odczytów stylu na klatkę |
-| `trace()` (516–536) — skan Moore'a po `getImageData` + Douglas-Peucker | ~117 000 pikseli, **synchronicznie**, w oknie pierwszego malowania |
-| `mix-blend-mode: screen` na `#flare` (230) | osobna warstwa kompozycji, potrafi wyłączyć szybkie ścieżki GPU |
+| źródło kosztu | przewidywana skala | co pokazał pomiar (sesja 5) |
+|---|---|---|
+| 443 elementy SVG, każdy z `setAttribute` co klatkę | ~890 zapisów atrybutów na klatkę ≈ **53 000/s** przy 60 fps | **skala się zgadza, koszt nie potwierdzony.** Layout 143,5 ms (2,3%) i ani jedna pozycja siatki pod nim |
+| `getComputedStyle` w pętli rysującej płótna (592, 606–607) | setki wymuszonych odczytów stylu na klatkę | zdjęte w B4 — odczyt wyszedł poza pętlę |
+| `trace()` (516–536) — skan Moore'a po `getImageData` + Douglas-Peucker | ~117 000 pikseli, **synchronicznie**, w oknie pierwszego malowania | **92 690 pikseli**, a najdroższy okazał się `getImageData`, nie skan Moore'a |
+| `mix-blend-mode: screen` na `#flare` (230) | osobna warstwa kompozycji, potrafi wyłączyć szybkie ścieżki GPU | nie mierzone osobno, nie wypłynęło w zestawieniu |
 
-Najgroźniejsze jest `trace()` razem z budową 443 węzłów: oba są synchroniczne
-i dzieją się **przed pierwszym malowaniem**, czyli dokładnie wtedy, gdy użytkownik
-chce zacząć pisać w polu e-mail.
+Szacunek 890 zapisów na klatkę **zostaje jako opis skali** — liczba elementów
+i zapisów jest prawdziwa. Zmierzony koszt tej skali jednak **nie potwierdza**:
+zapisy dzieją się, ale nie kosztują tego, czego się po nich spodziewano.
+Rozstrzygnięcie i przyczyna — przy kryterium B7 w sekcji 4.
+
+Zwiad typował tak: *najgroźniejsze jest `trace()` razem z budową 443 węzłów,
+bo oba są synchroniczne i dzieją się przed pierwszym malowaniem, czyli
+dokładnie wtedy, gdy użytkownik chce zacząć pisać w polu e-mail.* Kierunek był
+trafny — koszt faktycznie siedzi w oknie pierwszego malowania i faktycznie
+w obsłudze napisu — ale **konkretny winowajca był wskazany źle** (patrz niżej:
+`getImageData`, nie skan Moore'a).
+
+**Pomiar z sesji 5.** Dławienie procesora 4× potwierdzone, nagranie 7,08 s,
+pełne przeładowanie z animacją:
+
+| pozycja | czas | udział |
+|---|---|---|
+| Scripting | 4037 ms | 57% |
+| Rendering | 1615 ms | 23% |
+| Painting | 649 ms | 9% |
+| Recalculate Style | 781,3 ms | 12,3% |
+| Layout | 143,5 ms | 2,3% |
+| Paint | 296,5 ms | 4,7% |
+| Pre-paint | 143,1 ms | 2,2% |
+| mediana klatek | 60–63/s | — |
+
+**Najdroższa pozycja renderowania to `Recalculate Style`, i nie stoi za nią
+siatka.** Pod nią siedzi `ZnakRAGent.useEffect` z linii 200 — czyli **napis**,
+który po B4 jest już na canvas. Siatka głowy, dla której planowano B7, nie
+pojawia się w tym zestawieniu wcale.
 
 Obrazy są najmniejszym problemem — po wyjęciu z base64 ważą 21 KB łącznie.
 
@@ -310,7 +337,7 @@ Gałąź `feature/etap-b-animacja` odbita od `master` na `f14443b`.
 | **B5** | pierścień, próg 2000 ms, animacja raz na dokument | zamknięty (`2347b80`) |
 | — | cofnięcie progu z 600 na 2000 | zamknięty (`5e28f42`) |
 | **B6** | `prefers-reduced-motion` obejmuje całą scenę i zdejmuje próg logowania | zamknięty (`e2d5715`) |
-| **B7** | siatka na canvas — **traktowany jako prawdopodobny** | |
+| **B7** | siatka na canvas | **ODPADA** — pomiar sesji 5 nie spełnił żadnego kryterium |
 
 > **B8 odwołany — decyzja zakresowa, nie brak czasu.** Miganie pierścienia
 > i czerwone oko przy nieudanym logowaniu było **rozszerzeniem poza etap B**,
@@ -398,6 +425,10 @@ przeskakuje na koniec tylko głowę, linia 441), i wtedy próg 2000 ms znika.
 
 ### Kryterium B7 — ustalone przed pomiarem
 
+**Poniższy blok zostaje w dokumencie dokładnie w tym brzmieniu, w jakim był
+zapisany PRZED pomiarem.** O to chodzi: ma być widać, że próg nie został
+dopasowany do wyniku.
+
 > Nagranie 6 s od wczytania w DevTools → Performance, dławienie procesora 4×.
 > Przechodzimy na canvas, jeśli zachodzi którekolwiek:
 > **(a)** mediana klatek poniżej 50 fps,
@@ -407,6 +438,56 @@ przeskakuje na koniec tylko głowę, linia 441), i wtedy próg 2000 ms znika.
 Kryterium (c) prawie na pewno zadziała: zapis atrybutów geometrii SVG
 (`x1`, `y1`, `cx`, `cy`) unieważnia układ w każdej obecnej przeglądarce.
 Planuj czas tak, jakby B7 był w zakresie.
+
+### Rozstrzygnięcie — B7 ODPADA
+
+Pomiar sesji 5: dławienie 4× potwierdzone, nagranie 7,08 s, pełne przeładowanie
+z animacją.
+
+| kryterium | próg | zmierzone | spełnione |
+|---|---|---|---|
+| **(a)** mediana klatek | poniżej 50 fps | **60–63/s** | NIE |
+| **(b)** Recalculate Style + Layout | ponad 30% | **14,6%** (12,3 + 2,3) | NIE |
+| **(c)** Layout w płomieniach | w ogóle obecny | obecny, 143,5 ms | **formalnie tak, ale nie nasz** |
+
+**Kryterium (c) jest jedynym, które wymaga rozstrzygnięcia, i rozstrzyga się
+na NIE.** Pod wierszem `Layout` stoją wyłącznie pozycje Reacta i routera:
+`commitLayoutEffectOnFiber`, `flushLayoutEffects`, `useLayoutEffect`,
+`InnerLayoutRouter`, `OuterLayoutRouter`. **Ani jedna z animacji siatki.**
+To narzut montowania komponentów, a nie przeliczanie układu wywołane zapisem
+atrybutów — czyli nie to, co kryterium (c) miało wyłapać.
+
+**Przewidywanie „kryterium (c) prawie na pewno zadziała" było BŁĘDNE, i to
+u podstawy.** Opierało się na założeniu, że zapis `x1`, `y1`, `cx`, `cy`
+unieważni układ dokumentu. **Atrybuty geometrii wewnątrz SVG układem dokumentu
+nie ruszają** — przeglądarka rozlicza wnętrze SVG osobno, własnym mechanizmem,
+i zapis do nich nie unieważnia układu strony. Zdanie z kryterium mówiło
+o zachowaniu przeglądarki, którego przeglądarki nie mają.
+
+**Gdzie naprawdę siedzi koszt:** najdroższą pozycją renderowania jest
+`Recalculate Style` (781,3 ms), a pod nią `ZnakRAGent.useEffect` z linii 200 —
+czyli **napis, który po B4 jest już na canvas**. Siatka głowy, którą B7 miał
+naprawiać, w zestawieniu nie pojawia się wcale. B7 celował w element, który
+nie był problemem.
+
+### Trzy razy w tym etapie przewidywanie wydajności rozminęło się z pomiarem
+
+Warto to zapisać razem, bo pojedynczo każdy przypadek wygląda na drobiazg,
+a razem układają się we wzór:
+
+1. **117 000 pikseli okazało się 92 690.** Szacunek zawyżony o jedną czwartą.
+2. **Najdroższy w obsłudze napisu okazał się `getImageData`, nie skan Moore'a.**
+   Zwiad wskazywał na algorytm, a płacimy za odczyt bufora.
+3. **Layout od zapisu atrybutów SVG nie wystąpił wcale.** Nie „był mniejszy,
+   niż sądzono" — nie było go w ogóle, bo opierał się na nieistniejącym
+   zachowaniu przeglądarki.
+
+**Wniosek dla następnego etapu:** kryterium ustalać przed pomiarem — to się
+sprawdziło i zostaje. Ale **przewidywań wyniku nie zapisywać jako niemal
+pewnych.** „Prawie na pewno zadziała" kosztowało tu zaplanowaną sesję 6
+i o mało nie kosztowało 2–3 godzin przepisywania siatki na canvas, która
+działa dobrze. Przewidywanie ma być hipotezą do sprawdzenia, nie wnioskiem
+zapisanym z góry.
 
 ---
 
@@ -468,9 +549,9 @@ Bez parametru `proxy.js` wyrzuca z `/logowanie` na `/projekty`.
 ## 6. Rozkład na sesje
 
 Pierwotny szacunek mówił 4–8 godzin, po dołożeniu B0 i B0b urealniony na 7–11,
-potem na 8,5–12,5 po dołożeniu B8. **B8 wypadł z zakresu**, więc wychodzi
-**7,5–10 godzin**, z czego **8 godzin już za nami**. Podaję liczbę, która się
-obroni, nie tę, która ładniej wygląda.
+potem na 8,5–12,5 po dołożeniu B8. B8 wypadł z zakresu, potem **B7 odpadł po
+pomiarze**. **Etap zamknął się w ~10 godzinach, na pięciu sesjach.** Podaję
+liczbę, która się obroni, nie tę, która ładniej wygląda.
 
 | sesja | zakres | czas | stan |
 |---|---|---|---|
@@ -478,24 +559,28 @@ obroni, nie tę, która ładniej wygląda.
 | **2** | B2, B3 | ~140 min | **wykonana** — pierwsza animacja na ekranie, testy → 841 |
 | **3** | B4, B5 | ~150 min | **wykonana** — napis na płótnie, pierścień, oko, animacja raz na dokument, testy → 888 |
 | **4** | próg 2000 (`5e28f42`), dokument (`3ec82a1`), B6 (`e2d5715`) | ~120 min | **wykonana** — testy → 895, B8 odwołany |
-| **5** | przegląd 15 punktów z sekcji 5, pomiar pod kryterium B7 | 1–1,5 h | |
-| **6** | B7 siatka na canvas — **warunkowa** | 2–3 h | |
+| **5** | przegląd punktów z sekcji 5, pomiar pod kryterium B7 | ~90 min | **wykonana** — B7 odpadł, **etap B zamknięty** |
 
-**Sesje 1 i 5 są bezpieczne o dowolnej porze** — kod testowalny automatycznie
+**Sesja 6 (B7, siatka na canvas) NIE POWSTAŁA.** Była warunkowa i warunek nie
+zaszedł — pomiar z sesji 5 nie spełnił żadnego z trzech kryteriów. Zaoszczędzone
+2–3 godziny to nie jest praca odłożona, tylko praca, która okazała się
+niepotrzebna: siatka nie była wąskim gardłem.
+
+**Sesje 1 i 5 były bezpieczne o dowolnej porze** — kod testowalny automatycznie
 i czytanie liczb z DevTools.
 
-**Sesje 2, 3 i 6 wymagają patrzenia i nie nadają się na późny wieczór.**
+**Sesje 2 i 3 wymagały patrzenia i nie nadawały się na późny wieczór.**
 Błędy cyklu życia Reacta nie rzucają wyjątków — objawiają się grzejącym laptopem
 po piątym wejściu na stronę. Zmęczona głowa ich nie zauważy, a piąte wejście to
 dokładnie ten test, który się wtedy pomija.
 
-**Sesja 5 jest bramką.** Jeśli kryterium B7 nie zadziała, sesja 6 znika i całość
-zamyka się w **5,5–7 godzinach**, czyli praktycznie na tym, co już jest.
+**Sesja 5 była bramką i zadziałała jako bramka** — rozstrzygnęła zakres, zamiast
+go rozszerzyć. Bramka, która zawsze przepuszcza, nie jest bramką.
 
-**Co może wydłużyć konkretnie:** B3 jest największym pojedynczym kawałkiem etapu:
-animuje 443 elementy SVG (428 w grupie siatki — 290 kresek i 138 kółek — plus 15
-w rozproszeniu), do tego budowanie idempotentne i okręgi spawów przez referencję.
-Jeśli coś się rozjedzie, to tam. B5 ma pułapkę ze znacznikiem „już grano" opisaną wyżej.
+**Największym pojedynczym kawałkiem etapu było B3:** animuje 443 elementy SVG
+(428 w grupie siatki — 290 kresek i 138 kółek — plus 15 w rozproszeniu), do tego
+budowanie idempotentne i okręgi spawów przez referencję. B5 miało pułapkę ze
+znacznikiem „już grano" opisaną wyżej. Oba przeszły przegląd sesji 5 bez uwag.
 
 ---
 
