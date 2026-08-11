@@ -194,3 +194,46 @@ a {
   text-decoration: none;
 }
 
+/* CIEMNY EKRAN LOGOWANIA — TO, CO ZOSTAJE POZA JEGO PUDELKIEM.
+
+   .ekran (app/logowanie/logowanie.module.css) maluje sie nieprzezroczystym
+   #0c1220 na 100dvh, wiec w widocznym obszarze przykrywa wszystko. Poza jego
+   zasiegiem zostaja dwie rzeczy i obie ida z <html>/<body>:
+
+   PASEK PRZEWIJANIA OKNA bierze barwy z color-scheme na :root. W motywie
+   jasnym jest bialy i ma 19 px, i widac go przy granatowym ekranie zawsze,
+   gdy strona ma co przewijac — na przyklad w oknie 900x500, gdzie akapit
+   bledu wychodzi pod krawedz (pomiar z etapu A, nie z tej sesji).
+
+   KANWA OKNA bierze tlo z <body>, bo <html> nie ma wlasnego i tlo body sie na
+   nia propaguje. Widac ja tam, gdzie jest gumowy overscroll, czyli na macOS —
+   Chrome na Windowsie go nie ma, wiec ta druga regula jest polisa, a nie
+   naprawa czegos zmierzonego.
+
+   SELEKTOR PO ATRYBUCIE, NIE PO KLASIE: nazwa .ekran pochodzi z modulu CSS
+   i jest haszowana przy budowaniu, wiec z tego pliku jest nieosiagalna.
+   Znacznik data-ekran stoi w app/logowanie/page.js.
+
+   TE DWIE REGULY MUSZA ZOSTAC NA KONCU PLIKU. :root:has([data-ekran="..."])
+   ma specyficznosc 0-2-0 — dokladnie tyle samo co :root[data-theme="light"]
+   wyzej. Remis rozstrzyga kolejnosc w zrodle. Przeniesione w gore przestana
+   dzialac w motywie jasnym, czyli w jedynym, w ktorym sa potrzebne.
+
+   DRUGA REGULA MA INNA SPECYFICZNOSC NIZ PIERWSZA I TO JEST ZAMIERZONE.
+   body:has([data-ekran="logowanie"]) ma 0-1-1, bo :has() bierze specyficznosc
+   najmocniejszego argumentu (0-1-0) plus body (0-0-1). Bije wiec bazowe
+   body{background:var(--background)} (0-0-1) w motywie jasnym, ale przegrywa
+   z poswiata na body w ciemnym (:root[data-theme="dark"] body oraz
+   :root:not([data-theme="light"]) body w zapytaniu medialnym, obie 0-2-1).
+   TAK MA BYC: w ciemnym kanwa jest ciemna sama z siebie, a poswiata ma zostac.
+   Nie wyrownuj tej asymetrii podnoszeniem specyficznosci ani !important —
+   zgasisz gradient na body na ekranie logowania w motywie ciemnym. */
+
+:root:has([data-ekran="logowanie"]) {
+  color-scheme: dark;
+}
+
+body:has([data-ekran="logowanie"]) {
+  background: #0c1220;
+}
+

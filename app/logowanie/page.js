@@ -1,11 +1,14 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase, isSupabaseConfigured, SUPABASE_CONFIG_ERROR } from "@/lib/supabase/client";
 import { Glowa } from "./_components/Glowa.jsx";
 import { Pierscien } from "./_components/Pierscien.jsx";
+import { SterowanieScenaProvider, useSterowanieScena } from "./_components/SterowanieScena.jsx";
+import { ZegarScenyProvider } from "./_components/ZegarSceny.jsx";
 import { ZnakRAGent } from "./_components/ZnakRAGent.jsx";
+import { PROG_LOGOWANIA_MS } from "./_lib/pierscien.js";
 import styles from "./logowanie.module.css";
 
 // Adres, pod ktory idzie uzytkownik bez hasla. W aplikacji nie ma zadnego
@@ -68,32 +71,93 @@ function FormularzLogowania() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
+  const sterowanie = useSterowanieScena();
+  // STRAZ NA PODWOJNY KLIK w ref, nie w stanie. Prototyp trzyma ja w zmiennej
+  // `running` (linie 761-767) i sprawdza SYNCHRONICZNIE. Stan Reacta ustawia
+  // sie asynchronicznie, wiec dwa szybkie klikniecia zdazylyby oba przeczytac
+  // `loading === false` i puscic dwa logowania.
+  const wTrakcie = useRef(false);
+
+  // Prototyp, linie 741-748: przy niepowodzeniu pierscien sie zeruje, oko
+  // gasnie, a scena STOI. To najczestszy przypadek powrotu na ten ekran
+  // i nie ma prawa odgrywac calej animacji od nowa — glowa i napis zostaja
+  // tam, gdzie byly.
+  function niepowodzenie(komunikat) {
+    setError(komunikat);
+    setLoading(false);
+    sterowanie.pierscien.zeruj();
+    sterowanie.oko.zgas();
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
-    if (loading) return;
+    if (wTrakcie.current) return;
 
     if (!isSupabaseConfigured || !supabase) {
       setError(SUPABASE_CONFIG_ERROR);
       return;
     }
 
+    wTrakcie.current = true;
     setError(null);
     setLoading(true);
 
-    const { error: authError } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
-      password,
-    });
+    try {
+      // Prototyp, linia 785: oko zapala sie OD RAZU po kliknieciu, nie po
+      // odpowiedzi serwera.
+      sterowanie.oko.zapal(performance.now());
 
-    if (authError) {
-      setError(readableAuthError(authError));
-      setLoading(false);
-      return;
+      // Prototyp, linie 786-790: pierscien i uwierzytelnienie ida ROWNOLEGLE.
+      // Prog jest przez to DOLNA GRANICA, a nie dodatkiem do czasu odpowiedzi:
+      // przy odpowiedzi w 200 ms czekamy tyle, co prog, a przy odpowiedzi
+      // wolniejszej niz prog — tyle, co odpowiedz, i ani milisekundy wiecej.
+      // ZADNA GALAZ Promise.all NIE MA PRAWA ODRZUCIC — Promise.all odrzuca,
+      // gdy odrzuci KTORAKOLWIEK z nich, a wtedy leci stad wyjatek i nie
+      // wykonuje sie nic ponizej.
+      //
+      // LANCUCH SKUTKOW, bo sam .catch wyglada na kosmetyke:
+      //   odrzucona obietnica uwierzytelnienia
+      //     -> wyjatek z obslugi wyslania formularza
+      //     -> setLoading(false) sie nie wykonuje
+      //     -> oko nie dostaje zgaszenia
+      //     -> Glowa nie oddaje uchwytu podtrzymania
+      //     -> PETLA rAF CHODZI W NIESKONCZONOSC.
+      //
+      // Usterka istniala przed B5 i konczyla sie zablokowanym formularzem;
+      // B5 podnosi jej cene do wycieku petli. Bez tego catch niezmiennik
+      // „kazde odmontowanie zostawia zero petli" jest FALSZYWY, a on jest
+      // trescia B2, na ktorym stoja B3, B4 i B5.
+      //
+      // Prototyp robi dokladnie to samo w linii 788: zamienia wyjatek na
+      // ksztalt bledu, zeby dalsza obsluga miala co czytac.
+      const pierscien = sterowanie.pierscien
+        .uruchom(PROG_LOGOWANIA_MS)
+        // Druga galaz tez jest opakowana. Obietnica pierscienia nie ma
+        // powodu odrzucic, ale jej cialo dotyka DOM-u i silnika, wiec
+        // „nie ma powodu" to za malo — koszt bledu jest tu wieksza pomylka
+        // niz jedna linia zapasu.
+        .catch(() => undefined);
+
+      const uwierzytelnienie = supabase.auth
+        .signInWithPassword({ email: email.trim(), password })
+        .catch((e) => ({ error: e }));
+
+      const [, { error: authError }] = await Promise.all([
+        pierscien,
+        uwierzytelnienie,
+      ]);
+
+      if (authError) {
+        niepowodzenie(readableAuthError(authError));
+        return;
+      }
+
+      // refresh() sprawia, ze serwer zobaczy swiezo ustawione ciasteczka sesji.
+      router.replace(powrot);
+      router.refresh();
+    } finally {
+      wTrakcie.current = false;
     }
-
-    // refresh() sprawia, ze serwer zobaczy swiezo ustawione ciasteczka sesji.
-    router.replace(powrot);
-    router.refresh();
   }
 
   // PRAWDZIWY <form onSubmit>, nie luzne pola jak w prototypie. Tam brak
@@ -247,25 +311,29 @@ function SkrotDeweloperski() {
 // zalezy od "?powrot=": formularz i skrot deweloperski.
 export default function LoginPage() {
   return (
-    <div className={styles.ekran}>
-      <div className={styles.uklad}>
-        <section className={styles.scena}>
-          <Glowa />
-          <ZnakRAGent />
-        </section>
+    <div className={styles.ekran} data-ekran="logowanie">
+      <ZegarScenyProvider>
+        <SterowanieScenaProvider>
+          <div className={styles.uklad}>
+            <section className={styles.scena}>
+              <Glowa />
+              <ZnakRAGent />
+            </section>
 
-        <section className={styles.kolumnaPanelu}>
-          <Pierscien>
-            <Suspense fallback={<FormularzZastepczy />}>
-              <FormularzLogowania />
-            </Suspense>
-          </Pierscien>
+            <section className={styles.kolumnaPanelu}>
+              <Pierscien>
+                <Suspense fallback={<FormularzZastepczy />}>
+                  <FormularzLogowania />
+                </Suspense>
+              </Pierscien>
 
-          <Suspense fallback={null}>
-            <SkrotDeweloperski />
-          </Suspense>
-        </section>
-      </div>
+              <Suspense fallback={null}>
+                <SkrotDeweloperski />
+              </Suspense>
+            </section>
+          </div>
+        </SterowanieScenaProvider>
+      </ZegarScenyProvider>
     </div>
   );
 }

@@ -225,6 +225,56 @@ warunku, skoro warunkiem jest `canBuild`. Warto przy okazji rozstrzygnąć, czy
 ułamek `N / 50` ma nadal sens, skoro mianownik nie jest już tym, na co się
 czeka.
 
+### Zapis modeli konta przepisuje konfigurację jednego konta na drugie
+
+**Zmierzone na żywo 2026-08-10, nie wydedukowane.** Konto `aideas@celebracja.com`
+miało dziewięć modeli OpenRoutera i przypisanie agenta na `openai/gpt-5.6-terra`.
+Po JEDNEJ zmianie roli „model do pojęć" w Ustawieniach miało sześć modeli —
+**identycznych co do znaku z listą konta `pit321@op.pl`** — oraz jego przypisania
+agenta i mentora. Osiem z dziewięciu modeli zostało skasowanych, w tym ten, na
+którym stała cała demonstracja.
+
+**Dlaczego to możliwe.** Zapis jest CAŁOŚCIOWY i sterowany stanem klienta.
+`app/ustawienia/_modele/ModeleJezykowe.js:672-682` przy zmianie jednej roli
+wysyła **całą listę** i **wszystkie trzy przypisania** ze stanu przeglądarki:
+
+```js
+zapisz(dopuszczone, { ...przypisania, [rola]: wybrany ? {…} : null });
+```
+
+Trasa (`app/api/settings/models/route.js:150-159`) kasuje wtedy każdy model
+spoza przesłanej listy, dopisuje przesłane i dopiero na końcu zapisuje
+przypisania. Jeśli `dopuszczone` pochodzi z **innego konta** — bo stan
+`DopuszczoneContext` przeżył zmianę konta bez pełnego przeładowania — to
+jedno kliknięcie przepisuje konfigurację jednego konta na drugie.
+
+**Żadna osłona nie zawiodła i to jest najgorsze.** Klucz obcy złożony wytrzymał,
+bo lista jest zapisywana PRZED przypisaniami (kolejność celowa, opisana w tej
+trasie). Walidacja przypisań też przeszła, bo sprawdza je **względem nowej
+listy, nie zapisanej** (`route.js:142-148`) — również celowo. Obie reguły
+pilnują spójności WEWNĄTRZ żądania i robią to bez zarzutu. Żadna nie pyta, czy
+przysłana lista ma cokolwiek wspólnego z listą tego konta sprzed sekundy.
+Odpowiedź to `200`, bez ostrzeżenia; użytkownik widzi udany zapis.
+
+**Czego to NIE dotyczy:** agentów. `agents` trzyma `provider` i `model` przy
+sobie i nie ma klucza obcego do `allowed_models` — dowód wprost z bazy:
+„Agent testowy" stoi na `anthropic/claude-opus-4-8`, którego na liście konta
+nie ma i nie było. Rozmowa też nie sprawdza listy dopuszczonych.
+
+**Dlaczego to nie jest drobiazg:** przy jednym użytkowniku to strata
+konfiguracji do odtworzenia zapytaniem. Przy wielu to ścieżka, w której konto A
+nadpisuje konto B — po cichu, ze statusem sukcesu. RLS tu nie pomoże, bo zapis
+idzie z poprawną tożsamością; złe są DANE, nie uprawnienia.
+
+Trzy kierunki naprawy, żadnego nie przesądzam:
+- odświeżać listę przy zmianie tożsamości (leczy przyczynę, nie klasę błędu);
+- zapis przyrostowy zamiast całościowego — osobno model, osobno przypisanie
+  (znosi klasę błędu, ale trasa i tak musi sprawdzać przypisania względem
+  listy, więc to nie jest zmiana kosmetyczna);
+- znacznik wersji listy: klient odsyła wersję, którą przeczytał, serwer
+  odrzuca zapis przy rozjeździe. Najmniej inwazyjne i jedyne, które chroni
+  także przed dwiema kartami tego samego konta.
+
 ---
 
 ## Nazwa

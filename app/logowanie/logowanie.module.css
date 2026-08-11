@@ -18,12 +18,27 @@
       akurat tam, gdzie helm jest najwyzszy. .ekran ja zakrywa, wiec nie trzeba
       niczego wylaczac w pliku wspoldzielonym.
 
-   3. EKRAN JEST ZAWSZE CIEMNY, niezaleznie od data-theme. Wychodzi to samo
-      z siebie, bo paleta to LITERALY, a nie tokeny aplikacji — motyw nie ma
-      na co wplynac. Jedyne, co sie samo nie zalatwia, to color-scheme:
-      globalne :root{color-scheme:light} w motywie jasnym dalo by biale tlo
-      autouzupelniania Chrome, jasny pasek przewijania i jasny kursor w polach.
-      Stad jawne color-scheme: dark nizej.
+   3. EKRAN JEST ZAWSZE CIEMNY, niezaleznie od data-theme.
+
+      DECYZJA I JEJ UZASADNIENIE: helm to nieprzezroczysty prostokat bez
+      kanalu alfa, wiec ilustracja jest ciemna z natury i na jasnym tle
+      pokazuje szew. To jest jedyny powod, ktory sie liczy.
+
+      HISTORIA, ZEBY NIKT NIE SZUKAL NIEISTNIEJACEGO: wczesniejsza wersja
+      tego komentarza opierala decyzje na tym, ze domyslnym motywem jest
+      "auto", wiec nowy uzytkownik na jasnym systemie zobaczylby stary wyglad
+      na Arialu. Commit c2377a4 zmienil domyslke na ciemna i ta przeslanka
+      przestala obowiazywac. Decyzja stoi na przeslance wyzej, ktora sie nie
+      zmienila.
+
+      MECHANIZM: paleta nizej to LITERALY, a nie tokeny aplikacji, wiec motyw
+      nie ma na co wplynac. Samo sie nie zalatwia color-scheme: globalne
+      :root{color-scheme:light} w motywie jasnym daloby biale tlo
+      autouzupelniania Chrome i jasny kursor w polach. Stad jawne
+      color-scheme: dark nizej.
+
+      POZA TYM PLIKIEM: pasek przewijania okna i kanwa poza .ekran ida
+      z <html>/<body> i sa domykane dwiema regulami na koncu app/globals.css.
    ============================================================================ */
 
 .ekran {
@@ -123,8 +138,23 @@
   filter: drop-shadow(0 0 2.4px rgba(110, 231, 224, 0.55));
 }
 
-/* Grupy sa w JSX PUSTE i takie zostaja — wypelni je efekt w etapie B.
-   Selektory potomne, bo elementow jeszcze nie ma. */
+/* KTO JEST WLASCICIELEM TYCH ELEMENTOW — od tego zalezy cala animacja z B3.
+
+   Siatka i rozproszenie MAJA dzieci w JSX od etapu A3: 290 kresek i 138 kolek
+   w siatce, 11 kropek i 4 wielokaty w rozproszeniu. Efekt w B3 niczego tam nie
+   buduje — indeksuje je przez referencje do grupy i mutuje im atrybuty
+   (opacity, transform, stroke-dashoffset).
+
+   WLASCICIELEM ELEMENTOW JEST REACT, wiec Glowa NIE MOZE miec stanu ani
+   zmieniajacych sie propsow: kazde przerenderowanie odtworzy atrybuty z JSX
+   i skasuje to, co zapisala animacja — scena wrocilaby na klatke koncowa
+   w srodku przebiegu.
+
+   PUSTA W JSX ZOSTAJE WYLACZNIE GRUPA SPAWOW. Okregi spawow sa przejsciowe
+   (powstaja na wezle szwu i gasna po SPAW_MS) i jako jedyne powstaja przez
+   createElementNS, w efekcie.
+
+   Selektory potomne, bo elementy nie maja wlasnych klas poza .magenta. */
 .siatka line {
   stroke: var(--siatka);
   stroke-width: var(--w-line);
@@ -194,6 +224,15 @@
   margin-top: calc(-6.78% - var(--size) * 0.334);
 
   background: transparent;
+}
+
+/* Plotno obrysu lezy pod napisem i wypelnia cale pole znaku. Prototyp ma tu
+   to samo (#mark canvas). Jest czysto dekoracyjne: do konca przebiegu zostaje
+   puste, a warstwa tekstowa dochodzi do pelnej widocznosci. */
+.znakPlotno {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
 }
 
 .znakSlowo {
