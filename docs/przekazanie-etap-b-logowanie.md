@@ -495,6 +495,11 @@ zapisanym z góry.
 
 **To musi zrobić człowiek.** Testy przechodzą przy każdym z tych błędów.
 
+**Stan po sesji 5:** przegląd objął punkty **1–8, 10 i 12**; punkty **9 i 15**
+zamknięte wcześniej (B6 i B0); punkty **11, 13 i 14 zostają**. Stan każdego
+z tych trzech jest opisany przy nim — to są stany, nie zaległości do nadrobienia
+przed zamknięciem etapu.
+
 **Cykl życia — tu mieszkają błędy podwójnego montowania:**
 
 1. Policzyć `<line>` w pierścieniu w panelu Elements — ma być **48, nie 96**
@@ -525,13 +530,24 @@ zapisanym z góry.
 
 **Wydajność:**
 
-10. Nagranie 6 s przy dławieniu 4×, ocena według kryterium B7
-11. Frame Rendering Stats w trakcie animacji
-12. Pomiar `trace()` — jednorazowy, ale wypada w oknie pierwszego malowania
-13. Lighthouse, **Total Blocking Time** — to ta jedna liczba, która pokazuje,
-    czy ekran blokuje pisanie w polu
+10. Nagranie 6 s przy dławieniu 4×, ocena według kryterium B7 —
+    **ZMIERZONE** (7,08 s, dławienie 4×). B7 odpadł, patrz sekcja 4
+11. Frame Rendering Stats w trakcie animacji — **nie mierzone tym narzędziem.**
+    Mediana klatek została zmierzona inną drogą: licznikiem `rAF` w skrypcie
+    przeglądu, **60–63/s przy dławieniu 4×**. Punkt jest więc pokryty co do
+    treści, choć nie co do narzędzia
+12. Pomiar `trace()` — jednorazowy, ale wypada w oknie pierwszego malowania —
+    **ZMIERZONE**: 92 690 pikseli (nie 117 000 z szacunku), a najdroższy
+    okazał się `getImageData`, nie skan Moore'a
+13. Lighthouse, **Total Blocking Time** — **NIE MIERZONE.** To jedyna liczba
+    z całej tej sekcji, która powiedziałaby wprost, **czy ekran blokuje pisanie
+    w polu e-mail**. Żaden inny punkt tego nie zastępuje. **Warto zmierzyć przed
+    wdrożeniem produkcyjnym**
 14. Zmiana rozmiaru okna w trakcie animacji — `measure()` przelicza obrys przy
-    każdej zmianie szerokości, więc przeciąganie krawędzi to najgorszy przypadek
+    każdej zmianie szerokości, więc przeciąganie krawędzi to najgorszy przypadek —
+    **NIE MIERZONE dla sceny.** Zmierzone zostało wyłącznie przeliczanie obrysu
+    napisu w B4: 30 zdarzeń przez 3 s dało 1 pomiar, odłożenie o 150 ms działa.
+    **Zachowanie całej sceny przy przeciąganiu krawędzi pozostaje niesprawdzone**
 
 **Motyw (zamknięte w B0, zostaje jako regresja):**
 
@@ -614,15 +630,41 @@ znacznikiem „już grano" opisaną wyżej. Oba przeszły przegląd sesji 5 bez 
 
 ---
 
-## 8. Instrukcja startu następnej sesji
+## 8. Co zostało do zrobienia poza etapem B
 
-1. Wklej ten dokument jako pierwszą wiadomość w nowym czacie.
-2. Dopisz jedno zdanie: od czego chcesz zacząć. Następny w kolejce:
-   **przegląd punktów z sekcji 5 i pomiar pod kryterium B7**.
-3. Miej otwarte: aplikację na `localhost:3000` (wylogowaną albo z `?podglad=1`),
-   terminal z Claude Code w katalogu projektu.
-4. Jeśli coś w tym dokumencie rozminie się z rzeczywistością — najpierw
-   `git status` i `git log --oneline -10`, potem decyzje.
+Etap B jest zamknięty. Poniższe **nie należy do niego** — to rzeczy, które
+etap B odsłonił albo świadomie zostawił za swoją granicą. Kolejność jest
+kolejnością pilności, nie wielkości.
+
+**1. Push całej historii — pierwsza rzecz.** Gałąź `feature/etap-b-animacja`
+ma **14 commitów ponad `master`**, z czego **12 istnieje wyłącznie na dysku
+lokalnym**. Na `origin/feature/etap-b-animacja` stoją tylko dwa najstarsze:
+`1ab7d79` i `b6fe574`. Do czasu pusha **jedynym egzemplarzem dwunastu commitów
+jest ten dysk** — awaria dysku kasuje cały etap B poza B0 i B1. Zakaz danych
+wrażliwych obowiązywał przez cały etap właśnie pod to: historia poleci
+w całości do publicznego repozytorium.
+
+**2. Animacja nie była oglądana w wersji produkcyjnej.** Wszystko, co widzieliśmy,
+to `npm run dev`. W `npm run build` + `npm start` **nie ma Strict Mode**, więc
+nie ma podwójnego montowania — powinno działać lepiej, nie gorzej, bo cały
+etap B walczył właśnie z podwójnym montowaniem. **To jest jednak argument,
+nie pomiar.** Obejrzeć trzeba.
+
+**3. Nie sprawdzano na telefonie ani w przeglądarce innej niż Chrome.** Reguła
+`:has()` z B0, canvas i `rAF` są w każdej bieżącej przeglądarce od 2023 roku,
+więc nie ma powodu spodziewać się kłopotów. **Znowu: argument, nie pomiar.**
+
+**4. Produkcja stoi na `feature/tryb-demo`, nie na `master`.** Samo scalenie
+etapu B do `master` **niczego na produkcji nie zmieni**. Co zrobić z gałęzią
+pokazową, to osobna decyzja i trzeba ją podjąć świadomie, a nie odkryć po
+wdrożeniu, że nic nie widać.
+
+**5. Punkty 13 i 14 sekcji 5 do zmierzenia przed wdrożeniem.** Total Blocking
+Time w Lighthouse — bo to jedyna liczba mówiąca, czy ekran blokuje pisanie
+w polu e-mail. I zachowanie całej sceny przy przeciąganiu krawędzi okna.
 
 **Kopia zapasowa.** Dopóki nie pushujemy, jedynym egzemplarzem pracy jest dysk
 lokalny. Kopia folderu projektu przed każdą sesją to trzydzieści sekund.
+
+**Gdyby coś w tym dokumencie rozminęło się z rzeczywistością** — najpierw
+`git status` i `git log --oneline -15`, potem decyzje.
